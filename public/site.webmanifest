@@ -1,0 +1,26 @@
+{
+  "name": "Code Mage - Code Your Magic",
+  "short_name": "Code Mage",
+  "description": "Learn Python through short videos, tricky problems, and book summaries",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2E3A59",
+  "theme_color": "#D94F4F",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/brand/Code Mage Logo.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["education", "developer", "programming"],
+  "lang": "en",
+  "scope": "/"
+}
