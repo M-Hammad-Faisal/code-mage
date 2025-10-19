@@ -2,7 +2,7 @@
   "name": "code-mage",
   "private": true,
   "version": "0.0.0",
-  "homepage": "https://hammad-faisal.github.io/",
+  "homepage": "https://m-hammad-faisal.github.io/code-mage/",
   "type": "module",
   "scripts": {
     "dev": "vite",
