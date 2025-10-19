@@ -3,11 +3,8 @@ import { Layout } from './components';
 import { Home, Learn, Blog, About, Contact, LessonDetail } from './pages';
 
 function App() {
-  // Set basename for GitHub Pages deployment
-  const basename = import.meta.env.PROD ? '/code-mage' : '';
-
   return (
-    <Router basename={basename}>
+    <Router>
       <Layout>
         <Routes>
           <Route path="/" element={<Home />} />
