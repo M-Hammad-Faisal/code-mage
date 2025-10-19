@@ -1,3 +1,5 @@
+import { ASSETS } from '../utils/assets';
+
 export interface YouTubeVideo {
   id: string;
   title: string;
@@ -35,7 +37,7 @@ const PLACEHOLDER_VIDEOS: YouTubeVideo[] = [
     title: 'Python Fundamentals: Variables and Data Types',
     description:
       'Learn the basics of Python variables, data types, and how to work with them effectively in your code.',
-    thumbnail: '/brand/Code Mage Banner.png',
+    thumbnail: ASSETS.BANNER,
     publishedAt: '2024-01-15',
     duration: '12:34',
     viewCount: '15,420',
@@ -46,7 +48,7 @@ const PLACEHOLDER_VIDEOS: YouTubeVideo[] = [
     title: 'Advanced Python: List Comprehensions Explained',
     description:
       'Master Python list comprehensions with practical examples and best practices for cleaner code.',
-    thumbnail: '/brand/Code Mage Banner.png',
+    thumbnail: ASSETS.BANNER,
     publishedAt: '2024-01-10',
     duration: '18:45',
     viewCount: '23,156',
@@ -57,7 +59,7 @@ const PLACEHOLDER_VIDEOS: YouTubeVideo[] = [
     title: 'Building Your First Python Project',
     description:
       'Step-by-step guide to creating a complete Python project from scratch with best practices.',
-    thumbnail: '/brand/Code Mage Banner.png',
+    thumbnail: ASSETS.BANNER,
     publishedAt: '2024-01-05',
     duration: '25:12',
     viewCount: '31,892',

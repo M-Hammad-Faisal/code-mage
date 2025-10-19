@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Play, Clock, Eye } from 'lucide-react';
 import type { YouTubeVideo } from '../lib/youtube';
+import { ASSETS } from '../utils/assets';
 
 interface YouTubeCardProps {
   video: YouTubeVideo;
@@ -33,7 +34,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ video, index }) => {
           onError={e => {
             // Fallback to a placeholder if thumbnail fails to load
             const target = e.target as HTMLImageElement;
-            target.src = '/brand/Code Mage Banner.png';
+            target.src = ASSETS.BANNER;
           }}
         />
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">

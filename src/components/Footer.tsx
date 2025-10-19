@@ -13,6 +13,7 @@ import {
   Users,
   Star,
 } from 'lucide-react';
+import { ASSETS } from '../utils/assets';
 
 export const Footer: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -93,7 +94,7 @@ export const Footer: React.FC = () => {
           >
             <div className="flex items-center space-x-3 mb-6">
               <motion.img
-                src="/brand/Code Mage Logo.png"
+                src={ASSETS.LOGO}
                 alt="Code Mage Logo"
                 className="w-12 h-12 shadow-lg"
                 whileHover={{ scale: 1.05, rotate: 5 }}

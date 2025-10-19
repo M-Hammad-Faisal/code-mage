@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Play, BookOpen, ArrowRight } from 'lucide-react';
 import { SITE } from '../site.config';
+import { ASSETS } from '../utils/assets';
 
 export const Hero: React.FC = () => {
   const [scrollY, setScrollY] = useState(0);
@@ -38,7 +39,7 @@ export const Hero: React.FC = () => {
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat will-change-transform"
         style={{
-          backgroundImage: `url('/brand/Code Mage Banner.png')`,
+          backgroundImage: `url('${ASSETS.BANNER}')`,
           transform: `translateY(${scrollY * 0.5}px)`,
         }}
       >

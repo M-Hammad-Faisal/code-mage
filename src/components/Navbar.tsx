@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Youtube, Github, Linkedin, Heart } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { SITE, NAVIGATION } from '../site.config';
+import { ASSETS } from '../utils/assets';
 
 export const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -54,7 +55,7 @@ export const Navbar: React.FC = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3 group">
             <img
-              src="/brand/Code Mage Logo.png"
+              src={ASSETS.LOGO}
               alt={`${SITE.brand} Logo`}
               className="w-8 h-8 group-hover:scale-110 transition-transform duration-200"
             />
