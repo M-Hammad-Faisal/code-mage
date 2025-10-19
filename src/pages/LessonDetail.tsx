@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
   Clock, 
   User, 
@@ -103,7 +103,6 @@ print(f"Outside function: {global_var}")
 };
 
 export const LessonDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
   const [completedObjectives, setCompletedObjectives] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'code' | 'resources'>('overview');
 
