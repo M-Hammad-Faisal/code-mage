@@ -1,10 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Youtube, Github, Linkedin, Heart, Mail, ArrowRight, Code, BookOpen, Users, Star } from 'lucide-react';
 
 export const Footer: React.FC = () => {
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const currentYear = new Date().getFullYear();
+
+  useEffect(() => {
+    // Check initial dark mode state
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkDarkMode();
+    
+    // Listen for theme changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
+  }, []);
 
   const socialLinks = [
     { icon: Youtube, href: "https://youtube.com/@codemage", label: "YouTube", color: "hover:bg-red-600" },
@@ -19,15 +38,18 @@ export const Footer: React.FC = () => {
     { name: "Contact", href: "/contact", icon: Mail }
   ];
 
-  const stats = [
-    { label: "Students", value: "10K+" },
-    { label: "Courses", value: "50+" },
-    { label: "Projects", value: "100+" },
-    { label: "Rating", value: "4.9", icon: Star }
-  ];
+
 
   return (
-    <footer className="relative bg-gradient-to-br from-cloud-50 via-cloud-100 to-cloud-200 dark:from-navy-900 dark:via-navy-800 dark:to-black text-navy-900 dark:text-cloud-100 overflow-hidden">
+    <footer 
+      className="relative overflow-hidden"
+      style={{
+        background: isDarkMode 
+          ? 'linear-gradient(to bottom right, #1f2937, #111827, #000000)'
+          : 'linear-gradient(to bottom right, #fafafa, #f4f4f5, #e4e4e7)',
+        color: isDarkMode ? '#f4f4f5' : '#312e81'
+      }}
+    >
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-10 dark:opacity-10">
         <div className="absolute top-0 left-0 w-96 h-96 bg-red-300 dark:bg-red-500 rounded-full blur-3xl"></div>
@@ -53,30 +75,61 @@ export const Footer: React.FC = () => {
                 whileHover={{ scale: 1.05, rotate: 5 }}
                 transition={{ type: "spring", stiffness: 300 }}
               />
-              <span className="text-3xl font-heading font-bold text-navy-900 dark:text-white">Code Mage</span>
+              <span 
+                className="text-3xl font-heading font-bold"
+                style={{ color: isDarkMode ? '#ffffff' : '#312e81' }}
+              >
+                Code Mage
+              </span>
             </div>
             
-            <p className="text-navy-600 dark:text-cloud-300 mb-8 text-lg leading-relaxed">
+            <p 
+              className="mb-8 text-lg leading-relaxed"
+              style={{ color: isDarkMode ? '#d1d5db' : '#4b5563' }}
+            >
               Empowering developers with practical Python tutorials, courses, and real-world projects. 
               Join our community and master the art of coding.
             </p>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              {stats.map((stat, index) => (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {[
+                { icon: Code, label: "Projects", value: "10K+", color: "from-blue-500 to-cyan-500" },
+                { icon: BookOpen, label: "Courses", value: "50+", color: "from-green-500 to-emerald-500" },
+                { icon: Users, label: "Students", value: "100+", color: "from-purple-500 to-pink-500" },
+                { icon: Star, label: "Rating", value: "4.9", color: "from-yellow-500 to-orange-500" }
+              ].map((stat, index) => (
                 <motion.div
                   key={stat.label}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
+                  className="backdrop-blur-sm rounded-2xl p-4 text-center group transition-all duration-300"
+                  style={{
+                    backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                    border: `1px solid ${isDarkMode ? 'rgba(75, 85, 99, 0.5)' : 'rgba(226, 232, 240, 0.3)'}`,
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   viewport={{ once: true }}
-                  className="text-center p-4 bg-white/80 dark:bg-navy-800/50 backdrop-blur-sm rounded-xl border border-cloud-300/50 dark:border-navy-700/50"
+                  whileHover={{ 
+                    scale: 1.05,
+                    backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.8)' : 'rgba(255, 255, 255, 0.2)'
+                  }}
                 >
-                  <div className="flex items-center justify-center mb-2">
-                    <span className="text-2xl font-bold text-navy-900 dark:text-white">{stat.value}</span>
-                    {stat.icon && <stat.icon className="w-4 h-4 text-yellow-500 dark:text-yellow-400 ml-1" />}
+                  <div className={`w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
+                    <stat.icon className="w-6 h-6 text-white" />
                   </div>
-                  <p className="text-navy-600 dark:text-cloud-400 text-sm">{stat.label}</p>
+                  <div 
+                    className="text-2xl font-bold mb-1"
+                    style={{ color: isDarkMode ? '#ffffff' : '#312e81' }}
+                  >
+                    {stat.value}
+                  </div>
+                  <div 
+                    className="text-sm"
+                    style={{ color: isDarkMode ? '#d1d5db' : '#4b5563' }}
+                  >
+                    {stat.label}
+                  </div>
                 </motion.div>
               ))}
             </div>
@@ -95,9 +148,18 @@ export const Footer: React.FC = () => {
                   viewport={{ once: true }}
                   whileHover={{ y: -3, scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className={`group p-3 bg-white/80 dark:bg-navy-800/80 backdrop-blur-sm rounded-xl border border-cloud-300/50 dark:border-navy-700/50 ${social.color} transition-all duration-300 shadow-lg hover:shadow-xl`}
+                  className="group p-3 backdrop-blur-sm rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
+                  style={{
+                    backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                    border: `1px solid ${isDarkMode ? 'rgba(75, 85, 99, 0.5)' : 'rgba(209, 213, 219, 0.5)'}`,
+                  }}
                 >
-                  <social.icon className="w-6 h-6 text-black dark:text-cloud-300 group-hover:text-white dark:group-hover:text-white transition-colors duration-300" />
+                  <social.icon 
+                    className="w-6 h-6 group-hover:text-white transition-colors duration-300" 
+                    style={{ 
+                      color: isDarkMode ? '#d1d5db' : '#000000'
+                    }}
+                  />
                 </motion.a>
               ))}
             </div>
@@ -111,7 +173,10 @@ export const Footer: React.FC = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center">
+            <h3 
+              className="text-xl font-bold mb-6 flex items-center"
+              style={{ color: isDarkMode ? '#ffffff' : '#312e81' }}
+            >
               <ArrowRight className="w-5 h-5 mr-2 text-red-500" />
               Quick Links
             </h3>
@@ -126,9 +191,20 @@ export const Footer: React.FC = () => {
                 >
                   <Link 
                     to={link.href} 
-                    className="group flex items-center space-x-3 text-navy-600 dark:text-cloud-300 hover:text-navy-900 dark:hover:text-white transition-all duration-300 p-2 rounded-lg hover:bg-cloud-200/50 dark:hover:bg-navy-800/50"
+                    className="group flex items-center space-x-3 transition-all duration-300 p-2 rounded-lg"
+                    style={{
+                      color: isDarkMode ? '#d1d5db' : '#4b5563',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = isDarkMode ? '#ffffff' : '#312e81';
+                      e.currentTarget.style.backgroundColor = isDarkMode ? 'rgba(17, 24, 39, 0.5)' : 'rgba(209, 213, 219, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = isDarkMode ? '#d1d5db' : '#4b5563';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
-                    <link.icon className="w-4 h-4 text-red-500 dark:text-red-500 group-hover:text-red-500 dark:group-hover:text-red-500 group-hover:scale-110 transition-all duration-300" />
+                    <link.icon className="w-4 h-4 text-red-500 group-hover:scale-110 transition-all duration-300" />
                     <span className="group-hover:translate-x-1 transition-transform">{link.name}</span>
                   </Link>
                 </motion.li>
@@ -144,7 +220,10 @@ export const Footer: React.FC = () => {
             transition={{ duration: 0.6, delay: 0.4 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center">
+            <h3 
+              className="text-xl font-bold mb-6 flex items-center"
+              style={{ color: isDarkMode ? '#ffffff' : '#312e81' }}
+            >
               <Heart className="w-5 h-5 mr-2 text-red-500" />
               Support & Connect
             </h3>
@@ -157,25 +236,67 @@ export const Footer: React.FC = () => {
                 rel="noopener noreferrer"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="group flex items-center space-x-3 p-4 bg-gradient-to-r from-red-100/50 dark:from-red-600/20 to-red-200/50 dark:to-red-700/20 backdrop-blur-sm rounded-xl border border-red-300/50 dark:border-red-500/30 hover:border-red-400/70 dark:hover:border-red-500/50 transition-all duration-300"
+                className="group flex items-center space-x-3 p-4 backdrop-blur-sm rounded-xl transition-all duration-300"
+                style={{
+                  background: isDarkMode 
+                    ? 'linear-gradient(to right, rgba(220, 38, 38, 0.2), rgba(185, 28, 28, 0.2))'
+                    : 'linear-gradient(to right, rgba(254, 226, 226, 0.5), rgba(254, 202, 202, 0.5))',
+                  border: `1px solid ${isDarkMode ? 'rgba(239, 68, 68, 0.3)' : 'rgba(252, 165, 165, 0.5)'}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = isDarkMode ? 'rgba(239, 68, 68, 0.5)' : 'rgba(248, 113, 113, 0.7)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = isDarkMode ? 'rgba(239, 68, 68, 0.3)' : 'rgba(252, 165, 165, 0.5)';
+                }}
               >
-                <Heart className="w-5 h-5 text-red-500 dark:text-red-500 group-hover:text-red-500 dark:group-hover:text-red-500 group-hover:scale-110 transition-all duration-300" />
+                <Heart className="w-5 h-5 text-red-500 group-hover:scale-110 transition-all duration-300" />
                 <div>
-                  <span className="text-navy-900 dark:text-white font-medium block">Support on Patreon</span>
-                  <span className="text-navy-600 dark:text-cloud-400 text-sm">Help us create more content</span>
+                  <span 
+                    className="font-medium block"
+                    style={{ color: isDarkMode ? '#ffffff' : '#312e81' }}
+                  >
+                    Support on Patreon
+                  </span>
+                  <span 
+                    className="text-sm"
+                    style={{ color: isDarkMode ? '#9ca3af' : '#4b5563' }}
+                  >
+                    Help us create more content
+                  </span>
                 </div>
                 <ArrowRight className="w-4 h-4 text-red-500 ml-auto group-hover:translate-x-1 transition-transform" />
               </motion.a>
 
               <motion.div
                 whileHover={{ scale: 1.02 }}
-                className="group p-4 bg-blue-50/50 dark:bg-navy-800/50 backdrop-blur-sm rounded-xl border border-blue-200/50 dark:border-navy-700/50 hover:border-blue-300/70 dark:hover:border-navy-600/50 transition-all duration-300"
+                className="group p-4 backdrop-blur-sm rounded-xl transition-all duration-300"
+                style={{
+                   backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.5)' : 'rgba(239, 246, 255, 0.5)',
+                   border: `1px solid ${isDarkMode ? 'rgba(75, 85, 99, 0.5)' : 'rgba(191, 219, 254, 0.5)'}`,
+                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = isDarkMode ? 'rgba(75, 85, 99, 0.5)' : 'rgba(147, 197, 253, 0.7)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = isDarkMode ? 'rgba(75, 85, 99, 0.5)' : 'rgba(191, 219, 254, 0.5)';
+                }}
               >
                 <Link to="/contact" className="flex items-center space-x-3">
-                  <Mail className="w-5 h-5 text-blue-500 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+                  <Mail className="w-5 h-5 text-blue-500 group-hover:scale-110 transition-transform" />
                   <div>
-                    <span className="text-navy-900 dark:text-white font-medium block">Get in Touch</span>
-                    <span className="text-navy-600 dark:text-cloud-400 text-sm">Questions? We're here to help</span>
+                    <span 
+                      className="font-medium block"
+                      style={{ color: isDarkMode ? '#ffffff' : '#312e81' }}
+                    >
+                      Get in Touch
+                    </span>
+                    <span 
+                      className="text-sm"
+                      style={{ color: isDarkMode ? '#9ca3af' : '#4b5563' }}
+                    >
+                      Questions? We're here to help
+                    </span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-blue-400 ml-auto group-hover:translate-x-1 transition-transform" />
                 </Link>
@@ -187,12 +308,18 @@ export const Footer: React.FC = () => {
               {/* Background decoration */}
               <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-red-500/20 to-purple-500/20 rounded-full blur-xl"></div>
               
-              <h4 className="text-lg font-semibold text-navy-900 dark:text-white mb-3 relative">
-                <span className="bg-gradient-to-r from-red-500 dark:from-red-400 to-purple-500 dark:to-purple-400 bg-clip-text text-transparent">
-                  Stay Updated
-                </span>
-              </h4>
-              <p className="text-navy-600 dark:text-cloud-300 text-sm mb-4 relative">Get the latest tutorials and coding tips delivered to your inbox.</p>
+              <h4 
+              className="text-lg font-semibold mb-3 relative"
+              style={{ color: isDarkMode ? '#ffffff' : '#312e81' }}
+            >
+              <span className="bg-gradient-to-r from-red-500 dark:from-red-400 to-purple-500 dark:to-purple-400 bg-clip-text text-transparent">
+                Stay Updated
+              </span>
+            </h4>
+            <p 
+              className="text-sm mb-4 relative"
+              style={{ color: isDarkMode ? '#d1d5db' : '#4b5563' }}
+            >Get the latest tutorials and coding tips delivered to your inbox.</p>
               
               <motion.div 
                 className="flex space-x-2 relative"
@@ -204,7 +331,12 @@ export const Footer: React.FC = () => {
                   <motion.input
                     type="email"
                     placeholder="Enter your email"
-                    className="w-full px-4 py-2 bg-white/70 dark:bg-navy-900/50 border border-cloud-300/50 dark:border-navy-600/50 rounded-lg text-navy-900 dark:text-white placeholder-navy-500 dark:placeholder-cloud-400 focus:outline-none focus:border-red-500/50 transition-all duration-300 group-hover:bg-white/90 dark:group-hover:bg-navy-900/70"
+                    className="w-full px-4 py-2 rounded-lg focus:outline-none focus:border-red-500/50 transition-all duration-300"
+                    style={{
+                      backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.5)' : 'rgba(255, 255, 255, 0.7)',
+                      border: `1px solid ${isDarkMode ? 'rgba(75, 85, 99, 0.5)' : 'rgba(209, 213, 219, 0.5)'}`,
+                      color: isDarkMode ? '#ffffff' : '#312e81'
+                    }}
                     whileFocus={{ scale: 1.02 }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />
@@ -254,21 +386,29 @@ export const Footer: React.FC = () => {
           </motion.div>
         </div>
 
-        {/* Bottom Section */}
-        <motion.div 
-          className="border-t border-cloud-300/50 dark:border-navy-700/50 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          viewport={{ once: true }}
+        {/* Bottom section */}
+        <div 
+          className="pt-8"
+          style={{
+            borderTop: `1px solid ${isDarkMode ? 'rgba(75, 85, 99, 0.5)' : 'rgba(226, 232, 240, 0.5)'}`,
+            marginTop: '3rem'
+          }}
         >
-          <p className="text-navy-600 dark:text-cloud-400 text-sm flex items-center">
-            © {currentYear} Code Mage. All rights reserved.
-          </p>
-          <p className="text-navy-600 dark:text-cloud-400 text-sm mt-2 md:mt-0 flex items-center">
-            Made with <Heart className="w-4 h-4 text-red-500 mx-1" /> for the Python community
-          </p>
-        </motion.div>
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <p 
+              className="text-sm"
+              style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}
+            >
+              © {currentYear} Code Mage. All rights reserved.
+            </p>
+            <p 
+              className="text-sm flex items-center"
+              style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}
+            >
+              Made with <Heart className="w-4 h-4 mx-1 text-red-500" /> for the Python community
+            </p>
+          </div>
+        </div>
       </div>
     </footer>
   );

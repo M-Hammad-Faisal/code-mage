@@ -234,10 +234,10 @@ export const Learn: React.FC = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-12"
         >
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-cloud-100 mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
             Learn Python
           </h1>
-          <p className="text-xl text-gray-600 dark:text-cloud-300 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-white max-w-3xl mx-auto">
             Master Python programming with our comprehensive lessons, from beginner basics to advanced concepts.
           </p>
         </motion.div>
@@ -251,13 +251,13 @@ export const Learn: React.FC = () => {
         >
           {/* Search Bar */}
           <div className="relative mb-6">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-navy-400 dark:text-cloud-500 w-5 h-5" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-navy-400 dark:text-cloud-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Search lessons, topics, or technologies..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-navy-900 dark:text-cloud-100 placeholder-navy-400 dark:placeholder-cloud-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
+              className="w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-navy-900 dark:text-cloud-100 placeholder-navy-400 dark:placeholder-cloud-400 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
             />
           </div>
 

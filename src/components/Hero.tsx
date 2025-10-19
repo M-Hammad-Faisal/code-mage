@@ -6,11 +6,30 @@ import { SITE } from '../site.config';
 
 export const Hero: React.FC = () => {
   const [scrollY, setScrollY] = useState(0);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    // Check initial dark mode state
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkDarkMode();
+    
+    // Listen for theme changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -255,7 +274,17 @@ export const Hero: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.2 }}
           >
-            <div className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-white/20 dark:border-gray-500/40 shadow-lg dark:shadow-2xl">
+            <div 
+              className="backdrop-blur-sm rounded-lg p-6 shadow-lg dark:shadow-2xl"
+              style={{
+                background: isDarkMode 
+                  ? 'linear-gradient(to bottom right, #1f2937, #111827, #000000)'
+                  : 'linear-gradient(to bottom right, #fafafa, #f4f4f5, #e4e4e7)',
+                border: isDarkMode 
+                  ? '1px solid rgba(75, 85, 99, 0.3)'
+                  : '1px solid rgba(229, 231, 235, 0.5)'
+              }}
+            >
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">
                 Join the Mage Guild
               </h3>

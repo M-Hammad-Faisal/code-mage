@@ -135,10 +135,10 @@ export const Blog: React.FC = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-12"
         >
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-cloud-100 mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
             Code Mage Blog
           </h1>
-          <p className="text-xl text-gray-600 dark:text-cloud-300 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-white max-w-3xl mx-auto">
             Discover the latest tutorials, tips, and insights to level up your programming skills.
           </p>
         </motion.div>
