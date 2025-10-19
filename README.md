@@ -1,73 +1,152 @@
-# React + TypeScript + Vite
+# Code Mage 🧙‍♂️
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, interactive coding education platform built with React, TypeScript, and Vite. Code Mage provides an engaging learning experience with syntax-highlighted code examples, interactive lessons, and a beautiful, responsive design.
 
-Currently, two official plugins are available:
+## 🌟 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Interactive Lessons**: Step-by-step coding tutorials with syntax highlighting
+- **Modern UI**: Beautiful, responsive design with smooth animations using Framer Motion
+- **Multi-Language Support**: Syntax highlighting for multiple programming languages
+- **Markdown-Based Content**: Easy-to-maintain lesson content using Markdown with frontmatter
+- **Responsive Design**: Optimized for desktop, tablet, and mobile devices
+- **Fast Performance**: Built with Vite for lightning-fast development and builds
+- **Type Safety**: Full TypeScript support for better development experience
+- **Code Quality**: Pre-commit hooks with ESLint and Prettier for consistent code style
 
-## React Compiler
+## 🚀 Live Demo
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Visit the live application: [https://m-hammad-faisal.github.io/code-mage/](https://m-hammad-faisal.github.io/code-mage/)
 
-## Expanding the ESLint configuration
+## 🛠️ Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Frontend**: React 19, TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **Routing**: React Router DOM
+- **Markdown Processing**: Remark, Rehype
+- **Syntax Highlighting**: Rehype Highlight
+- **Icons**: Lucide React
+- **Code Quality**: ESLint, Prettier, Husky, Lint-staged
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 📦 Installation
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1. **Clone the repository**
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+   ```bash
+   git clone https://github.com/M-Hammad-Faisal/code-mage.git
+   cd code-mage
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Start the development server**
+
+   ```bash
+   npm run dev
+   ```
+
+4. **Open your browser**
+   Navigate to `http://localhost:5173` to see the application.
+
+## 🔧 Available Scripts
+
+- `npm run dev` - Start the development server
+- `npm run build` - Build the project for production
+- `npm run preview` - Preview the production build locally
+- `npm run lint` - Run ESLint and Prettier checks
+- `npm run format` - Format code with Prettier
+
+## 📁 Project Structure
+
+```
+code-mage/
+├── public/                 # Static assets
+├── src/
+│   ├── components/        # Reusable React components
+│   ├── pages/            # Page components
+│   ├── data/             # Lesson data and content
+│   ├── types/            # TypeScript type definitions
+│   ├── utils/            # Utility functions
+│   └── styles/           # Global styles
+├── .husky/               # Git hooks configuration
+├── .github/workflows/    # GitHub Actions CI/CD
+└── ...
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 📝 Adding New Lessons
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x';
-import reactDom from 'eslint-plugin-react-dom';
+1. Create a new Markdown file in `src/data/lessons/`
+2. Add frontmatter with lesson metadata:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
-```
+   ```markdown
+   ---
+   title: "Your Lesson Title"
+   description: "Brief description of the lesson"
+   difficulty: "beginner" | "intermediate" | "advanced"
+   duration: "30 minutes"
+   language: "javascript"
+   ---
+
+   # Your lesson content here
+   ```
+
+3. Update the lessons index to include your new lesson
+
+## 🔄 Pre-commit Hooks
+
+This project uses Husky and lint-staged to ensure code quality:
+
+- **ESLint**: Checks for code quality and potential errors
+- **Prettier**: Ensures consistent code formatting
+- **TypeScript**: Type checking for better code reliability
+
+The pre-commit hooks automatically run on staged files before each commit.
+
+## 🚀 Deployment
+
+The project is automatically deployed to GitHub Pages using GitHub Actions when changes are pushed to the main branch.
+
+### Manual Deployment
+
+1. **Build the project**
+
+   ```bash
+   npm run build
+   ```
+
+2. **Deploy to GitHub Pages**
+   The `deploy.yml` workflow handles automatic deployment.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Commit your changes (`git commit -m 'Add some amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Muhammad Hammad Faisal**
+
+- GitHub: [@M-Hammad-Faisal](https://github.com/M-Hammad-Faisal)
+
+## 🙏 Acknowledgments
+
+- React team for the amazing framework
+- Vite team for the blazing fast build tool
+- All the open-source contributors who made this project possible
+
+---
+
+Made with ❤️ by [Muhammad Hammad Faisal](https://github.com/M-Hammad-Faisal)
