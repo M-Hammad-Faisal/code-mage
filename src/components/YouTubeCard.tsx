@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Play, Clock, Eye } from 'lucide-react';
 import type { YouTubeVideo } from '../lib/youtube';
-import { ASSETS } from '../utils/assets';
+import LazyImage from './LazyImage';
 
 interface YouTubeCardProps {
   video: YouTubeVideo;
@@ -27,14 +27,12 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ video, index }) => {
       className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
     >
       <div className="relative group">
-        <img
+        <LazyImage
           src={video.thumbnail}
           alt={video.title}
           className="w-full h-48 object-cover"
-          onError={e => {
-            // Fallback to a placeholder if thumbnail fails to load
-            const target = e.target as HTMLImageElement;
-            target.src = ASSETS.BANNER;
+          onError={() => {
+            // Fallback handled by LazyImage component
           }}
         />
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">

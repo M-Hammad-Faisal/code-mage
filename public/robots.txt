@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://code-mage.vercel.app/sitemap.xml

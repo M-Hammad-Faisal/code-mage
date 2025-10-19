@@ -12,6 +12,7 @@ import {
   BookOpen,
   Users,
   Star,
+  DollarSign,
 } from 'lucide-react';
 import { ASSETS } from '../utils/assets';
 
@@ -40,21 +41,27 @@ export const Footer: React.FC = () => {
   const socialLinks = [
     {
       icon: Youtube,
-      href: 'https://youtube.com/@codemage',
+      href: 'https://youtube.com/@code_your_magic',
       label: 'YouTube',
       color: 'hover:bg-red-600',
     },
     {
       icon: Github,
-      href: 'https://github.com/codemage',
+      href: 'https://github.com/hammad-faisal',
       label: 'GitHub',
       color: 'hover:bg-gray-700',
     },
     {
       icon: Linkedin,
-      href: 'https://linkedin.com/in/codemage',
+      href: 'https://linkedin.com/in/hammad-faisal-dev',
       label: 'LinkedIn',
       color: 'hover:bg-blue-600',
+    },
+    {
+      icon: DollarSign,
+      href: 'https://patreon.com/code_your_magic',
+      label: 'Patreon',
+      color: 'hover:bg-orange-600',
     },
   ];
 
@@ -113,8 +120,7 @@ export const Footer: React.FC = () => {
               style={{ color: isDarkMode ? '#d1d5db' : '#4b5563' }}
             >
               Empowering developers with practical Python tutorials, courses,
-              and real-world projects. Join our community and master the art of
-              coding.
+              and real-world projects. Join our community and code your magic.
             </p>
 
             {/* Stats */}

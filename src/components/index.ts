@@ -5,3 +5,4 @@ export { ThemeToggle } from './ThemeToggle';
 export { Layout } from './Layout';
 export { YouTubeCard } from './YouTubeCard';
 export { YouTubeSection } from './YouTubeSection';
+export { SEO } from './SEO';

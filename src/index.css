@@ -42,8 +42,14 @@
   --gradient-dark: linear-gradient(135deg, #18181b 0%, #09090b 100%);
   --gradient-accent: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
 
-  --font-family-heading: 'Inter', system-ui, sans-serif;
-  --font-family-body: 'Inter', system-ui, sans-serif;
+  --font-family-heading:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    system-ui, sans-serif;
+  --font-family-body:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    system-ui, sans-serif;
 }
 
 /* Global smooth scrolling and animations */
@@ -196,6 +202,65 @@ body {
 ::selection {
   background-color: rgba(239, 68, 68, 0.3);
   color: #ffffff;
+}
+
+/* Accessibility improvements */
+.skip-to-content {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: #ef4444;
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 4px;
+  z-index: 1000;
+  font-weight: 600;
+  transition: top 0.3s;
+}
+
+.skip-to-content:focus {
+  top: 6px;
+}
+
+/* Enhanced focus styles */
+*:focus {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+}
+
+/* Focus styles for interactive elements */
+button:focus,
+a:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+}
+
+/* Dark mode focus styles */
+.dark button:focus,
+.dark a:focus,
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  outline-color: #f87171;
+  box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.1);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --color-accent-primary: #000000;
+    --color-accent-primary-hover: #333333;
+  }
+
+  .dark {
+    --color-accent-primary: #ffffff;
+    --color-accent-primary-hover: #cccccc;
+  }
 }
 
 /* Reduced motion for accessibility */

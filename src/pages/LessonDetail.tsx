@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import LazyImage from '../components/LazyImage';
 import {
   Clock,
   User,
@@ -379,7 +380,7 @@ export const LessonDetail: React.FC = () => {
                 Your Instructor
               </h3>
               <div className="flex items-center space-x-3">
-                <img
+                <LazyImage
                   src={lessonData.instructor.avatar}
                   alt={lessonData.instructor.name}
                   className="w-12 h-12 rounded-full"

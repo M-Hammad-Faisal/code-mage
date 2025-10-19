@@ -1,10 +1,17 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { SEO } from '../components';
 import { Code, Heart, Users, Target, Palette, Smartphone } from 'lucide-react';
 
 export const About: React.FC = () => {
   return (
     <div className="min-h-screen bg-cloud-100 dark:bg-navy-900 py-16">
+      <SEO
+        title="About Code Mage - Our Story"
+        description="Learn about Code Mage's mission to make programming education accessible through practical tutorials, hands-on projects, and comprehensive learning resources."
+        url="https://code-mage.vercel.app/about"
+      />
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -37,7 +44,7 @@ export const About: React.FC = () => {
                 At Code Mage, we believe that programming should be accessible,
                 enjoyable, and transformative. Our mission is to create the most
                 comprehensive and beginner-friendly Python learning platform
-                that helps developers at all levels master the art of coding.
+                that helps developers at all levels code their magic.
               </p>
               <p className="text-lg text-navy-700 dark:text-cloud-300">
                 Whether you're just starting your programming journey or looking
@@ -173,8 +180,12 @@ export const About: React.FC = () => {
             developers who are already learning with Code Mage.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="btn-primary">Start Learning</button>
-            <button className="btn-secondary">Watch Videos</button>
+            <Link to="/learn" className="btn-primary">
+              Start Learning
+            </Link>
+            <Link to="/blog" className="btn-secondary">
+              Watch Videos
+            </Link>
           </div>
         </motion.div>
       </div>

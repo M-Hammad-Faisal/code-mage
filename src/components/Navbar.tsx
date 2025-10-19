@@ -130,7 +130,9 @@ export const Navbar: React.FC = () => {
             <button
               onClick={toggleMenu}
               className="p-2 rounded-md text-navy-600 dark:text-white hover:text-red-600 dark:hover:text-red-400 hover:bg-navy-100 dark:hover:bg-navy-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-              aria-label="Toggle menu"
+              aria-label={isOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isOpen}
+              aria-controls="mobile-menu"
             >
               {isOpen ? (
                 <X className="w-6 h-6" />
@@ -143,10 +145,15 @@ export const Navbar: React.FC = () => {
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <div className="md:hidden border-t border-navy-100 dark:border-navy-700">
-            <div
+          <div
+            id="mobile-menu"
+            className="md:hidden border-t border-navy-100 dark:border-navy-700"
+          >
+            <nav
               className="px-2 pt-2 pb-3 space-y-1"
               style={{ backgroundColor: isDarkMode ? '#1f2937' : '#ffffff' }}
+              role="navigation"
+              aria-label="Mobile navigation"
             >
               {NAVIGATION.map(item => (
                 <Link
@@ -162,7 +169,7 @@ export const Navbar: React.FC = () => {
                   {item.name}
                 </Link>
               ))}
-            </div>
+            </nav>
           </div>
         )}
       </div>

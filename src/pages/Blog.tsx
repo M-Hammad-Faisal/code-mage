@@ -10,6 +10,8 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { SEO } from '../components';
+import LazyImage from '../components/LazyImage';
 
 const blogPosts = [
   {
@@ -164,6 +166,11 @@ export const Blog: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-cloud-100 dark:bg-navy-900 py-16">
+      <SEO
+        title="Programming Blog - Code Mage"
+        description="Read the latest articles on programming, web development, software engineering best practices, and technology insights from Code Mage."
+        url="https://code-mage.vercel.app/blog"
+      />
       <div className="container mx-auto px-4">
         {/* Header */}
         <motion.div
@@ -247,7 +254,7 @@ export const Blog: React.FC = () => {
                   className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-600/50 hover:shadow-xl dark:hover:shadow-3xl transition-all duration-300 hover:-translate-y-1 backdrop-blur-sm"
                 >
                   <div className="relative">
-                    <img
+                    <LazyImage
                       src={post.image}
                       alt={post.title}
                       className="w-full h-48 object-cover"
@@ -308,7 +315,7 @@ export const Blog: React.FC = () => {
 
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <img
+                        <LazyImage
                           src={post.author.avatar}
                           alt={post.author.name}
                           className="w-8 h-8 rounded-full"

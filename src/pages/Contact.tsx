@@ -1,11 +1,17 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { SEO } from '../components';
 import { Github, Clock, Youtube, Linkedin, Heart } from 'lucide-react';
 import { SITE } from '../site.config';
 
 export const Contact: React.FC = () => {
   return (
     <div className="min-h-screen bg-cloud-100 dark:bg-navy-900 py-16">
+      <SEO
+        title="Contact Us - Code Mage"
+        description="Get in touch with Code Mage. Have questions about our programming tutorials? Want to collaborate? We'd love to hear from you!"
+        url="https://code-mage.vercel.app/contact"
+      />
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

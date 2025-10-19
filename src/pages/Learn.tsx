@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { SEO } from '../components';
+import LazyImage from '../components/LazyImage';
 import {
   BookOpen,
   Code,
@@ -257,6 +259,11 @@ export const Learn: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-cloud-100 dark:bg-navy-900 py-16">
+      <SEO
+        title="Learn Programming - Code Mage"
+        description="Explore our comprehensive programming tutorials and courses. Learn Python, JavaScript, web development, and more through hands-on projects and practical examples."
+        url="https://code-mage.vercel.app/learn"
+      />
       <div className="container mx-auto px-4">
         {/* Header */}
         <motion.div
@@ -403,7 +410,7 @@ export const Learn: React.FC = () => {
                 >
                   {/* Lesson Thumbnail */}
                   <div className="relative h-48 overflow-hidden">
-                    <img
+                    <LazyImage
                       src={lesson.thumbnail}
                       alt={lesson.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

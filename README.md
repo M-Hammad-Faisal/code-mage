@@ -15,7 +15,7 @@ A modern, interactive coding education platform built with React, TypeScript, an
 
 ## 🚀 Live Demo
 
-Visit the live application: [https://m-hammad-faisal.github.io/code-mage/](https://m-hammad-faisal.github.io/code-mage/)
+Visit the live application: [https://code-mage.vercel.app/](https://code-mage.vercel.app/)
 
 ## 🛠️ Tech Stack
 
@@ -122,18 +122,9 @@ The project is automatically deployed to GitHub Pages using GitHub Actions when 
 2. **Deploy to GitHub Pages**
    The `deploy.yml` workflow handles automatic deployment.
 
-## 🤝 Contributing
+## 💡 Suggestions
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Commit your changes (`git commit -m 'Add some amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Have ideas for new topics or content? Feel free to reach out with suggestions for tutorials, courses, or programming topics you'd like to see covered. Your input helps shape the content that benefits the developer community.
 
 ## 👨‍💻 Author
 
