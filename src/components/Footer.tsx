@@ -96,7 +96,7 @@ export const Footer: React.FC = () => {
               <motion.img
                 src={ASSETS.LOGO}
                 alt="Code Mage Logo"
-                className="w-12 h-12 shadow-lg"
+                className="w-12 h-12 rounded-lg shadow-lg"
                 whileHover={{ scale: 1.05, rotate: 5 }}
                 transition={{ type: 'spring', stiffness: 300 }}
               />

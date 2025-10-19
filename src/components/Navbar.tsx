@@ -57,7 +57,7 @@ export const Navbar: React.FC = () => {
             <img
               src={ASSETS.LOGO}
               alt={`${SITE.brand} Logo`}
-              className="w-8 h-8 group-hover:scale-110 transition-transform duration-200"
+              className="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform duration-200"
             />
             <span className="text-xl font-heading font-bold text-navy-800 dark:text-white">
               {SITE.brand}
