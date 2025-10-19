@@ -11,10 +11,10 @@ interface YouTubeCardProps {
 export const YouTubeCard: React.FC<YouTubeCardProps> = ({ video, index }) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   };
 
@@ -30,7 +30,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ video, index }) => {
           src={video.thumbnail}
           alt={video.title}
           className="w-full h-48 object-cover"
-          onError={(e) => {
+          onError={e => {
             // Fallback to a placeholder if thumbnail fails to load
             const target = e.target as HTMLImageElement;
             target.src = '/brand/Code Mage Banner.png';
@@ -43,16 +43,16 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ video, index }) => {
           {video.duration}
         </div>
       </div>
-      
+
       <div className="p-4">
         <h3 className="font-semibold text-lg mb-2 line-clamp-2 text-gray-900 dark:text-white">
           {video.title}
         </h3>
-        
+
         <p className="text-gray-600 dark:text-gray-300 text-sm mb-3 line-clamp-2">
           {video.description}
         </p>
-        
+
         <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-3">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
@@ -65,7 +65,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ video, index }) => {
             </div>
           </div>
         </div>
-        
+
         <a
           href={video.url}
           target="_blank"

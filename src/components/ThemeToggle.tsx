@@ -7,8 +7,10 @@ export const ThemeToggle: React.FC = () => {
   useEffect(() => {
     // Check for saved theme preference or default to light mode
     const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
+    const prefersDark = window.matchMedia(
+      '(prefers-color-scheme: dark)'
+    ).matches;
+
     if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
       setIsDark(true);
       document.documentElement.classList.add('dark');
@@ -22,7 +24,7 @@ export const ThemeToggle: React.FC = () => {
     const newTheme = isDark ? 'light' : 'dark';
     setIsDark(!isDark);
     localStorage.setItem('theme', newTheme);
-    
+
     if (newTheme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -37,14 +39,18 @@ export const ThemeToggle: React.FC = () => {
       aria-label="Toggle theme"
     >
       <div className="relative w-5 h-5">
-        <Sun 
+        <Sun
           className={`absolute inset-0 w-5 h-5 text-yellow-500 transition-all duration-300 ${
-            isDark ? 'opacity-0 rotate-90 scale-0' : 'opacity-100 rotate-0 scale-100'
+            isDark
+              ? 'opacity-0 rotate-90 scale-0'
+              : 'opacity-100 rotate-0 scale-100'
           }`}
         />
-        <Moon 
+        <Moon
           className={`absolute inset-0 w-5 h-5 text-blue-400 transition-all duration-300 ${
-            isDark ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-0'
+            isDark
+              ? 'opacity-100 rotate-0 scale-100'
+              : 'opacity-0 -rotate-90 scale-0'
           }`}
         />
       </div>

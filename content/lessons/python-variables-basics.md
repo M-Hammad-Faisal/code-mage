@@ -48,6 +48,7 @@ print(score)  # Output: Perfect!
 ## Quick Exercise
 
 Try creating variables for:
+
 - Your favorite programming language
 - The number of hours you code per day
 - Whether you enjoy debugging (True/False)

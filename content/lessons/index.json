@@ -9,7 +9,7 @@
     "summary": "Quick intro to variables, types, and reassignment.",
     "tags": ["python", "basics", "variables"],
     "code": [
-      {"filename": "variables.py", "path": "/code/basics/variables.py"}
+      { "filename": "variables.py", "path": "/code/basics/variables.py" }
     ],
     "bodyMdx": "/content/lessons/python-variables-basics.md"
   },
@@ -23,7 +23,7 @@
     "summary": "Explore advanced function concepts including closures and decorators.",
     "tags": ["python", "functions", "advanced"],
     "code": [
-      {"filename": "functions.py", "path": "/code/advanced/functions.py"}
+      { "filename": "functions.py", "path": "/code/advanced/functions.py" }
     ],
     "bodyMdx": "/content/lessons/python-functions-deep-dive.md"
   },
@@ -37,7 +37,10 @@
     "summary": "Understanding Python's data model and special methods.",
     "tags": ["python", "book-summary", "data-model"],
     "code": [
-      {"filename": "data_model.py", "path": "/code/book-summaries/data_model.py"}
+      {
+        "filename": "data_model.py",
+        "path": "/code/book-summaries/data_model.py"
+      }
     ],
     "bodyMdx": "/content/lessons/fluent-python-chapter-1.md"
   },
@@ -51,7 +54,10 @@
     "summary": "Learn to write clean, efficient list comprehensions.",
     "tags": ["python", "basics", "comprehensions"],
     "code": [
-      {"filename": "comprehensions.py", "path": "/code/basics/comprehensions.py"}
+      {
+        "filename": "comprehensions.py",
+        "path": "/code/basics/comprehensions.py"
+      }
     ],
     "bodyMdx": "/content/lessons/python-list-comprehensions.md"
   },
@@ -64,9 +70,7 @@
     "youtubeId": "VIDEO_ID_HERE",
     "summary": "Create a simple web scraper using requests and BeautifulSoup.",
     "tags": ["python", "projects", "web-scraping"],
-    "code": [
-      {"filename": "scraper.py", "path": "/code/projects/scraper.py"}
-    ],
+    "code": [{ "filename": "scraper.py", "path": "/code/projects/scraper.py" }],
     "bodyMdx": "/content/lessons/python-web-scraper.md"
   },
   {
@@ -79,7 +83,10 @@
     "summary": "Demystify asynchronous programming in Python.",
     "tags": ["python", "async", "advanced"],
     "code": [
-      {"filename": "async_examples.py", "path": "/code/advanced/async_examples.py"}
+      {
+        "filename": "async_examples.py",
+        "path": "/code/advanced/async_examples.py"
+      }
     ],
     "bodyMdx": "/content/lessons/python-async-await.md"
   }

@@ -1,7 +1,7 @@
 ---
-title: "5 Things I Learned from Fluent Python - Chapter 2"
-date: "2025-01-15"
-tags: ["book-summary", "python", "sequences"]
+title: '5 Things I Learned from Fluent Python - Chapter 2'
+date: '2025-01-15'
+tags: ['book-summary', 'python', 'sequences']
 ---
 
 # 5 Things I Learned from Fluent Python - Chapter 2
@@ -95,4 +95,4 @@ What's your favorite Python sequence trick? Let me know in the comments!
 
 ---
 
-*This is part of my ongoing series reading through Fluent Python. Follow along for more insights from this incredible book!*
+_This is part of my ongoing series reading through Fluent Python. Follow along for more insights from this incredible book!_

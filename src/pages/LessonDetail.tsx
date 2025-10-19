@@ -1,65 +1,68 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  Clock, 
-  User, 
-  Calendar, 
-  Tag, 
-  ChevronLeft, 
-  ChevronRight, 
-  BookOpen, 
-  Code, 
+import {
+  Clock,
+  User,
+  Calendar,
+  Tag,
+  ChevronLeft,
+  ChevronRight,
+  BookOpen,
+  Code,
   CheckCircle,
   Circle,
   Download,
-  Share2
+  Share2,
 } from 'lucide-react';
 
 // Sample lesson data - in a real app, this would come from an API
 const lessonData = {
   id: 1,
-  title: "Python Functions and Scope",
-  description: "Learn how to create and use functions in Python, understand variable scope, and master function parameters and return values.",
-  videoId: "BVfCWuca9nw", // Sample YouTube video ID
-  duration: "15:30",
-  level: "Beginner",
-  category: "Python",
+  title: 'Python Functions and Scope',
+  description:
+    'Learn how to create and use functions in Python, understand variable scope, and master function parameters and return values.',
+  videoId: 'BVfCWuca9nw', // Sample YouTube video ID
+  duration: '15:30',
+  level: 'Beginner',
+  category: 'Python',
   instructor: {
-    name: "Sarah Chen",
-    avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80",
-    title: "Senior Python Developer"
+    name: 'Sarah Chen',
+    avatar:
+      'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80',
+    title: 'Senior Python Developer',
   },
-  publishedDate: "Dec 10, 2023",
-  tags: ["Python", "Functions", "Scope", "Programming Basics"],
+  publishedDate: 'Dec 10, 2023',
+  tags: ['Python', 'Functions', 'Scope', 'Programming Basics'],
   content: {
-    overview: "In this lesson, you'll learn the fundamentals of Python functions, including how to define them, pass parameters, return values, and understand variable scope. Functions are essential building blocks in Python programming.",
+    overview:
+      "In this lesson, you'll learn the fundamentals of Python functions, including how to define them, pass parameters, return values, and understand variable scope. Functions are essential building blocks in Python programming.",
     learningObjectives: [
       "Understand what functions are and why they're important",
-      "Learn how to define and call functions",
-      "Master function parameters and arguments",
-      "Understand return values and how to use them",
-      "Learn about variable scope (local vs global)",
-      "Practice with real-world examples"
+      'Learn how to define and call functions',
+      'Master function parameters and arguments',
+      'Understand return values and how to use them',
+      'Learn about variable scope (local vs global)',
+      'Practice with real-world examples',
     ],
     prerequisites: [
-      "Basic Python syntax",
-      "Variables and data types",
-      "Control structures (if/else, loops)"
+      'Basic Python syntax',
+      'Variables and data types',
+      'Control structures (if/else, loops)',
     ],
     codeExamples: [
       {
-        title: "Basic Function Definition",
+        title: 'Basic Function Definition',
         code: `def greet(name):
     """A simple function that greets a person"""
     return f"Hello, {name}!"
 
 # Call the function
 message = greet("Alice")
-print(message)  # Output: Hello, Alice!`
+print(message)  # Output: Hello, Alice!`,
       },
       {
-        title: "Function with Multiple Parameters",
+        title: 'Function with Multiple Parameters',
         code: `def calculate_area(length, width):
     """Calculate the area of a rectangle"""
     area = length * width
@@ -71,10 +74,10 @@ print(f"Area: {result}")  # Output: Area: 15
 
 # Call with keyword arguments
 result = calculate_area(width=4, length=6)
-print(f"Area: {result}")  # Output: Area: 24`
+print(f"Area: {result}")  # Output: Area: 24`,
       },
       {
-        title: "Variable Scope Example",
+        title: 'Variable Scope Example',
         code: `# Global variable
 global_var = "I'm global"
 
@@ -86,31 +89,31 @@ def scope_example():
 
 scope_example()
 print(f"Outside function: {global_var}")
-# print(local_var)  # This would cause an error!`
-      }
-    ]
+# print(local_var)  # This would cause an error!`,
+      },
+    ],
   },
   nextLesson: {
     id: 2,
-    title: "Python Classes and Objects",
-    duration: "18:45"
+    title: 'Python Classes and Objects',
+    duration: '18:45',
   },
   prevLesson: {
     id: 0,
-    title: "Python Data Types and Variables",
-    duration: "12:20"
-  }
+    title: 'Python Data Types and Variables',
+    duration: '12:20',
+  },
 };
 
 export const LessonDetail: React.FC = () => {
   const [completedObjectives, setCompletedObjectives] = useState<number[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'code' | 'resources'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'code' | 'resources'>(
+    'overview'
+  );
 
   const toggleObjective = (index: number) => {
-    setCompletedObjectives(prev => 
-      prev.includes(index) 
-        ? prev.filter(i => i !== index)
-        : [...prev, index]
+    setCompletedObjectives(prev =>
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
     );
   };
 
@@ -125,7 +128,10 @@ export const LessonDetail: React.FC = () => {
           className="mb-6"
         >
           <nav className="flex items-center space-x-2 text-sm text-navy-600 dark:text-cloud-300">
-            <Link to="/learn" className="hover:text-red-600 dark:hover:text-red-400 transition-colors">
+            <Link
+              to="/learn"
+              className="hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            >
               Learn
             </Link>
             <span>/</span>
@@ -157,7 +163,7 @@ export const LessonDetail: React.FC = () => {
                   {lessonData.duration}
                 </div>
               </div>
-              
+
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h1 className="text-2xl md:text-3xl font-bold text-navy-900 dark:text-cloud-100">
@@ -190,11 +196,15 @@ export const LessonDetail: React.FC = () => {
                     <Clock className="w-4 h-4" />
                     <span>{lessonData.duration}</span>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    lessonData.level === 'Beginner' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                    lessonData.level === 'Intermediate' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                    'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      lessonData.level === 'Beginner'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        : lessonData.level === 'Intermediate'
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                    }`}
+                  >
                     {lessonData.level}
                   </span>
                 </div>
@@ -227,11 +237,15 @@ export const LessonDetail: React.FC = () => {
                   {[
                     { id: 'overview', label: 'Overview', icon: BookOpen },
                     { id: 'code', label: 'Code Examples', icon: Code },
-                    { id: 'resources', label: 'Resources', icon: Download }
+                    { id: 'resources', label: 'Resources', icon: Download },
                   ].map(tab => (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id as 'overview' | 'code' | 'resources')}
+                      onClick={() =>
+                        setActiveTab(
+                          tab.id as 'overview' | 'code' | 'resources'
+                        )
+                      }
                       className={`flex items-center space-x-2 py-4 border-b-2 font-medium text-sm transition-colors ${
                         activeTab === tab.id
                           ? 'border-red-600 text-red-600 dark:text-red-400'
@@ -263,26 +277,30 @@ export const LessonDetail: React.FC = () => {
                         Learning Objectives
                       </h4>
                       <div className="space-y-2">
-                        {lessonData.content.learningObjectives.map((objective, index) => (
-                          <div
-                            key={index}
-                            className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                            onClick={() => toggleObjective(index)}
-                          >
-                            {completedObjectives.includes(index) ? (
-                              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-                            ) : (
-                              <Circle className="w-5 h-5 text-navy-400 dark:text-cloud-400 mt-0.5 flex-shrink-0" />
-                            )}
-                            <span className={`text-sm ${
-                              completedObjectives.includes(index)
-                                ? 'text-navy-900 dark:text-cloud-100 line-through'
-                                : 'text-navy-600 dark:text-cloud-300'
-                            }`}>
-                              {objective}
-                            </span>
-                          </div>
-                        ))}
+                        {lessonData.content.learningObjectives.map(
+                          (objective, index) => (
+                            <div
+                              key={index}
+                              className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                              onClick={() => toggleObjective(index)}
+                            >
+                              {completedObjectives.includes(index) ? (
+                                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                              ) : (
+                                <Circle className="w-5 h-5 text-navy-400 dark:text-cloud-400 mt-0.5 flex-shrink-0" />
+                              )}
+                              <span
+                                className={`text-sm ${
+                                  completedObjectives.includes(index)
+                                    ? 'text-navy-900 dark:text-cloud-100 line-through'
+                                    : 'text-navy-600 dark:text-cloud-300'
+                                }`}
+                              >
+                                {objective}
+                              </span>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
 
@@ -291,12 +309,17 @@ export const LessonDetail: React.FC = () => {
                         Prerequisites
                       </h4>
                       <ul className="space-y-1">
-                        {lessonData.content.prerequisites.map((prereq, index) => (
-                          <li key={index} className="text-sm text-navy-600 dark:text-cloud-300 flex items-center space-x-2">
-                            <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
-                            <span>{prereq}</span>
-                          </li>
-                        ))}
+                        {lessonData.content.prerequisites.map(
+                          (prereq, index) => (
+                            <li
+                              key={index}
+                              className="text-sm text-navy-600 dark:text-cloud-300 flex items-center space-x-2"
+                            >
+                              <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
+                              <span>{prereq}</span>
+                            </li>
+                          )
+                        )}
                       </ul>
                     </div>
                   </div>
@@ -305,7 +328,10 @@ export const LessonDetail: React.FC = () => {
                 {activeTab === 'code' && (
                   <div className="space-y-6">
                     {lessonData.content.codeExamples.map((example, index) => (
-                      <div key={index} className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+                      <div
+                        key={index}
+                        className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden"
+                      >
                         <div className="bg-gray-50 dark:bg-gray-700 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
                           <h4 className="font-medium text-navy-900 dark:text-cloud-100">
                             {example.title}
@@ -327,7 +353,8 @@ export const LessonDetail: React.FC = () => {
                         Additional Resources
                       </h3>
                       <p className="text-navy-600 dark:text-cloud-300 mb-4">
-                        Download code examples, slides, and additional materials for this lesson.
+                        Download code examples, slides, and additional materials
+                        for this lesson.
                       </p>
                       <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors duration-200">
                         Download Resources
@@ -378,7 +405,7 @@ export const LessonDetail: React.FC = () => {
               <h3 className="font-semibold text-navy-900 dark:text-cloud-100 mb-4">
                 Lesson Navigation
               </h3>
-              
+
               {/* Previous Lesson */}
               {lessonData.prevLesson && (
                 <Link
@@ -387,7 +414,9 @@ export const LessonDetail: React.FC = () => {
                 >
                   <ChevronLeft className="w-5 h-5 text-navy-400 dark:text-cloud-400 group-hover:text-red-600 dark:group-hover:text-red-400" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-navy-500 dark:text-cloud-400 mb-1">Previous</p>
+                    <p className="text-xs text-navy-500 dark:text-cloud-400 mb-1">
+                      Previous
+                    </p>
                     <p className="font-medium text-navy-900 dark:text-cloud-100 truncate">
                       {lessonData.prevLesson.title}
                     </p>
@@ -405,7 +434,9 @@ export const LessonDetail: React.FC = () => {
                   className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-navy-500 dark:text-cloud-400 mb-1">Next</p>
+                    <p className="text-xs text-navy-500 dark:text-cloud-400 mb-1">
+                      Next
+                    </p>
                     <p className="font-medium text-navy-900 dark:text-cloud-100 truncate">
                       {lessonData.nextLesson.title}
                     </p>

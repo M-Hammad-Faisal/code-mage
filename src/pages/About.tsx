@@ -16,7 +16,8 @@ export const About: React.FC = () => {
             About Code Mage
           </h1>
           <p className="text-xl text-navy-600 dark:text-cloud-300 max-w-3xl mx-auto">
-            Empowering developers with high-quality Python tutorials, code examples, and programming insights.
+            Empowering developers with high-quality Python tutorials, code
+            examples, and programming insights.
           </p>
         </motion.div>
 
@@ -33,14 +34,16 @@ export const About: React.FC = () => {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
               <p className="text-lg text-navy-700 dark:text-cloud-300 mb-6">
-                At Code Mage, we believe that programming should be accessible, enjoyable, and transformative. 
-                Our mission is to create the most comprehensive and beginner-friendly Python learning platform 
+                At Code Mage, we believe that programming should be accessible,
+                enjoyable, and transformative. Our mission is to create the most
+                comprehensive and beginner-friendly Python learning platform
                 that helps developers at all levels master the art of coding.
               </p>
               <p className="text-lg text-navy-700 dark:text-cloud-300">
-                Whether you're just starting your programming journey or looking to advance your skills, 
-                we provide clear explanations, practical examples, and real-world projects that make 
-                learning Python both effective and fun.
+                Whether you're just starting your programming journey or looking
+                to advance your skills, we provide clear explanations, practical
+                examples, and real-world projects that make learning Python both
+                effective and fun.
               </p>
             </div>
             <div className="flex justify-center">
@@ -66,24 +69,39 @@ export const About: React.FC = () => {
               <div className="bg-red-600 p-6 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
                 <Code className="w-10 h-10 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-navy-900 dark:text-cloud-100 mb-4">Full-Stack Development</h3>
-              <p className="text-navy-600 dark:text-cloud-300">Building complete web applications from frontend to backend with modern technologies.</p>
+              <h3 className="text-xl font-bold text-navy-900 dark:text-cloud-100 mb-4">
+                Full-Stack Development
+              </h3>
+              <p className="text-navy-600 dark:text-cloud-300">
+                Building complete web applications from frontend to backend with
+                modern technologies.
+              </p>
             </div>
 
             <div className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl p-6 border border-gray-200 dark:border-gray-600/50 text-center backdrop-blur-sm">
               <div className="bg-blue-600 p-6 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
                 <Palette className="w-10 h-10 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-navy-900 dark:text-cloud-100 mb-4">UI/UX Design</h3>
-              <p className="text-navy-600 dark:text-cloud-300">Creating beautiful and intuitive user interfaces with attention to user experience.</p>
+              <h3 className="text-xl font-bold text-navy-900 dark:text-cloud-100 mb-4">
+                UI/UX Design
+              </h3>
+              <p className="text-navy-600 dark:text-cloud-300">
+                Creating beautiful and intuitive user interfaces with attention
+                to user experience.
+              </p>
             </div>
 
             <div className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl p-6 border border-gray-200 dark:border-gray-600/50 text-center backdrop-blur-sm">
               <div className="bg-green-600 p-6 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
                 <Smartphone className="w-10 h-10 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-navy-900 dark:text-cloud-100 mb-4">Mobile Development</h3>
-              <p className="text-navy-600 dark:text-cloud-300">Developing responsive mobile applications for iOS and Android platforms.</p>
+              <h3 className="text-xl font-bold text-navy-900 dark:text-cloud-100 mb-4">
+                Mobile Development
+              </h3>
+              <p className="text-navy-600 dark:text-cloud-300">
+                Developing responsive mobile applications for iOS and Android
+                platforms.
+              </p>
             </div>
           </div>
         </motion.div>
@@ -107,8 +125,8 @@ export const About: React.FC = () => {
                 Quality First
               </h3>
               <p className="text-navy-600 dark:text-cloud-300">
-                Every tutorial, code example, and resource is carefully crafted and tested 
-                to ensure accuracy, clarity, and practical value.
+                Every tutorial, code example, and resource is carefully crafted
+                and tested to ensure accuracy, clarity, and practical value.
               </p>
             </div>
             <div className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl p-6 border border-gray-200 dark:border-gray-600/50 text-center backdrop-blur-sm">
@@ -119,8 +137,9 @@ export const About: React.FC = () => {
                 Community Driven
               </h3>
               <p className="text-navy-600 dark:text-cloud-300">
-                We listen to our community and continuously improve our content based 
-                on feedback, questions, and suggestions from fellow developers.
+                We listen to our community and continuously improve our content
+                based on feedback, questions, and suggestions from fellow
+                developers.
               </p>
             </div>
             <div className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl p-6 border border-gray-200 dark:border-gray-600/50 text-center backdrop-blur-sm">
@@ -131,8 +150,9 @@ export const About: React.FC = () => {
                 Passion for Teaching
               </h3>
               <p className="text-navy-600 dark:text-cloud-300">
-                We're passionate about sharing knowledge and helping others succeed 
-                in their programming journey, one line of code at a time.
+                We're passionate about sharing knowledge and helping others
+                succeed in their programming journey, one line of code at a
+                time.
               </p>
             </div>
           </div>
@@ -149,16 +169,12 @@ export const About: React.FC = () => {
             Ready to Start Your Journey?
           </h2>
           <p className="text-lg text-navy-700 dark:text-cloud-300 max-w-2xl mx-auto mb-8">
-            Ready to level up your programming skills? Join thousands of developers who are 
-            already learning with Code Mage.
+            Ready to level up your programming skills? Join thousands of
+            developers who are already learning with Code Mage.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="btn-primary">
-              Start Learning
-            </button>
-            <button className="btn-secondary">
-              Watch Videos
-            </button>
+            <button className="btn-primary">Start Learning</button>
+            <button className="btn-secondary">Watch Videos</button>
           </div>
         </motion.div>
       </div>

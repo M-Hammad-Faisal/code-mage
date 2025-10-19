@@ -4,7 +4,6 @@ import { Github, Clock, Youtube, Linkedin, Heart } from 'lucide-react';
 import { SITE } from '../site.config';
 
 export const Contact: React.FC = () => {
-
   return (
     <div className="min-h-screen bg-cloud-100 dark:bg-navy-900 py-16">
       <div className="container mx-auto px-4">
@@ -18,7 +17,8 @@ export const Contact: React.FC = () => {
             Get in Touch
           </h1>
           <p className="text-xl text-navy-600 dark:text-cloud-300 max-w-3xl mx-auto">
-            Have questions, suggestions, or just want to say hello? We'd love to hear from you!
+            Have questions, suggestions, or just want to say hello? We'd love to
+            hear from you!
           </p>
         </motion.div>
 
@@ -35,7 +35,10 @@ export const Contact: React.FC = () => {
             </h2>
             <form className="space-y-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-navy-700 dark:text-cloud-300 mb-2">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-navy-700 dark:text-cloud-300 mb-2"
+                >
                   Name
                 </label>
                 <input
@@ -47,7 +50,10 @@ export const Contact: React.FC = () => {
                 />
               </div>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-navy-700 dark:text-cloud-300 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-navy-700 dark:text-cloud-300 mb-2"
+                >
                   Email
                 </label>
                 <input
@@ -59,7 +65,10 @@ export const Contact: React.FC = () => {
                 />
               </div>
               <div>
-                <label htmlFor="subject" className="block text-sm font-medium text-navy-700 dark:text-cloud-300 mb-2">
+                <label
+                  htmlFor="subject"
+                  className="block text-sm font-medium text-navy-700 dark:text-cloud-300 mb-2"
+                >
                   Subject
                 </label>
                 <input
@@ -71,7 +80,10 @@ export const Contact: React.FC = () => {
                 />
               </div>
               <div>
-                <label htmlFor="message" className="block text-sm font-medium text-navy-700 dark:text-cloud-300 mb-2">
+                <label
+                  htmlFor="message"
+                  className="block text-sm font-medium text-navy-700 dark:text-cloud-300 mb-2"
+                >
                   Message
                 </label>
                 <textarea
@@ -147,12 +159,15 @@ export const Contact: React.FC = () => {
                 Response Time
               </h3>
               <p className="text-navy-600 dark:text-cloud-300 mb-4">
-                We typically respond to messages within 24-48 hours. For urgent matters, 
-                please reach out via our Discord community for faster assistance.
+                We typically respond to messages within 24-48 hours. For urgent
+                matters, please reach out via our Discord community for faster
+                assistance.
               </p>
               <div className="flex items-center space-x-2 text-green-600">
                 <Clock className="w-5 h-5" />
-                <span className="text-sm font-medium">Usually responds within a day</span>
+                <span className="text-sm font-medium">
+                  Usually responds within a day
+                </span>
               </div>
             </div>
           </motion.div>
@@ -174,7 +189,8 @@ export const Contact: React.FC = () => {
                 How can I suggest a tutorial topic?
               </summary>
               <p className="mt-2 text-navy-600 dark:text-cloud-300 text-sm">
-                We love hearing your ideas! Send us a message with your topic suggestion and we'll consider it for future content.
+                We love hearing your ideas! Send us a message with your topic
+                suggestion and we'll consider it for future content.
               </p>
             </details>
             <details className="group">
@@ -182,7 +198,8 @@ export const Contact: React.FC = () => {
                 Do you offer one-on-one tutoring?
               </summary>
               <p className="mt-2 text-navy-600 dark:text-cloud-300 text-sm">
-                Currently, we focus on creating comprehensive tutorials and guides. For personalized help, join our Discord community.
+                Currently, we focus on creating comprehensive tutorials and
+                guides. For personalized help, join our Discord community.
               </p>
             </details>
             <details className="group">
@@ -190,7 +207,8 @@ export const Contact: React.FC = () => {
                 Can I contribute to Code Mage?
               </summary>
               <p className="mt-2 text-navy-600 dark:text-cloud-300 text-sm">
-                Absolutely! We welcome contributions from the community. Reach out to discuss collaboration opportunities.
+                Absolutely! We welcome contributions from the community. Reach
+                out to discuss collaboration opportunities.
               </p>
             </details>
           </div>

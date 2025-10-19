@@ -41,7 +41,7 @@ export const YouTubeSection: React.FC = () => {
               Learn programming with our latest video tutorials
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[...Array(6)].map((_, index) => (
               <div

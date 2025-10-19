@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  BookOpen, 
-  Code, 
-  Zap, 
-  CheckCircle, 
-  Clock, 
-  Users, 
-  FileText, 
-  Target, 
+import {
+  BookOpen,
+  Code,
+  Zap,
+  CheckCircle,
+  Clock,
+  Users,
+  FileText,
+  Target,
   Play,
   Search,
   Filter,
@@ -17,7 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Star,
-  BarChart3
+  BarChart3,
 } from 'lucide-react';
 import { YouTubeSection } from '../components/YouTubeSection';
 
@@ -25,139 +25,160 @@ import { YouTubeSection } from '../components/YouTubeSection';
 const lessons = [
   {
     id: 1,
-    title: "Python Fundamentals",
-    description: "Learn the basics of Python programming including variables, data types, and control structures.",
-    category: "Python Basics",
-    level: "Beginner",
-    duration: "2:30",
+    title: 'Python Fundamentals',
+    description:
+      'Learn the basics of Python programming including variables, data types, and control structures.',
+    category: 'Python Basics',
+    level: 'Beginner',
+    duration: '2:30',
     students: 1234,
     rating: 4.8,
-    instructor: "Sarah Chen",
-    thumbnail: "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-    tags: ["Python", "Variables", "Data Types", "Control Flow"],
-    icon: BookOpen
+    instructor: 'Sarah Chen',
+    thumbnail:
+      'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+    tags: ['Python', 'Variables', 'Data Types', 'Control Flow'],
+    icon: BookOpen,
   },
   {
     id: 2,
-    title: "Object-Oriented Programming",
-    description: "Master classes, objects, inheritance, and polymorphism in Python.",
-    category: "Python Basics",
-    level: "Intermediate",
-    duration: "3:15",
+    title: 'Object-Oriented Programming',
+    description:
+      'Master classes, objects, inheritance, and polymorphism in Python.',
+    category: 'Python Basics',
+    level: 'Intermediate',
+    duration: '3:15',
     students: 856,
     rating: 4.9,
-    instructor: "Mike Johnson",
-    thumbnail: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-    tags: ["OOP", "Classes", "Inheritance", "Polymorphism"],
-    icon: Code
+    instructor: 'Mike Johnson',
+    thumbnail:
+      'https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+    tags: ['OOP', 'Classes', 'Inheritance', 'Polymorphism'],
+    icon: Code,
   },
   {
     id: 3,
-    title: "Web Development with Flask",
+    title: 'Web Development with Flask',
     description: "Build web applications using Python's Flask framework.",
-    category: "Web Development",
-    level: "Intermediate",
-    duration: "4:00",
+    category: 'Web Development',
+    level: 'Intermediate',
+    duration: '4:00',
     students: 642,
     rating: 4.7,
-    instructor: "Emily Davis",
-    thumbnail: "https://images.unsplash.com/photo-1627398242454-45a1465c2479?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-    tags: ["Flask", "Web Development", "Backend", "API"],
-    icon: Zap
+    instructor: 'Emily Davis',
+    thumbnail:
+      'https://images.unsplash.com/photo-1627398242454-45a1465c2479?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+    tags: ['Flask', 'Web Development', 'Backend', 'API'],
+    icon: Zap,
   },
   {
     id: 4,
-    title: "Data Analysis with Pandas",
-    description: "Learn to manipulate and analyze data using the Pandas library.",
-    category: "Data Science",
-    level: "Intermediate",
-    duration: "3:45",
+    title: 'Data Analysis with Pandas',
+    description:
+      'Learn to manipulate and analyze data using the Pandas library.',
+    category: 'Data Science',
+    level: 'Intermediate',
+    duration: '3:45',
     students: 789,
     rating: 4.6,
-    instructor: "David Wilson",
-    thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-    tags: ["Pandas", "Data Analysis", "CSV", "DataFrames"],
-    icon: BarChart3
+    instructor: 'David Wilson',
+    thumbnail:
+      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+    tags: ['Pandas', 'Data Analysis', 'CSV', 'DataFrames'],
+    icon: BarChart3,
   },
   {
     id: 5,
-    title: "Machine Learning Basics",
-    description: "Introduction to machine learning concepts and scikit-learn.",
-    category: "Data Science",
-    level: "Advanced",
-    duration: "5:20",
+    title: 'Machine Learning Basics',
+    description: 'Introduction to machine learning concepts and scikit-learn.',
+    category: 'Data Science',
+    level: 'Advanced',
+    duration: '5:20',
     students: 423,
     rating: 4.8,
-    instructor: "Dr. Lisa Park",
-    thumbnail: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-    tags: ["Machine Learning", "Scikit-learn", "Algorithms", "AI"],
-    icon: Target
+    instructor: 'Dr. Lisa Park',
+    thumbnail:
+      'https://images.unsplash.com/photo-1555949963-aa79dcee981c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+    tags: ['Machine Learning', 'Scikit-learn', 'Algorithms', 'AI'],
+    icon: Target,
   },
   {
     id: 6,
-    title: "API Development",
-    description: "Create RESTful APIs using Python and modern frameworks.",
-    category: "Web Development",
-    level: "Advanced",
-    duration: "4:30",
+    title: 'API Development',
+    description: 'Create RESTful APIs using Python and modern frameworks.',
+    category: 'Web Development',
+    level: 'Advanced',
+    duration: '4:30',
     students: 567,
     rating: 4.7,
-    instructor: "Alex Rodriguez",
-    thumbnail: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-    tags: ["API", "REST", "FastAPI", "Backend"],
-    icon: Play
+    instructor: 'Alex Rodriguez',
+    thumbnail:
+      'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+    tags: ['API', 'REST', 'FastAPI', 'Backend'],
+    icon: Play,
   },
   {
     id: 7,
-    title: "Python Testing & Debugging",
-    description: "Learn testing frameworks and debugging techniques for Python applications.",
-    category: "Python Basics",
-    level: "Intermediate",
-    duration: "2:45",
+    title: 'Python Testing & Debugging',
+    description:
+      'Learn testing frameworks and debugging techniques for Python applications.',
+    category: 'Python Basics',
+    level: 'Intermediate',
+    duration: '2:45',
     students: 345,
     rating: 4.5,
-    instructor: "Rachel Green",
-    thumbnail: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-    tags: ["Testing", "Debugging", "PyTest", "Unit Tests"],
-    icon: CheckCircle
+    instructor: 'Rachel Green',
+    thumbnail:
+      'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+    tags: ['Testing', 'Debugging', 'PyTest', 'Unit Tests'],
+    icon: CheckCircle,
   },
   {
     id: 8,
-    title: "Database Integration",
-    description: "Connect Python applications with databases using SQLAlchemy and more.",
-    category: "Web Development",
-    level: "Intermediate",
-    duration: "3:30",
+    title: 'Database Integration',
+    description:
+      'Connect Python applications with databases using SQLAlchemy and more.',
+    category: 'Web Development',
+    level: 'Intermediate',
+    duration: '3:30',
     students: 678,
     rating: 4.6,
-    instructor: "Tom Anderson",
-    thumbnail: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-    tags: ["Database", "SQLAlchemy", "SQL", "ORM"],
-    icon: FileText
+    instructor: 'Tom Anderson',
+    thumbnail:
+      'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+    tags: ['Database', 'SQLAlchemy', 'SQL', 'ORM'],
+    icon: FileText,
   },
   {
     id: 9,
-    title: "Async Programming in Python",
-    description: "Master asynchronous programming with asyncio and async/await.",
-    category: "Advanced Python",
-    level: "Advanced",
-    duration: "4:15",
+    title: 'Async Programming in Python',
+    description:
+      'Master asynchronous programming with asyncio and async/await.',
+    category: 'Advanced Python',
+    level: 'Advanced',
+    duration: '4:15',
     students: 234,
     rating: 4.9,
-    instructor: "Kevin Liu",
-    thumbnail: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
-    tags: ["Async", "Asyncio", "Concurrency", "Performance"],
-    icon: Zap
-  }
+    instructor: 'Kevin Liu',
+    thumbnail:
+      'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+    tags: ['Async', 'Asyncio', 'Concurrency', 'Performance'],
+    icon: Zap,
+  },
 ];
 
-const categories = ["All", "Python Basics", "Web Development", "Data Science", "Advanced Python"];
-const levels = ["All", "Beginner", "Intermediate", "Advanced"];
+const categories = [
+  'All',
+  'Python Basics',
+  'Web Development',
+  'Data Science',
+  'Advanced Python',
+];
+const levels = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 const sortOptions = [
-  { value: "popular", label: "Most Popular" },
-  { value: "newest", label: "Newest" },
-  { value: "rating", label: "Highest Rated" },
-  { value: "duration", label: "Duration" }
+  { value: 'popular', label: 'Most Popular' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'rating', label: 'Highest Rated' },
+  { value: 'duration', label: 'Duration' },
 ];
 
 export const Learn: React.FC = () => {
@@ -167,18 +188,23 @@ export const Learn: React.FC = () => {
   const [sortBy, setSortBy] = useState('popular');
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   const lessonsPerPage = 6;
 
   // Filter and sort lessons
   const filteredAndSortedLessons = useMemo(() => {
     const filtered = lessons.filter(lesson => {
-      const matchesSearch = lesson.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           lesson.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           lesson.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchesCategory = selectedCategory === 'All' || lesson.category === selectedCategory;
-      const matchesLevel = selectedLevel === 'All' || lesson.level === selectedLevel;
-      
+      const matchesSearch =
+        lesson.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lesson.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lesson.tags.some(tag =>
+          tag.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      const matchesCategory =
+        selectedCategory === 'All' || lesson.category === selectedCategory;
+      const matchesLevel =
+        selectedLevel === 'All' || lesson.level === selectedLevel;
+
       return matchesSearch && matchesCategory && matchesLevel;
     });
 
@@ -202,9 +228,14 @@ export const Learn: React.FC = () => {
   }, [searchTerm, selectedCategory, selectedLevel, sortBy]);
 
   // Pagination
-  const totalPages = Math.ceil(filteredAndSortedLessons.length / lessonsPerPage);
+  const totalPages = Math.ceil(
+    filteredAndSortedLessons.length / lessonsPerPage
+  );
   const startIndex = (currentPage - 1) * lessonsPerPage;
-  const paginatedLessons = filteredAndSortedLessons.slice(startIndex, startIndex + lessonsPerPage);
+  const paginatedLessons = filteredAndSortedLessons.slice(
+    startIndex,
+    startIndex + lessonsPerPage
+  );
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -238,7 +269,8 @@ export const Learn: React.FC = () => {
             Learn Python
           </h1>
           <p className="text-xl text-gray-600 dark:text-white max-w-3xl mx-auto">
-            Master Python programming with our comprehensive lessons, from beginner basics to advanced concepts.
+            Master Python programming with our comprehensive lessons, from
+            beginner basics to advanced concepts.
           </p>
         </motion.div>
 
@@ -256,7 +288,7 @@ export const Learn: React.FC = () => {
               type="text"
               placeholder="Search lessons, topics, or technologies..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-navy-900 dark:text-cloud-100 placeholder-navy-400 dark:placeholder-cloud-400 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
             />
           </div>
@@ -269,18 +301,21 @@ export const Learn: React.FC = () => {
             >
               <Filter className="w-4 h-4" />
               <span>Filters</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`}
+              />
             </button>
-            
+
             <div className="flex items-center space-x-4">
               <span className="text-navy-600 dark:text-cloud-300">
-                {filteredAndSortedLessons.length} lesson{filteredAndSortedLessons.length !== 1 ? 's' : ''} found
+                {filteredAndSortedLessons.length} lesson
+                {filteredAndSortedLessons.length !== 1 ? 's' : ''} found
               </span>
-              
+
               {/* Sort Dropdown */}
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={e => setSortBy(e.target.value)}
                 className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-navy-600 dark:text-cloud-300 focus:outline-none focus:ring-2 focus:ring-red-600"
               >
                 {sortOptions.map(option => (
@@ -374,7 +409,9 @@ export const Learn: React.FC = () => {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute top-4 left-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getLevelColor(lesson.level)}`}>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${getLevelColor(lesson.level)}`}
+                      >
                         {lesson.level}
                       </span>
                     </div>
