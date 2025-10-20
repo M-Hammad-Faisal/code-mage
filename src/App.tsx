@@ -23,6 +23,11 @@ const LessonDetail = lazy(() =>
     default: module.LessonDetail,
   }))
 );
+const BlogDetail = lazy(() =>
+  import('./pages/BlogDetail').then(module => ({
+    default: module.BlogDetail,
+  }))
+);
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Loading component for Suspense fallback
@@ -43,6 +48,7 @@ function App() {
             <Route path="/learn" element={<Learn />} />
             <Route path="/learn/:id" element={<LessonDetail />} />
             <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:id" element={<BlogDetail />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="*" element={<NotFound />} />

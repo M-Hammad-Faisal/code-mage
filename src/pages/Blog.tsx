@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Clock,
@@ -16,115 +17,206 @@ import LazyImage from '../components/LazyImage';
 const blogPosts = [
   {
     id: 1,
-    title: 'Python Data Structures Deep Dive',
+    title:
+      "From Confusion to Clarity: Understanding Python's Mutable Default Arguments",
     excerpt:
-      "Explore the inner workings of Python's built-in data structures and learn when to use each one for optimal performance.",
+      'The notorious Python gotcha that trips up even senior developers. Master mutable default arguments once and for all with visual explanations, real-world examples, and bulletproof solutions.',
     image:
-      'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'Python',
-    tags: ['Python', 'Data Structures', 'Performance'],
-    date: 'Dec 10, 2023',
-    readTime: '8 min',
-    views: '1.2k',
+      'https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    category: 'Python Deep Dive',
+    tags: [
+      'python',
+      'gotchas',
+      'functions',
+      'mutable',
+      'interview',
+      'debugging',
+      'best-practices',
+    ],
+    date: 'Jan 16, 2025',
+    readTime: '12 min',
+    views: '2.8k',
     author: {
-      name: 'Sarah Chen',
-      avatar:
-        'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80',
+      name: 'Code Mage',
+      avatar: '/brand/Code Mage Logo.webp',
     },
   },
   {
     id: 2,
-    title: 'Building REST APIs with FastAPI',
+    title: 'Can You Solve This? The Trickiest List-Comprehension Puzzle Ever',
     excerpt:
-      'Learn how to create fast, modern APIs using FastAPI and Python type hints for better development experience.',
+      'Think you know list comprehensions? 🤔 This mind-bending puzzle has stumped senior developers. Can you crack it? Drop your solution in the comments and see how you stack up!',
     image:
-      'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'Web Development',
-    tags: ['FastAPI', 'Python', 'REST API', 'Backend'],
-    date: 'Dec 8, 2023',
-    readTime: '12 min',
-    views: '2.1k',
+      'https://images.unsplash.com/photo-1509228468518-180dd4864904?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    category: 'Python Challenges',
+    tags: [
+      'python',
+      'list-comprehension',
+      'challenge',
+      'puzzle',
+      'interactive',
+      'advanced',
+    ],
+    date: 'Jan 16, 2025',
+    readTime: '8 min',
+    views: '4.1k',
     author: {
-      name: 'Mike Rodriguez',
-      avatar:
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80',
+      name: 'Code Mage',
+      avatar: '/brand/Code Mage Logo.webp',
     },
   },
   {
     id: 3,
-    title: 'Machine Learning with Scikit-learn',
+    title: '5 Python Problems That Made Me Rage-Quit (and What I Learned)',
     excerpt:
-      "Get started with machine learning using Python's most popular ML library and build your first predictive models.",
+      "Every Python developer has been there - staring at code that should work but doesn't. Here are 5 problems that nearly broke me, and the hard-won lessons that made me a better programmer.",
     image:
-      'https://images.unsplash.com/photo-1555949963-aa79dcee981c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'Machine Learning',
-    tags: ['Machine Learning', 'Scikit-learn', 'Python', 'AI'],
-    date: 'Dec 5, 2023',
-    readTime: '15 min',
-    views: '3.5k',
+      'https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    category: 'Python Problems',
+    tags: [
+      'python',
+      'debugging',
+      'problems',
+      'learning',
+      'gotchas',
+      'experience',
+    ],
+    date: 'Jan 16, 2025',
+    readTime: '10 min',
+    views: '3.7k',
     author: {
-      name: 'Dr. Emily Watson',
-      avatar:
-        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80',
+      name: 'Code Mage',
+      avatar: '/brand/Code Mage Logo.webp',
     },
   },
   {
     id: 4,
-    title: 'React Hooks Mastery Guide',
+    title:
+      'Building a Mini Hogwarts Sorting Hat AI in Python (Beginner Friendly Project)',
     excerpt:
-      'Master React Hooks with practical examples and learn how to build custom hooks for reusable logic.',
+      "Ever wondered which Hogwarts house you truly belong to? Let's build an AI that can sort you! This beginner-friendly project teaches machine learning fundamentals while creating something magical.",
     image:
-      'https://images.unsplash.com/photo-1633356122544-f134324a6cee?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'React',
-    tags: ['React', 'Hooks', 'JavaScript', 'Frontend'],
-    date: 'Dec 3, 2023',
-    readTime: '10 min',
-    views: '2.8k',
+      'https://images.unsplash.com/photo-1484417894907-623942c8ee29?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    category: 'AI Projects',
+    tags: [
+      'python',
+      'ai',
+      'machine-learning',
+      'beginner',
+      'project',
+      'harry-potter',
+      'classification',
+    ],
+    date: 'Jan 15, 2025',
+    readTime: '15 min',
+    views: '5.2k',
     author: {
-      name: 'Alex Thompson',
-      avatar:
-        'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80',
+      name: 'Code Mage',
+      avatar: '/brand/Code Mage Logo.webp',
     },
   },
   {
     id: 5,
-    title: 'Database Design Best Practices',
+    title: 'Loops Are Spells: How to Think Recursively in Python',
     excerpt:
-      'Learn essential database design principles and normalization techniques for scalable applications.',
+      'Step into the magical world of recursion! 🪄 Learn to think like a wizard and master the art of recursive spells. From simple incantations to powerful algorithms, discover the magic within your code.',
     image:
-      'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'Database',
-    tags: ['Database', 'SQL', 'Design', 'Backend'],
-    date: 'Nov 30, 2023',
-    readTime: '14 min',
-    views: '1.9k',
+      'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    category: 'Python Magic',
+    tags: [
+      'python',
+      'recursion',
+      'algorithms',
+      'beginner',
+      'storytelling',
+      'magic',
+      'functions',
+    ],
+    date: 'Jan 15, 2025',
+    readTime: '12 min',
+    views: '3.9k',
     author: {
-      name: 'David Kim',
-      avatar:
-        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80',
+      name: 'Code Mage',
+      avatar: '/brand/Code Mage Logo.webp',
     },
   },
   {
     id: 6,
-    title: 'TypeScript for JavaScript Developers',
+    title: "What I Learned After Reading Fluent Python — So You Don't Have To",
     excerpt:
-      'Transition from JavaScript to TypeScript with confidence and improve your code quality and developer experience.',
+      "Fluent Python is a masterpiece, but it's also 800+ pages of dense content. Here are the game-changing insights that will level up your Python skills without reading the entire book.",
     image:
-      'https://images.unsplash.com/photo-1516116216624-53e697fedbea?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'TypeScript',
-    tags: ['TypeScript', 'JavaScript', 'Types', 'Development'],
-    date: 'Nov 28, 2023',
-    readTime: '11 min',
-    views: '4.2k',
+      'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    category: 'Book Summary',
+    tags: [
+      'python',
+      'book-summary',
+      'fluent-python',
+      'advanced',
+      'learning',
+      'insights',
+    ],
+    date: 'Jan 14, 2025',
+    readTime: '10 min',
+    views: '6.1k',
     author: {
-      name: 'Lisa Park',
-      avatar:
-        'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80',
+      name: 'Code Mage',
+      avatar: '/brand/Code Mage Logo.webp',
+    },
+  },
+  {
+    id: 7,
+    title: "The Magic Behind Python's 'is' vs '==' — Explained Like You're 5",
+    excerpt:
+      'Why does `a is b` sometimes work and sometimes not? 🤔 Let\'s unravel this Python mystery with simple analogies that will make you go "Aha!" and never confuse identity with equality again.',
+    image:
+      'https://images.unsplash.com/photo-1629654297299-c8506221ca97?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    category: 'Python Fundamentals',
+    tags: [
+      'python',
+      'fundamentals',
+      'identity',
+      'equality',
+      'beginner',
+      'comparison',
+      'operators',
+    ],
+    date: 'Jan 14, 2025',
+    readTime: '7 min',
+    views: '4.8k',
+    author: {
+      name: 'Code Mage',
+      avatar: '/brand/Code Mage Logo.webp',
+    },
+  },
+  {
+    id: 8,
+    title: "10 Python Mistakes You're Probably Making Without Realizing It",
+    excerpt:
+      'Even experienced Python developers fall into these traps. Discover the subtle mistakes that could be slowing down your code and making your programs behave unexpectedly.',
+    image:
+      'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    category: 'Python Tips',
+    tags: [
+      'python',
+      'mistakes',
+      'best-practices',
+      'performance',
+      'debugging',
+      'tips',
+    ],
+    date: 'Jan 13, 2025',
+    readTime: '9 min',
+    views: '7.3k',
+    author: {
+      name: 'Code Mage',
+      avatar: '/brand/Code Mage Logo.webp',
     },
   },
 ];
 
 export const Blog: React.FC = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
@@ -251,7 +343,8 @@ export const Blog: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.1 * index }}
-                  className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-600/50 hover:shadow-xl dark:hover:shadow-3xl transition-all duration-300 hover:-translate-y-1 backdrop-blur-sm"
+                  className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-600/50 hover:shadow-xl dark:hover:shadow-3xl transition-all duration-300 hover:-translate-y-1 backdrop-blur-sm cursor-pointer"
+                  onClick={() => navigate(`/blog/${post.id}`)}
                 >
                   <div className="relative">
                     <LazyImage
@@ -325,6 +418,10 @@ export const Blog: React.FC = () => {
                         </span>
                       </div>
                       <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          navigate(`/blog/${post.id}`);
+                        }}
                         className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium text-sm transition-colors duration-200"
                         aria-label={`Read more about ${post.title}`}
                       >
