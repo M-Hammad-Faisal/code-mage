@@ -223,29 +223,39 @@ body {
   top: 6px;
 }
 
-/* Enhanced focus styles */
 *:focus {
+  outline: none;
+}
+
+*:focus-visible {
   outline: 2px solid #ef4444;
   outline-offset: 2px;
 }
 
-/* Focus styles for interactive elements */
 button:focus,
 a:focus,
 input:focus,
 textarea:focus,
 select:focus {
+  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
   outline: 2px solid #ef4444;
   outline-offset: 2px;
   box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
 }
 
-/* Dark mode focus styles */
-.dark button:focus,
-.dark a:focus,
-.dark input:focus,
-.dark textarea:focus,
-.dark select:focus {
+/* Dark mode focus styles - only on keyboard navigation */
+.dark button:focus-visible,
+.dark a:focus-visible,
+.dark input:focus-visible,
+.dark textarea:focus-visible,
+.dark select:focus-visible {
   outline-color: #f87171;
   box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.1);
 }

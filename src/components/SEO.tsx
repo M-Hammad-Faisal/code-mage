@@ -11,7 +11,7 @@ interface SEOProps {
 export function SEO({
   title = 'Code Mage - Code Your Magic',
   description = 'Code Your Magic with Code Mage. Learn Python, web development, and software engineering through practical tutorials and hands-on projects.',
-  image = '/brand/Code Mage Banner.png',
+  image = '/brand/Code Mage Banner.webp',
   url = 'https://code-mage.vercel.app',
   type = 'website',
 }: SEOProps) {

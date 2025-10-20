@@ -9,7 +9,7 @@ export const SITE = {
     linkedin: 'https://www.linkedin.com/in/m-hammad-faisal/',
     patreon: 'https://www.patreon.com/cw/code_your_magic',
   },
-  ogImage: '/brand/Code Mage Banner.png',
+  ogImage: '/brand/Code Mage Banner.webp',
   description:
     'Bite-sized Python videos, tricky problems, and book-smart summaries—built for curious minds.',
   seo: {

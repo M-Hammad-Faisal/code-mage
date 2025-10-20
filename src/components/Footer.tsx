@@ -15,6 +15,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { ASSETS } from '../utils/assets';
+import { WebPImage } from './WebPImage';
 
 export const Footer: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -100,13 +101,17 @@ export const Footer: React.FC = () => {
             viewport={{ once: true }}
           >
             <div className="flex items-center space-x-3 mb-6">
-              <motion.img
-                src={ASSETS.LOGO}
-                alt="Code Mage Logo"
-                className="w-12 h-12 rounded-lg shadow-lg"
+              <motion.div
                 whileHover={{ scale: 1.05, rotate: 5 }}
                 transition={{ type: 'spring', stiffness: 300 }}
-              />
+              >
+                <WebPImage
+                  webpSrc={ASSETS.LOGO.WEBP}
+                  fallbackSrc={ASSETS.LOGO.PNG}
+                  alt="Code Mage Logo"
+                  className="w-12 h-12 rounded-lg shadow-lg"
+                />
+              </motion.div>
               <span
                 className="text-3xl font-heading font-bold"
                 style={{ color: isDarkMode ? '#ffffff' : '#312e81' }}
@@ -200,6 +205,7 @@ export const Footer: React.FC = () => {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label={`Visit our ${social.label} page`}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -302,6 +308,7 @@ export const Footer: React.FC = () => {
                 href="https://patreon.com/codemage"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Support us on Patreon"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="group flex items-center space-x-3 p-4 backdrop-blur-sm rounded-xl transition-all duration-300"
@@ -431,6 +438,7 @@ export const Footer: React.FC = () => {
                   whileTap={{ scale: 0.95 }}
                   className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-xl relative overflow-hidden group"
                   transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                  aria-label="Subscribe to newsletter"
                 >
                   <span className="relative z-10 flex items-center">
                     <motion.div

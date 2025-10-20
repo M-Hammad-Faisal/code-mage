@@ -13,6 +13,21 @@ export function getAssetPath(path: string): string {
  * Common asset paths used throughout the application
  */
 export const ASSETS = {
-  LOGO: getAssetPath('brand/Code Mage Logo.png'),
-  BANNER: getAssetPath('brand/Code Mage Banner.png'),
+  LOGO: {
+    WEBP: getAssetPath('brand/Code Mage Logo.webp'),
+    PNG: getAssetPath('brand/Code Mage Logo-96.png'),
+    DEFAULT: getAssetPath('brand/Code Mage Logo-96.png'),
+  },
+  BANNER: {
+    WEBP: getAssetPath('brand/Code Mage Banner.webp'),
+    PNG: getAssetPath('brand/Code Mage Banner.png'),
+    DEFAULT: getAssetPath('brand/Code Mage Banner.webp'),
+  },
 } as const;
+
+/**
+ * Legacy exports for backward compatibility
+ * @deprecated Use ASSETS.LOGO.DEFAULT or ASSETS.BANNER.DEFAULT instead
+ */
+export const LOGO = ASSETS.LOGO.DEFAULT;
+export const BANNER = ASSETS.BANNER.DEFAULT;

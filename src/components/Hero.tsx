@@ -35,12 +35,13 @@ export const Hero: React.FC = () => {
 
   return (
     <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden">
-      {/* Parallax Background Image */}
+      {/* Optimized Background Image for LCP */}
       <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat will-change-transform"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: `url('${ASSETS.BANNER}')`,
-          transform: `translateY(${scrollY * 0.5}px)`,
+          backgroundImage: `url('${ASSETS.BANNER.WEBP}'), url('${ASSETS.BANNER.PNG}')`,
+          transform: `translateY(${scrollY * 0.3}px)`, // Reduced parallax effect for better performance
+          willChange: scrollY > 0 ? 'transform' : 'auto', // Only enable will-change when needed
         }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-navy-900/40 via-navy-900/60 to-navy-900/80 dark:from-black/80 dark:via-gray-900/90 dark:to-black/95"></div>
@@ -287,9 +288,9 @@ export const Hero: React.FC = () => {
                   : '1px solid rgba(229, 231, 235, 0.5)',
               }}
             >
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">
                 Join the Mage Guild
-              </h3>
+              </h2>
               <p className="text-gray-700 dark:text-gray-300 text-sm mb-4 text-center">
                 One helpful email per week.
               </p>
@@ -299,7 +300,7 @@ export const Hero: React.FC = () => {
                   placeholder="Enter your email"
                   className="flex-1 px-4 py-2 rounded-lg border-0 focus:ring-2 focus:ring-red-400 dark:focus:ring-red-500 text-navy-900 dark:text-gray-100 dark:bg-gray-800 placeholder-navy-500 dark:placeholder-gray-400 dark:border dark:border-gray-600"
                 />
-                <button className="bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 text-white font-semibold px-6 py-2 rounded-lg transition-colors duration-200">
+                <button className="bg-red-700 dark:bg-red-600 hover:bg-red-800 dark:hover:bg-red-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors duration-200">
                   Join
                 </button>
               </div>

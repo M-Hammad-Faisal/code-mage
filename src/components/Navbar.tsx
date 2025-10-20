@@ -4,6 +4,7 @@ import { Menu, X, Youtube, Github, Linkedin, Heart } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { SITE, NAVIGATION } from '../site.config';
 import { ASSETS } from '../utils/assets';
+import { WebPImage } from './WebPImage';
 
 export const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -54,8 +55,9 @@ export const Navbar: React.FC = () => {
         <div className="flex justify-between items-center h-16 px-4 sm:px-6 lg:px-8">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3 group">
-            <img
-              src={ASSETS.LOGO}
+            <WebPImage
+              webpSrc={ASSETS.LOGO.WEBP}
+              fallbackSrc={ASSETS.LOGO.PNG}
               alt={`${SITE.brand} Logo`}
               className="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform duration-200"
             />

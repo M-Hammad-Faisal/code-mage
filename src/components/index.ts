@@ -7,3 +7,4 @@ export { YouTubeCard } from './YouTubeCard';
 export { YouTubeSection } from './YouTubeSection';
 export { SEO } from './SEO';
 export { ScrollToTop } from './ScrollToTop';
+export { WebPImage, WebPBackground } from './WebPImage';

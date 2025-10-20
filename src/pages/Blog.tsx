@@ -324,7 +324,10 @@ export const Blog: React.FC = () => {
                           {post.author.name}
                         </span>
                       </div>
-                      <button className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium text-sm transition-colors duration-200">
+                      <button
+                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium text-sm transition-colors duration-200"
+                        aria-label={`Read more about ${post.title}`}
+                      >
                         Read More →
                       </button>
                     </div>
