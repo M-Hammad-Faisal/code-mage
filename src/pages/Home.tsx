@@ -24,7 +24,8 @@ export const Home: React.FC = () => {
       title: 'Python Fundamentals',
       description:
         'Master the basics of Python programming with hands-on examples and exercises.',
-      image: '/api/placeholder/400/250',
+      image:
+        'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
       category: 'Course',
       duration: '8 hours',
       students: '2.5k',
@@ -36,7 +37,8 @@ export const Home: React.FC = () => {
       title: 'Data Structures Deep Dive',
       description:
         'Comprehensive guide to data structures and algorithms in Python.',
-      image: '/api/placeholder/400/250',
+      image:
+        'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
       category: 'Tutorial',
       duration: '12 hours',
       students: '1.8k',
@@ -48,7 +50,8 @@ export const Home: React.FC = () => {
       title: 'Web Development with Flask',
       description:
         'Build modern web applications using Flask framework and best practices.',
-      image: '/api/placeholder/400/250',
+      image:
+        'https://images.unsplash.com/photo-1627398242454-45a1465c2479?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
       category: 'Project',
       duration: '15 hours',
       students: '3.2k',
