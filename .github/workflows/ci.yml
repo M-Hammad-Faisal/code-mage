@@ -69,15 +69,10 @@ jobs:
           name: build-files
           path: dist/
 
-      - name: Serve built files
-        run: |
-          npm install -g serve
-          serve -s dist -p 3000 &
-          sleep 5
+      - name: Install serve globally
+        run: npm install -g serve
 
       - name: Run Lighthouse CI
-        run: |
-          npm install -g @lhci/cli@0.12.x
-          lhci autorun
+        run: npx lhci autorun
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.GITHUB_TOKEN }}
