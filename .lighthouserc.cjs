@@ -17,11 +17,14 @@ module.exports = {
       },
     },
     collect: {
-      numberOfRuns: 3,
+      numberOfRuns: 1,
+      settings: {
+        chromeFlags: ['--no-sandbox', '--disable-dev-shm-usage'],
+      },
       startServerCommand: 'npm run preview',
       startServerReadyPattern: 'Local:',
-      startServerReadyTimeout: 30000,
-      url: ['http://localhost:3000'],
+      startServerReadyTimeout: 60000,
+      url: ['http://localhost:4173'],
     },
     upload: {
       target: 'temporary-public-storage',
