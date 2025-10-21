@@ -1,59 +1,28 @@
-import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import LazyImage from '../components/LazyImage';
 import {
-  Clock,
-  User,
+  BookOpen,
   Calendar,
-  Tag,
+  CheckCircle,
   ChevronLeft,
   ChevronRight,
-  BookOpen,
-  Code,
-  CheckCircle,
   Circle,
+  Clock,
+  Code,
   Download,
   Share2,
+  Tag,
+  User,
 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import LazyImage from '../components/LazyImage';
 
 // Sample lesson data - in a real app, this would come from an API
 const lessonData = {
-  id: 1,
-  title: 'Python Functions and Scope',
-  description:
-    'Learn how to create and use functions in Python, understand variable scope, and master function parameters and return values.',
-  videoId: 'BVfCWuca9nw', // Sample YouTube video ID
-  duration: '15:30',
-  level: 'Beginner',
   category: 'Python',
-  instructor: {
-    name: 'Sarah Chen',
-    avatar:
-      'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80',
-    title: 'Senior Python Developer',
-  },
-  publishedDate: 'Dec 10, 2023',
-  tags: ['Python', 'Functions', 'Scope', 'Programming Basics'],
   content: {
-    overview:
-      "In this lesson, you'll learn the fundamentals of Python functions, including how to define them, pass parameters, return values, and understand variable scope. Functions are essential building blocks in Python programming.",
-    learningObjectives: [
-      "Understand what functions are and why they're important",
-      'Learn how to define and call functions',
-      'Master function parameters and arguments',
-      'Understand return values and how to use them',
-      'Learn about variable scope (local vs global)',
-      'Practice with real-world examples',
-    ],
-    prerequisites: [
-      'Basic Python syntax',
-      'Variables and data types',
-      'Control structures (if/else, loops)',
-    ],
     codeExamples: [
       {
-        title: 'Basic Function Definition',
         code: `def greet(name):
     """A simple function that greets a person"""
     return f"Hello, {name}!"
@@ -61,9 +30,9 @@ const lessonData = {
 # Call the function
 message = greet("Alice")
 print(message)  # Output: Hello, Alice!`,
+        title: 'Basic Function Definition',
       },
       {
-        title: 'Function with Multiple Parameters',
         code: `def calculate_area(length, width):
     """Calculate the area of a rectangle"""
     area = length * width
@@ -76,9 +45,9 @@ print(f"Area: {result}")  # Output: Area: 15
 # Call with keyword arguments
 result = calculate_area(width=4, length=6)
 print(f"Area: {result}")  # Output: Area: 24`,
+        title: 'Function with Multiple Parameters',
       },
       {
-        title: 'Variable Scope Example',
         code: `# Global variable
 global_var = "I'm global"
 
@@ -91,19 +60,50 @@ def scope_example():
 scope_example()
 print(f"Outside function: {global_var}")
 # print(local_var)  # This would cause an error!`,
+        title: 'Variable Scope Example',
       },
     ],
+    learningObjectives: [
+      "Understand what functions are and why they're important",
+      'Learn how to define and call functions',
+      'Master function parameters and arguments',
+      'Understand return values and how to use them',
+      'Learn about variable scope (local vs global)',
+      'Practice with real-world examples',
+    ],
+    overview:
+      "In this lesson, you'll learn the fundamentals of Python functions, including how to define them, pass parameters, return values, and understand variable scope. Functions are essential building blocks in Python programming.",
+    prerequisites: [
+      'Basic Python syntax',
+      'Variables and data types',
+      'Control structures (if/else, loops)',
+    ],
   },
+  description:
+    'Learn how to create and use functions in Python, understand variable scope, and master function parameters and return values.',
+  duration: '15:30',
+  id: 1,
+  instructor: {
+    avatar:
+      'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80',
+    name: 'Sarah Chen',
+    title: 'Senior Python Developer',
+  },
+  level: 'Beginner',
   nextLesson: {
+    duration: '18:45',
     id: 2,
     title: 'Python Classes and Objects',
-    duration: '18:45',
   },
   prevLesson: {
+    duration: '12:20',
     id: 0,
     title: 'Python Data Types and Variables',
-    duration: '12:20',
   },
+  publishedDate: 'Dec 10, 2023',
+  tags: ['Python', 'Functions', 'Scope', 'Programming Basics'],
+  title: 'Python Functions and Scope',
+  videoId: 'BVfCWuca9nw', // Sample YouTube video ID
 };
 
 export const LessonDetail: React.FC = () => {
@@ -229,16 +229,16 @@ export const LessonDetail: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
               className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl border border-gray-200 dark:border-gray-600/50 backdrop-blur-sm"
             >
               {/* Tab Navigation */}
               <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="flex space-x-8 px-6">
                   {[
-                    { id: 'overview', label: 'Overview', icon: BookOpen },
-                    { id: 'code', label: 'Code Examples', icon: Code },
-                    { id: 'resources', label: 'Resources', icon: Download },
+                    { icon: BookOpen, id: 'overview', label: 'Overview' },
+                    { icon: Code, id: 'code', label: 'Code Examples' },
+                    { icon: Download, id: 'resources', label: 'Resources' },
                   ].map(tab => (
                     <button
                       key={tab.id}
@@ -373,7 +373,7 @@ export const LessonDetail: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
               className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl p-6 border border-gray-200 dark:border-gray-600/50 mb-6 backdrop-blur-sm"
             >
               <h3 className="font-semibold text-navy-900 dark:text-cloud-100 mb-4">
@@ -400,7 +400,7 @@ export const LessonDetail: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
               className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl p-6 border border-gray-200 dark:border-gray-600/50 backdrop-blur-sm"
             >
               <h3 className="font-semibold text-navy-900 dark:text-cloud-100 mb-4">

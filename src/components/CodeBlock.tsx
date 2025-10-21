@@ -1,16 +1,16 @@
+import { Check, Copy } from 'lucide-react';
 import React from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import {
-  tomorrow,
   prism,
+  tomorrow,
 } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Copy, Check } from 'lucide-react';
-import { useTheme, useCopyToClipboard } from '../hooks/useMDXHooks';
+import { useCopyToClipboard, useTheme } from '../hooks/useMDXHooks';
 
 interface CodeBlockProps {
+  [key: string]: unknown;
   children: string;
   className?: string;
-  [key: string]: unknown;
 }
 
 export const CodeBlock: React.FC<CodeBlockProps> = ({
@@ -46,7 +46,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           {language}
         </span>
         <button
-          onClick={() => copyToClipboard(codeString)}
+          onClick={async () => copyToClipboard(codeString)}
           className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200"
           title="Copy code"
         >
@@ -69,9 +69,9 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         PreTag="div"
         className="!mt-0 !rounded-t-none"
         customStyle={{
-          margin: 0,
           borderTopLeftRadius: 0,
           borderTopRightRadius: 0,
+          margin: 0,
         }}
       >
         {codeString}

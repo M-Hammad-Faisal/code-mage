@@ -1,21 +1,21 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { Play, Clock, Eye } from 'lucide-react';
+import { Clock, Eye, Play } from 'lucide-react';
+import React from 'react';
 import type { YouTubeVideo } from '../lib/youtube';
 import LazyImage from './LazyImage';
 
 interface YouTubeCardProps {
-  video: YouTubeVideo;
   index: number;
+  video: YouTubeVideo;
 }
 
-export const YouTubeCard: React.FC<YouTubeCardProps> = ({ video, index }) => {
+export const YouTubeCard: React.FC<YouTubeCardProps> = ({ index, video }) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
       day: 'numeric',
+      month: 'short',
+      year: 'numeric',
     });
   };
 
@@ -23,7 +23,7 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = ({ video, index }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
+      transition={{ delay: index * 0.1, duration: 0.5 }}
       className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
     >
       <div className="relative group">

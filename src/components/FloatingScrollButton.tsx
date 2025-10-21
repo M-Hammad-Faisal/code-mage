@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronUp } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 interface FloatingScrollButtonProps {
   showThreshold?: number;
@@ -25,8 +25,8 @@ export const FloatingScrollButton: React.FC<FloatingScrollButtonProps> = ({
 
   const scrollToTop = () => {
     window.scrollTo({
-      top: 0,
       behavior: 'smooth',
+      top: 0,
     });
   };
 

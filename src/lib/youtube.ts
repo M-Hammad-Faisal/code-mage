@@ -1,14 +1,14 @@
 import { ASSETS } from '../utils/assets';
 
 export interface YouTubeVideo {
-  id: string;
-  title: string;
   description: string;
-  thumbnail: string;
-  publishedAt: string;
   duration: string;
-  viewCount: string;
+  id: string;
+  publishedAt: string;
+  thumbnail: string;
+  title: string;
   url: string;
+  viewCount: string;
 }
 
 interface YouTubeSearchResponse {
@@ -33,37 +33,37 @@ interface YouTubeVideoDetailsResponse {
 // Fallback placeholder videos for when API is not available
 const PLACEHOLDER_VIDEOS: YouTubeVideo[] = [
   {
-    id: 'placeholder-1',
-    title: 'Python Fundamentals: Variables and Data Types',
     description:
       'Learn the basics of Python variables, data types, and how to work with them effectively in your code.',
-    thumbnail: ASSETS.BANNER.DEFAULT,
-    publishedAt: '2024-01-15',
     duration: '12:34',
-    viewCount: '15,420',
+    id: 'placeholder-1',
+    publishedAt: '2024-01-15',
+    thumbnail: ASSETS.BANNER.DEFAULT,
+    title: 'Python Fundamentals: Variables and Data Types',
     url: 'https://youtube.com/watch?v=placeholder-1',
+    viewCount: '15,420',
   },
   {
-    id: 'placeholder-2',
-    title: 'Advanced Python: List Comprehensions Explained',
     description:
       'Master Python list comprehensions with practical examples and best practices for cleaner code.',
-    thumbnail: ASSETS.BANNER.DEFAULT,
-    publishedAt: '2024-01-10',
     duration: '18:45',
-    viewCount: '23,156',
+    id: 'placeholder-2',
+    publishedAt: '2024-01-10',
+    thumbnail: ASSETS.BANNER.DEFAULT,
+    title: 'Advanced Python: List Comprehensions Explained',
     url: 'https://youtube.com/watch?v=placeholder-2',
+    viewCount: '23,156',
   },
   {
-    id: 'placeholder-3',
-    title: 'Building Your First Python Project',
     description:
       'Step-by-step guide to creating a complete Python project from scratch with best practices.',
-    thumbnail: ASSETS.BANNER.DEFAULT,
-    publishedAt: '2024-01-05',
     duration: '25:12',
-    viewCount: '31,892',
+    id: 'placeholder-3',
+    publishedAt: '2024-01-05',
+    thumbnail: ASSETS.BANNER.DEFAULT,
+    title: 'Building Your First Python Project',
     url: 'https://youtube.com/watch?v=placeholder-3',
+    viewCount: '31,892',
   },
 ];
 
@@ -117,14 +117,14 @@ class YouTubeService {
       return data.items.map((item, index: number) => {
         const details = detailsData.items[index];
         return {
-          id: item.id.videoId,
-          title: item.snippet.title,
           description: item.snippet.description,
-          thumbnail: item.snippet.thumbnails.medium.url,
-          publishedAt: item.snippet.publishedAt,
           duration: this.formatDuration(details.contentDetails.duration),
-          viewCount: this.formatViewCount(details.statistics.viewCount),
+          id: item.id.videoId,
+          publishedAt: item.snippet.publishedAt,
+          thumbnail: item.snippet.thumbnails.medium.url,
+          title: item.snippet.title,
           url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+          viewCount: this.formatViewCount(details.statistics.viewCount),
         };
       });
     } catch (error) {

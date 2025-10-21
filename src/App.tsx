@@ -1,34 +1,34 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
+import { lazy, Suspense } from 'react';
+import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { Layout, ScrollToTop } from './components';
 
 // Lazy load page components for better performance
-const Home = lazy(() =>
+const Home = lazy(async () =>
   import('./pages/Home').then(module => ({ default: module.Home }))
 );
-const Learn = lazy(() =>
+const Learn = lazy(async () =>
   import('./pages/Learn').then(module => ({ default: module.Learn }))
 );
-const Blog = lazy(() =>
+const Blog = lazy(async () =>
   import('./pages/Blog').then(module => ({ default: module.Blog }))
 );
-const About = lazy(() =>
+const About = lazy(async () =>
   import('./pages/About').then(module => ({ default: module.About }))
 );
-const Contact = lazy(() =>
+const Contact = lazy(async () =>
   import('./pages/Contact').then(module => ({ default: module.Contact }))
 );
-const LessonDetail = lazy(() =>
+const LessonDetail = lazy(async () =>
   import('./pages/LessonDetail').then(module => ({
     default: module.LessonDetail,
   }))
 );
-const BlogDetail = lazy(() =>
+const BlogDetail = lazy(async () =>
   import('./pages/BlogDetail').then(module => ({
     default: module.BlogDetail,
   }))
 );
-const NotFound = lazy(() => import('./pages/NotFound'));
+const NotFound = lazy(async () => import('./pages/NotFound'));
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (

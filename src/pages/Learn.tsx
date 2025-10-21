@@ -1,170 +1,170 @@
-import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { SEO } from '../components';
-import LazyImage from '../components/LazyImage';
 import {
+  BarChart3,
   BookOpen,
-  Code,
-  Zap,
   CheckCircle,
-  Clock,
-  Users,
-  FileText,
-  Target,
-  Play,
-  Search,
-  Filter,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  Code,
+  FileText,
+  Filter,
+  Play,
+  Search,
   Star,
-  BarChart3,
+  Target,
+  Users,
+  Zap,
 } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { SEO } from '../components';
+import LazyImage from '../components/LazyImage';
 import { YouTubeSection } from '../components/YouTubeSection';
 
 // Expanded lesson data with more comprehensive information
 const lessons = [
   {
-    id: 1,
-    title: 'Python Fundamentals',
+    category: 'Python Basics',
     description:
       'Learn the basics of Python programming including variables, data types, and control structures.',
-    category: 'Python Basics',
-    level: 'Beginner',
     duration: '2:30',
-    students: 1234,
-    rating: 4.8,
+    icon: BookOpen,
+    id: 1,
     instructor: 'Sarah Chen',
+    level: 'Beginner',
+    rating: 4.8,
+    students: 1234,
+    tags: ['Python', 'Variables', 'Data Types', 'Control Flow'],
     thumbnail:
       'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    tags: ['Python', 'Variables', 'Data Types', 'Control Flow'],
-    icon: BookOpen,
+    title: 'Python Fundamentals',
   },
   {
-    id: 2,
-    title: 'Object-Oriented Programming',
+    category: 'Python Basics',
     description:
       'Master classes, objects, inheritance, and polymorphism in Python.',
-    category: 'Python Basics',
-    level: 'Intermediate',
     duration: '3:15',
-    students: 856,
-    rating: 4.9,
+    icon: Code,
+    id: 2,
     instructor: 'Mike Johnson',
+    level: 'Intermediate',
+    rating: 4.9,
+    students: 856,
+    tags: ['OOP', 'Classes', 'Inheritance', 'Polymorphism'],
     thumbnail:
       'https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    tags: ['OOP', 'Classes', 'Inheritance', 'Polymorphism'],
-    icon: Code,
+    title: 'Object-Oriented Programming',
   },
   {
-    id: 3,
-    title: 'Web Development with Flask',
-    description: "Build web applications using Python's Flask framework.",
     category: 'Web Development',
-    level: 'Intermediate',
+    description: "Build web applications using Python's Flask framework.",
     duration: '4:00',
-    students: 642,
-    rating: 4.7,
+    icon: Zap,
+    id: 3,
     instructor: 'Emily Davis',
+    level: 'Intermediate',
+    rating: 4.7,
+    students: 642,
+    tags: ['Flask', 'Web Development', 'Backend', 'API'],
     thumbnail:
       'https://images.unsplash.com/photo-1627398242454-45a1465c2479?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    tags: ['Flask', 'Web Development', 'Backend', 'API'],
-    icon: Zap,
+    title: 'Web Development with Flask',
   },
   {
-    id: 4,
-    title: 'Data Analysis with Pandas',
+    category: 'Data Science',
     description:
       'Learn to manipulate and analyze data using the Pandas library.',
-    category: 'Data Science',
-    level: 'Intermediate',
     duration: '3:45',
-    students: 789,
-    rating: 4.6,
+    icon: BarChart3,
+    id: 4,
     instructor: 'David Wilson',
+    level: 'Intermediate',
+    rating: 4.6,
+    students: 789,
+    tags: ['Pandas', 'Data Analysis', 'CSV', 'DataFrames'],
     thumbnail:
       'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    tags: ['Pandas', 'Data Analysis', 'CSV', 'DataFrames'],
-    icon: BarChart3,
+    title: 'Data Analysis with Pandas',
   },
   {
-    id: 5,
-    title: 'Machine Learning Basics',
-    description: 'Introduction to machine learning concepts and scikit-learn.',
     category: 'Data Science',
-    level: 'Advanced',
+    description: 'Introduction to machine learning concepts and scikit-learn.',
     duration: '5:20',
-    students: 423,
-    rating: 4.8,
+    icon: Target,
+    id: 5,
     instructor: 'Dr. Lisa Park',
+    level: 'Advanced',
+    rating: 4.8,
+    students: 423,
+    tags: ['Machine Learning', 'Scikit-learn', 'Algorithms', 'AI'],
     thumbnail:
       'https://images.unsplash.com/photo-1555949963-aa79dcee981c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    tags: ['Machine Learning', 'Scikit-learn', 'Algorithms', 'AI'],
-    icon: Target,
+    title: 'Machine Learning Basics',
   },
   {
-    id: 6,
-    title: 'API Development',
-    description: 'Create RESTful APIs using Python and modern frameworks.',
     category: 'Web Development',
-    level: 'Advanced',
+    description: 'Create RESTful APIs using Python and modern frameworks.',
     duration: '4:30',
-    students: 567,
-    rating: 4.7,
+    icon: Play,
+    id: 6,
     instructor: 'Alex Rodriguez',
+    level: 'Advanced',
+    rating: 4.7,
+    students: 567,
+    tags: ['API', 'REST', 'FastAPI', 'Backend'],
     thumbnail:
       'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    tags: ['API', 'REST', 'FastAPI', 'Backend'],
-    icon: Play,
+    title: 'API Development',
   },
   {
-    id: 7,
-    title: 'Python Testing & Debugging',
+    category: 'Python Basics',
     description:
       'Learn testing frameworks and debugging techniques for Python applications.',
-    category: 'Python Basics',
-    level: 'Intermediate',
     duration: '2:45',
-    students: 345,
-    rating: 4.5,
+    icon: CheckCircle,
+    id: 7,
     instructor: 'Rachel Green',
+    level: 'Intermediate',
+    rating: 4.5,
+    students: 345,
+    tags: ['Testing', 'Debugging', 'PyTest', 'Unit Tests'],
     thumbnail:
       'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    tags: ['Testing', 'Debugging', 'PyTest', 'Unit Tests'],
-    icon: CheckCircle,
+    title: 'Python Testing & Debugging',
   },
   {
-    id: 8,
-    title: 'Database Integration',
+    category: 'Web Development',
     description:
       'Connect Python applications with databases using SQLAlchemy and more.',
-    category: 'Web Development',
-    level: 'Intermediate',
     duration: '3:30',
-    students: 678,
-    rating: 4.6,
+    icon: FileText,
+    id: 8,
     instructor: 'Tom Anderson',
+    level: 'Intermediate',
+    rating: 4.6,
+    students: 678,
+    tags: ['Database', 'SQLAlchemy', 'SQL', 'ORM'],
     thumbnail:
       'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    tags: ['Database', 'SQLAlchemy', 'SQL', 'ORM'],
-    icon: FileText,
+    title: 'Database Integration',
   },
   {
-    id: 9,
-    title: 'Async Programming in Python',
+    category: 'Advanced Python',
     description:
       'Master asynchronous programming with asyncio and async/await.',
-    category: 'Advanced Python',
-    level: 'Advanced',
     duration: '4:15',
-    students: 234,
-    rating: 4.9,
+    icon: Zap,
+    id: 9,
     instructor: 'Kevin Liu',
+    level: 'Advanced',
+    rating: 4.9,
+    students: 234,
+    tags: ['Async', 'Asyncio', 'Concurrency', 'Performance'],
     thumbnail:
       'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    tags: ['Async', 'Asyncio', 'Concurrency', 'Performance'],
-    icon: Zap,
+    title: 'Async Programming in Python',
   },
 ];
 
@@ -177,10 +177,10 @@ const categories = [
 ];
 const levels = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 const sortOptions = [
-  { value: 'popular', label: 'Most Popular' },
-  { value: 'newest', label: 'Newest' },
-  { value: 'rating', label: 'Highest Rated' },
-  { value: 'duration', label: 'Duration' },
+  { label: 'Most Popular', value: 'popular' },
+  { label: 'Newest', value: 'newest' },
+  { label: 'Highest Rated', value: 'rating' },
+  { label: 'Duration', value: 'duration' },
 ];
 
 export const Learn: React.FC = () => {
@@ -241,7 +241,7 @@ export const Learn: React.FC = () => {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ behavior: 'smooth', top: 0 });
   };
 
   const getLevelColor = (level: string) => {
@@ -285,7 +285,7 @@ export const Learn: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
+          transition={{ delay: 0.2, duration: 0.8 }}
           className="mb-8"
         >
           {/* Search Bar */}
@@ -337,9 +337,9 @@ export const Learn: React.FC = () => {
           {/* Filter Options */}
           {showFilters && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
               className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 mb-6"
             >
               <div className="grid md:grid-cols-2 gap-6">
@@ -395,7 +395,7 @@ export const Learn: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
+          transition={{ delay: 0.4, duration: 0.8 }}
           className="mb-12"
         >
           {paginatedLessons.length > 0 ? (
@@ -405,7 +405,7 @@ export const Learn: React.FC = () => {
                   key={lesson.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.1 * index }}
+                  transition={{ delay: 0.1 * index, duration: 0.8 }}
                   className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-600/50 hover:shadow-xl dark:hover:shadow-3xl transition-all duration-300 group backdrop-blur-sm"
                 >
                   {/* Lesson Thumbnail */}
@@ -506,7 +506,7 @@ export const Learn: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
             className="flex justify-center items-center space-x-2 mb-12"
           >
             <button

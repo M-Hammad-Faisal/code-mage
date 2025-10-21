@@ -16,22 +16,22 @@ interface MDXModule {
 
 // Dynamic import mapping for MDX files
 const mdxFiles: Record<string, () => Promise<MDXModule>> = {
-  'python-mutable-default-arguments-explained.mdx': () =>
-    import('../../content/blog/python-mutable-default-arguments-explained.mdx'),
-  'trickiest-list-comprehension-puzzle-ever.mdx': () =>
-    import('../../content/blog/trickiest-list-comprehension-puzzle-ever.mdx'),
-  '5-python-problems-made-me-rage-quit.mdx': () =>
-    import('../../content/blog/5-python-problems-made-me-rage-quit.mdx'),
-  'hogwarts-sorting-hat-ai-python.mdx': () =>
-    import('../../content/blog/hogwarts-sorting-hat-ai-python.mdx'),
-  'loops-are-spells-recursion-magic.mdx': () =>
-    import('../../content/blog/loops-are-spells-recursion-magic.mdx'),
-  'fluent-python-insights-you-need-to-know.mdx': () =>
-    import('../../content/blog/fluent-python-insights-you-need-to-know.mdx'),
-  'python-is-vs-equals-magic-explained.mdx': () =>
-    import('../../content/blog/python-is-vs-equals-magic-explained.mdx'),
-  '10-python-mistakes-youre-probably-making.mdx': () =>
+  '10-python-mistakes-youre-probably-making.mdx': async () =>
     import('../../content/blog/10-python-mistakes-youre-probably-making.mdx'),
+  '5-python-problems-made-me-rage-quit.mdx': async () =>
+    import('../../content/blog/5-python-problems-made-me-rage-quit.mdx'),
+  'fluent-python-insights-you-need-to-know.mdx': async () =>
+    import('../../content/blog/fluent-python-insights-you-need-to-know.mdx'),
+  'hogwarts-sorting-hat-ai-python.mdx': async () =>
+    import('../../content/blog/hogwarts-sorting-hat-ai-python.mdx'),
+  'loops-are-spells-recursion-magic.mdx': async () =>
+    import('../../content/blog/loops-are-spells-recursion-magic.mdx'),
+  'python-is-vs-equals-magic-explained.mdx': async () =>
+    import('../../content/blog/python-is-vs-equals-magic-explained.mdx'),
+  'python-mutable-default-arguments-explained.mdx': async () =>
+    import('../../content/blog/python-mutable-default-arguments-explained.mdx'),
+  'trickiest-list-comprehension-puzzle-ever.mdx': async () =>
+    import('../../content/blog/trickiest-list-comprehension-puzzle-ever.mdx'),
 };
 
 export const loadMDXFile = async (

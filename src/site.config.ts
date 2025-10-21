@@ -1,28 +1,28 @@
 export const SITE = {
-  brand: 'Code Mage',
-  tagline: 'Code Your Magic',
   baseUrl: 'https://code-mage.vercel.app',
-  url: 'https://code-mage.vercel.app',
+  brand: 'Code Mage',
+  description:
+    'Bite-sized Python videos, tricky problems, and book-smart summaries—built for curious minds.',
+  ogImage: '/brand/Code Mage Banner.webp',
+  seo: {
+    description:
+      'Bite-sized Python videos, tricky problems, and book-smart summaries—built for curious minds.',
+    title: 'Code Mage — Code Your Magic',
+  },
   socials: {
-    youtube: 'https://www.youtube.com/@code_your_magic',
     github: 'https://github.com/M-Hammad-Faisal/',
     linkedin: 'https://www.linkedin.com/in/m-hammad-faisal/',
     patreon: 'https://www.patreon.com/cw/code_your_magic',
+    youtube: 'https://www.youtube.com/@code_your_magic',
   },
-  ogImage: '/brand/Code Mage Banner.webp',
-  description:
-    'Bite-sized Python videos, tricky problems, and book-smart summaries—built for curious minds.',
-  seo: {
-    title: 'Code Mage — Code Your Magic',
-    description:
-      'Bite-sized Python videos, tricky problems, and book-smart summaries—built for curious minds.',
-  },
+  tagline: 'Code Your Magic',
+  url: 'https://code-mage.vercel.app',
 };
 
 export const NAVIGATION = [
-  { name: 'Home', href: '/' },
-  { name: 'Learn', href: '/learn' },
-  { name: 'Blog', href: '/blog' },
-  { name: 'About', href: '/about' },
-  { name: 'Contact', href: '/contact' },
+  { href: '/', name: 'Home' },
+  { href: '/learn', name: 'Learn' },
+  { href: '/blog', name: 'Blog' },
+  { href: '/about', name: 'About' },
+  { href: '/contact', name: 'Contact' },
 ];

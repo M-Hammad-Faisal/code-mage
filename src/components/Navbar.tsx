@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { Github, Heart, Linkedin, Menu, X, Youtube } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Youtube, Github, Linkedin, Heart } from 'lucide-react';
-import { ThemeToggle } from './ThemeToggle';
-import { SITE, NAVIGATION } from '../site.config';
+import { NAVIGATION, SITE } from '../site.config';
 import { ASSETS } from '../utils/assets';
+import { ThemeToggle } from './ThemeToggle';
 import { WebPImage } from './WebPImage';
 
 export const Navbar: React.FC = () => {
@@ -22,8 +22,8 @@ export const Navbar: React.FC = () => {
     // Listen for theme changes
     const observer = new MutationObserver(checkDarkMode);
     observer.observe(document.documentElement, {
-      attributes: true,
       attributeFilter: ['class'],
+      attributes: true,
     });
 
     return () => observer.disconnect();

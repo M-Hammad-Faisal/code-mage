@@ -1,12 +1,12 @@
 import React from 'react';
 
 interface WebPImageProps {
-  webpSrc: string;
-  fallbackSrc: string;
   alt: string;
   className?: string;
-  style?: React.CSSProperties;
+  fallbackSrc: string;
   loading?: 'lazy' | 'eager';
+  style?: React.CSSProperties;
+  webpSrc: string;
 }
 
 /**
@@ -14,12 +14,12 @@ interface WebPImageProps {
  * Uses the HTML <picture> element for automatic format selection
  */
 export const WebPImage: React.FC<WebPImageProps> = ({
-  webpSrc,
-  fallbackSrc,
   alt,
   className,
-  style,
+  fallbackSrc,
   loading = 'lazy',
+  style,
+  webpSrc,
 }) => {
   return (
     <picture>
@@ -36,11 +36,11 @@ export const WebPImage: React.FC<WebPImageProps> = ({
 };
 
 interface WebPBackgroundProps {
-  webpSrc: string;
-  fallbackSrc: string;
-  className?: string;
-  style?: React.CSSProperties;
   children?: React.ReactNode;
+  className?: string;
+  fallbackSrc: string;
+  style?: React.CSSProperties;
+  webpSrc: string;
 }
 
 /**
@@ -48,11 +48,11 @@ interface WebPBackgroundProps {
  * Uses optimized WebP detection for better performance
  */
 export const WebPBackground: React.FC<WebPBackgroundProps> = ({
-  webpSrc,
-  fallbackSrc,
-  className,
-  style,
   children,
+  className,
+  fallbackSrc,
+  style,
+  webpSrc,
 }) => {
   // Use WebP by default for modern browsers, fallback handled by CSS
   const backgroundStyle: React.CSSProperties = {

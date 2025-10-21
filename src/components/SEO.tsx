@@ -1,19 +1,19 @@
 import { useEffect } from 'react';
 
 interface SEOProps {
-  title?: string;
   description?: string;
   image?: string;
-  url?: string;
+  title?: string;
   type?: string;
+  url?: string;
 }
 
 export function SEO({
-  title = 'Code Mage - Code Your Magic',
   description = 'Code Your Magic with Code Mage. Learn Python, web development, and software engineering through practical tutorials and hands-on projects.',
   image = '/brand/Code Mage Banner.webp',
-  url = 'https://code-mage.vercel.app',
+  title = 'Code Mage - Code Your Magic',
   type = 'website',
+  url = 'https://code-mage.vercel.app',
 }: SEOProps) {
   useEffect(() => {
     // Update document title

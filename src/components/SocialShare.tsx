@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Share2,
+  Check,
+  Copy,
   Linkedin,
   Mail,
   MessageCircle,
-  Copy,
-  Check,
+  Share2,
 } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface SocialShareProps {
   title: string;
@@ -21,15 +21,13 @@ export const SocialShare: React.FC<SocialShareProps> = ({ title, url }) => {
   const encodedUrl = encodeURIComponent(currentUrl);
 
   const shareLinks = {
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
     email: `mailto:?subject=${encodedTitle}&body=Check out this article: ${encodedUrl}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
     whatsapp: `https://wa.me/?text=${encodedTitle} ${encodedUrl}`,
   };
 
   const shareButtons = [
     {
-      name: 'Copy Link',
-      icon: copied ? Check : Copy,
       action: 'copy',
       bgColor: copied
         ? 'bg-green-500 hover:bg-green-600'
@@ -37,34 +35,36 @@ export const SocialShare: React.FC<SocialShareProps> = ({ title, url }) => {
       darkBgColor: copied
         ? 'dark:bg-green-500 dark:hover:bg-green-600'
         : 'dark:bg-slate-600 dark:hover:bg-slate-700',
+      icon: copied ? Check : Copy,
+      name: 'Copy Link',
       textColor: 'text-white',
     },
     {
-      name: 'LinkedIn',
-      icon: Linkedin,
-      url: shareLinks.linkedin,
       action: 'share',
       bgColor: 'bg-[#0077B5] hover:bg-[#005885]',
       darkBgColor: 'dark:bg-[#0077B5] dark:hover:bg-[#005885]',
+      icon: Linkedin,
+      name: 'LinkedIn',
       textColor: 'text-white',
+      url: shareLinks.linkedin,
     },
     {
-      name: 'Email',
-      icon: Mail,
-      url: shareLinks.email,
       action: 'share',
       bgColor: 'bg-gray-600 hover:bg-gray-700',
       darkBgColor: 'dark:bg-gray-500 dark:hover:bg-gray-600',
+      icon: Mail,
+      name: 'Email',
       textColor: 'text-white',
+      url: shareLinks.email,
     },
     {
-      name: 'WhatsApp',
-      icon: MessageCircle,
-      url: shareLinks.whatsapp,
       action: 'share',
       bgColor: 'bg-[#25D366] hover:bg-[#1DA851]',
       darkBgColor: 'dark:bg-[#25D366] dark:hover:bg-[#1DA851]',
+      icon: MessageCircle,
+      name: 'WhatsApp',
       textColor: 'text-white',
+      url: shareLinks.whatsapp,
     },
   ];
 
@@ -117,7 +117,7 @@ export const SocialShare: React.FC<SocialShareProps> = ({ title, url }) => {
               whileTap={{ scale: 0.95 }}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
+              transition={{ delay: index * 0.1, duration: 0.3 }}
               className={`
                 flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm
                 transition-all duration-300 shadow-md hover:shadow-lg

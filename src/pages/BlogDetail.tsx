@@ -1,55 +1,59 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import type { ComponentType } from 'react';
 import { MDXProvider } from '@mdx-js/react';
+import { motion } from 'framer-motion';
 import {
+  ArrowLeft,
+  BookOpen,
+  Calendar,
   Clock,
   Eye,
-  Calendar,
-  Tag,
-  ArrowLeft,
   Share2,
-  BookOpen,
+  Tag,
   User,
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import {
-  SEO,
-  MDXComponents,
-  SocialShare,
   FloatingScrollButton,
+  MDXComponents,
+  SEO,
+  SocialShare,
 } from '../components';
 import LazyImage from '../components/LazyImage';
 import { loadMDXFile } from '../utils/mdxLoader';
 
 // Blog post type (should match the one in Blog.tsx)
 interface BlogPost {
-  id: number;
-  title: string;
-  excerpt: string;
-  image: string;
-  category: string;
-  tags: string[];
-  date: string;
-  readTime: string;
-  views: string;
   author: {
     name: string;
     avatar: string;
   };
+  category: string;
+  date: string;
+  excerpt: string;
+  id: number;
+  image: string;
+  readTime: string;
+  tags: string[];
+  title: string;
+  views: string;
 }
 
 // This should be the same data as in Blog.tsx - in a real app, this would come from an API or context
 const blogPosts: BlogPost[] = [
   {
-    id: 1,
-    title:
-      "From Confusion to Clarity: Understanding Python's Mutable Default Arguments",
+    author: {
+      avatar: '/brand/Code Mage Logo.webp',
+      name: 'Code Mage',
+    },
+    category: 'Python Deep Dive',
+    date: 'Jan 16, 2025',
     excerpt:
       'The notorious Python gotcha that trips up even senior developers. Master mutable default arguments once and for all with visual explanations, real-world examples, and bulletproof solutions.',
+    id: 1,
     image:
       'https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'Python Deep Dive',
+    readTime: '12 min',
     tags: [
       'python',
       'gotchas',
@@ -59,22 +63,23 @@ const blogPosts: BlogPost[] = [
       'debugging',
       'best-practices',
     ],
-    date: 'Jan 16, 2025',
-    readTime: '12 min',
+    title:
+      "From Confusion to Clarity: Understanding Python's Mutable Default Arguments",
     views: '2.8k',
-    author: {
-      name: 'Code Mage',
-      avatar: '/brand/Code Mage Logo.webp',
-    },
   },
   {
-    id: 2,
-    title: 'Can You Solve This? The Trickiest List-Comprehension Puzzle Ever',
+    author: {
+      avatar: '/brand/Code Mage Logo.webp',
+      name: 'Code Mage',
+    },
+    category: 'Python Challenges',
+    date: 'Jan 16, 2025',
     excerpt:
       'Think you know list comprehensions? 🤔 This mind-bending puzzle has stumped senior developers. Can you crack it? Drop your solution in the comments and see how you stack up!',
+    id: 2,
     image:
       'https://images.unsplash.com/photo-1509228468518-180dd4864904?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'Python Challenges',
+    readTime: '8 min',
     tags: [
       'python',
       'list-comprehension',
@@ -83,22 +88,22 @@ const blogPosts: BlogPost[] = [
       'interactive',
       'advanced',
     ],
-    date: 'Jan 16, 2025',
-    readTime: '8 min',
+    title: 'Can You Solve This? The Trickiest List-Comprehension Puzzle Ever',
     views: '4.1k',
-    author: {
-      name: 'Code Mage',
-      avatar: '/brand/Code Mage Logo.webp',
-    },
   },
   {
-    id: 3,
-    title: '5 Python Problems That Made Me Rage-Quit (and What I Learned)',
+    author: {
+      avatar: '/brand/Code Mage Logo.webp',
+      name: 'Code Mage',
+    },
+    category: 'Python Problems',
+    date: 'Jan 16, 2025',
     excerpt:
       "Every Python developer has been there - staring at code that should work but doesn't. Here are 5 problems that nearly broke me, and the hard-won lessons that made me a better programmer.",
+    id: 3,
     image:
       'https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'Python Problems',
+    readTime: '10 min',
     tags: [
       'python',
       'debugging',
@@ -107,23 +112,22 @@ const blogPosts: BlogPost[] = [
       'gotchas',
       'experience',
     ],
-    date: 'Jan 16, 2025',
-    readTime: '10 min',
+    title: '5 Python Problems That Made Me Rage-Quit (and What I Learned)',
     views: '3.7k',
-    author: {
-      name: 'Code Mage',
-      avatar: '/brand/Code Mage Logo.webp',
-    },
   },
   {
-    id: 4,
-    title:
-      'Building a Mini Hogwarts Sorting Hat AI in Python (Beginner Friendly Project)',
+    author: {
+      avatar: '/brand/Code Mage Logo.webp',
+      name: 'Code Mage',
+    },
+    category: 'AI Projects',
+    date: 'Jan 15, 2025',
     excerpt:
       "Ever wondered which Hogwarts house you truly belong to? Let's build an AI that can sort you! This beginner-friendly project teaches machine learning fundamentals while creating something magical.",
+    id: 4,
     image:
       'https://images.unsplash.com/photo-1484417894907-623942c8ee29?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'AI Projects',
+    readTime: '15 min',
     tags: [
       'python',
       'ai',
@@ -133,22 +137,23 @@ const blogPosts: BlogPost[] = [
       'harry-potter',
       'classification',
     ],
-    date: 'Jan 15, 2025',
-    readTime: '15 min',
+    title:
+      'Building a Mini Hogwarts Sorting Hat AI in Python (Beginner Friendly Project)',
     views: '5.2k',
-    author: {
-      name: 'Code Mage',
-      avatar: '/brand/Code Mage Logo.webp',
-    },
   },
   {
-    id: 5,
-    title: 'Loops Are Spells: How to Think Recursively in Python',
+    author: {
+      avatar: '/brand/Code Mage Logo.webp',
+      name: 'Code Mage',
+    },
+    category: 'Python Magic',
+    date: 'Jan 15, 2025',
     excerpt:
       'Step into the magical world of recursion! 🪄 Learn to think like a wizard and master the art of recursive spells. From simple incantations to powerful algorithms, discover the magic within your code.',
+    id: 5,
     image:
       'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'Python Magic',
+    readTime: '12 min',
     tags: [
       'python',
       'recursion',
@@ -158,22 +163,22 @@ const blogPosts: BlogPost[] = [
       'magic',
       'functions',
     ],
-    date: 'Jan 15, 2025',
-    readTime: '12 min',
+    title: 'Loops Are Spells: How to Think Recursively in Python',
     views: '3.9k',
-    author: {
-      name: 'Code Mage',
-      avatar: '/brand/Code Mage Logo.webp',
-    },
   },
   {
-    id: 6,
-    title: "What I Learned After Reading Fluent Python — So You Don't Have To",
+    author: {
+      avatar: '/brand/Code Mage Logo.webp',
+      name: 'Code Mage',
+    },
+    category: 'Book Summary',
+    date: 'Jan 14, 2025',
     excerpt:
       "Fluent Python is a masterpiece, but it's also 800+ pages of dense content. Here are the game-changing insights that will level up your Python skills without reading the entire book.",
+    id: 6,
     image:
       'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'Book Summary',
+    readTime: '10 min',
     tags: [
       'python',
       'book-summary',
@@ -182,22 +187,22 @@ const blogPosts: BlogPost[] = [
       'learning',
       'insights',
     ],
-    date: 'Jan 14, 2025',
-    readTime: '10 min',
+    title: "What I Learned After Reading Fluent Python — So You Don't Have To",
     views: '6.1k',
-    author: {
-      name: 'Code Mage',
-      avatar: '/brand/Code Mage Logo.webp',
-    },
   },
   {
-    id: 7,
-    title: "The Magic Behind Python's 'is' vs '==' — Explained Like You're 5",
+    author: {
+      avatar: '/brand/Code Mage Logo.webp',
+      name: 'Code Mage',
+    },
+    category: 'Python Fundamentals',
+    date: 'Jan 14, 2025',
     excerpt:
       'Why does `a is b` sometimes work and sometimes not? 🤔 Let\'s unravel this Python mystery with simple analogies that will make you go "Aha!" and never confuse identity with equality again.',
+    id: 7,
     image:
       'https://images.unsplash.com/photo-1629654297299-c8506221ca97?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'Python Fundamentals',
+    readTime: '7 min',
     tags: [
       'python',
       'fundamentals',
@@ -207,22 +212,22 @@ const blogPosts: BlogPost[] = [
       'comparison',
       'operators',
     ],
-    date: 'Jan 14, 2025',
-    readTime: '7 min',
+    title: "The Magic Behind Python's 'is' vs '==' — Explained Like You're 5",
     views: '4.8k',
-    author: {
-      name: 'Code Mage',
-      avatar: '/brand/Code Mage Logo.webp',
-    },
   },
   {
-    id: 8,
-    title: "10 Python Mistakes You're Probably Making Without Realizing It",
+    author: {
+      avatar: '/brand/Code Mage Logo.webp',
+      name: 'Code Mage',
+    },
+    category: 'Python Tips',
+    date: 'Jan 13, 2025',
     excerpt:
       'Even experienced Python developers fall into these traps. Discover the subtle mistakes that could be slowing down your code and making your programs behave unexpectedly.',
+    id: 8,
     image:
       'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    category: 'Python Tips',
+    readTime: '9 min',
     tags: [
       'python',
       'mistakes',
@@ -231,13 +236,8 @@ const blogPosts: BlogPost[] = [
       'debugging',
       'tips',
     ],
-    date: 'Jan 13, 2025',
-    readTime: '9 min',
+    title: "10 Python Mistakes You're Probably Making Without Realizing It",
     views: '7.3k',
-    author: {
-      name: 'Code Mage',
-      avatar: '/brand/Code Mage Logo.webp',
-    },
   },
 ];
 
@@ -307,12 +307,12 @@ export const BlogDetail: React.FC = () => {
     if (navigator.share && post) {
       try {
         await navigator.share({
-          title: post.title,
           text: post.excerpt,
+          title: post.title,
           url: window.location.href,
         });
       } catch (err) {
-        console.log('Error sharing:', err);
+        console.error('Error sharing:', err);
       }
     } else {
       // Fallback: copy to clipboard
@@ -496,7 +496,7 @@ export const BlogDetail: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
+          transition={{ delay: 0.8, duration: 0.8 }}
           className="mt-12"
         >
           <h2 className="text-2xl font-bold text-navy-900 dark:text-cloud-100 mb-6">

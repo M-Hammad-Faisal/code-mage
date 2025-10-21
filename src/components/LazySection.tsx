@@ -1,22 +1,22 @@
-import React, { useState, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface LazySectionProps {
+  animateOnLoad?: boolean;
   children: ReactNode;
   className?: string;
-  threshold?: number;
-  rootMargin?: string;
   fallback?: ReactNode;
-  animateOnLoad?: boolean;
+  rootMargin?: string;
+  threshold?: number;
 }
 
 const LazySection: React.FC<LazySectionProps> = ({
+  animateOnLoad = true,
   children,
   className = '',
-  threshold = 0.1,
-  rootMargin = '100px',
   fallback = null,
-  animateOnLoad = true,
+  rootMargin = '100px',
+  threshold = 0.1,
 }) => {
   const [isInView, setIsInView] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -33,8 +33,8 @@ const LazySection: React.FC<LazySectionProps> = ({
         }
       },
       {
-        threshold,
         rootMargin,
+        threshold,
       }
     );
 

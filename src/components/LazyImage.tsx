@@ -1,21 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface LazyImageProps {
-  src: string;
   alt: string;
   className?: string;
-  placeholder?: string;
-  onLoad?: () => void;
   onError?: () => void;
+  onLoad?: () => void;
+  placeholder?: string;
+  src: string;
 }
 
 const LazyImage: React.FC<LazyImageProps> = ({
-  src,
   alt,
   className = '',
-  placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PC9zdmc+',
-  onLoad,
   onError,
+  onLoad,
+  placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PC9zdmc+',
+  src,
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
@@ -31,8 +31,8 @@ const LazyImage: React.FC<LazyImageProps> = ({
         }
       },
       {
-        threshold: 0.1,
         rootMargin: '50px',
+        threshold: 0.1,
       }
     );
 

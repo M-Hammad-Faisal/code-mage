@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export const useTheme = () => {
   const [isDark, setIsDark] = useState(false);
@@ -13,8 +13,8 @@ export const useTheme = () => {
 
     const observer = new MutationObserver(checkTheme);
     observer.observe(document.documentElement, {
-      attributes: true,
       attributeFilter: ['class'],
+      attributes: true,
     });
 
     return () => observer.disconnect();

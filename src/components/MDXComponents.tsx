@@ -3,6 +3,34 @@ import { CodeBlock } from './CodeBlock';
 
 // MDX Components for custom styling
 export const MDXComponents = {
+  // Links
+  a: ({ children, href, ...props }: ComponentProps<'a'>) => (
+    <a
+      href={href}
+      className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 underline decoration-red-500/30 hover:decoration-red-500/60 transition-colors duration-200"
+      target={href?.startsWith('http') ? '_blank' : undefined}
+      rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+      {...props}
+    >
+      {children}
+    </a>
+  ),
+  // Blockquotes
+  blockquote: ({ children, ...props }: ComponentProps<'blockquote'>) => (
+    <blockquote
+      className="border-l-4 border-red-500 pl-4 my-6 italic text-navy-700 dark:text-cloud-200 bg-gray-50 dark:bg-gray-800/50 py-4 rounded-r-lg"
+      {...props}
+    >
+      {children}
+    </blockquote>
+  ),
+  // Code blocks and inline code
+  code: CodeBlock,
+  em: ({ children, ...props }: ComponentProps<'em'>) => (
+    <em className="italic text-navy-700 dark:text-cloud-200" {...props}>
+      {children}
+    </em>
+  ),
   // Headings
   h1: ({ children, ...props }: ComponentProps<'h1'>) => (
     <div className="mb-8 mt-0 first:mt-0">
@@ -59,31 +87,23 @@ export const MDXComponents = {
       {children}
     </h6>
   ),
-
-  // Paragraphs
-  p: ({ children, ...props }: ComponentProps<'p'>) => (
-    <p
-      className="mb-4 text-navy-600 dark:text-cloud-300 leading-relaxed"
-      {...props}
-    >
-      {children}
-    </p>
+  // Horizontal rule
+  hr: ({ ...props }: ComponentProps<'hr'>) => (
+    <hr className="my-8 border-gray-200 dark:border-gray-700" {...props} />
   ),
-
-  // Code blocks and inline code
-  code: CodeBlock,
-  pre: ({ children, ...props }: ComponentProps<'pre'>) => (
-    <pre {...props}>{children}</pre>
-  ),
-
-  // Lists
-  ul: ({ children, ...props }: ComponentProps<'ul'>) => (
-    <ul
-      className="list-disc list-inside mb-4 space-y-2 text-navy-600 dark:text-cloud-300"
+  // Images
+  img: ({ alt, src, ...props }: ComponentProps<'img'>) => (
+    <img
+      src={src}
+      alt={alt}
+      className="max-w-full h-auto rounded-lg shadow-md my-6"
       {...props}
-    >
+    />
+  ),
+  li: ({ children, ...props }: ComponentProps<'li'>) => (
+    <li className="text-navy-600 dark:text-cloud-300" {...props}>
       {children}
-    </ul>
+    </li>
   ),
   ol: ({ children, ...props }: ComponentProps<'ol'>) => (
     <ol
@@ -93,35 +113,24 @@ export const MDXComponents = {
       {children}
     </ol>
   ),
-  li: ({ children, ...props }: ComponentProps<'li'>) => (
-    <li className="text-navy-600 dark:text-cloud-300" {...props}>
-      {children}
-    </li>
-  ),
-
-  // Blockquotes
-  blockquote: ({ children, ...props }: ComponentProps<'blockquote'>) => (
-    <blockquote
-      className="border-l-4 border-red-500 pl-4 my-6 italic text-navy-700 dark:text-cloud-200 bg-gray-50 dark:bg-gray-800/50 py-4 rounded-r-lg"
+  // Paragraphs
+  p: ({ children, ...props }: ComponentProps<'p'>) => (
+    <p
+      className="mb-4 text-navy-600 dark:text-cloud-300 leading-relaxed"
       {...props}
     >
       {children}
-    </blockquote>
+    </p>
   ),
-
-  // Links
-  a: ({ children, href, ...props }: ComponentProps<'a'>) => (
-    <a
-      href={href}
-      className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 underline decoration-red-500/30 hover:decoration-red-500/60 transition-colors duration-200"
-      target={href?.startsWith('http') ? '_blank' : undefined}
-      rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
-      {...props}
-    >
+  pre: ({ children, ...props }: ComponentProps<'pre'>) => (
+    <pre {...props}>{children}</pre>
+  ),
+  // Strong and emphasis
+  strong: ({ children, ...props }: ComponentProps<'strong'>) => (
+    <strong className="font-bold text-navy-900 dark:text-cloud-100" {...props}>
       {children}
-    </a>
+    </strong>
   ),
-
   // Tables
   table: ({ children, ...props }: ComponentProps<'table'>) => (
     <div className="overflow-x-auto my-6">
@@ -133,20 +142,15 @@ export const MDXComponents = {
       </table>
     </div>
   ),
-  thead: ({ children, ...props }: ComponentProps<'thead'>) => (
-    <thead className="bg-gray-50 dark:bg-gray-800" {...props}>
-      {children}
-    </thead>
-  ),
   tbody: ({ children, ...props }: ComponentProps<'tbody'>) => (
     <tbody className="bg-white dark:bg-gray-900" {...props}>
       {children}
     </tbody>
   ),
-  tr: ({ children, ...props }: ComponentProps<'tr'>) => (
-    <tr className="border-b border-gray-200 dark:border-gray-700" {...props}>
+  td: ({ children, ...props }: ComponentProps<'td'>) => (
+    <td className="px-4 py-2 text-navy-600 dark:text-cloud-300" {...props}>
       {children}
-    </tr>
+    </td>
   ),
   th: ({ children, ...props }: ComponentProps<'th'>) => (
     <th
@@ -156,36 +160,23 @@ export const MDXComponents = {
       {children}
     </th>
   ),
-  td: ({ children, ...props }: ComponentProps<'td'>) => (
-    <td className="px-4 py-2 text-navy-600 dark:text-cloud-300" {...props}>
+  thead: ({ children, ...props }: ComponentProps<'thead'>) => (
+    <thead className="bg-gray-50 dark:bg-gray-800" {...props}>
       {children}
-    </td>
+    </thead>
   ),
-
-  // Horizontal rule
-  hr: ({ ...props }: ComponentProps<'hr'>) => (
-    <hr className="my-8 border-gray-200 dark:border-gray-700" {...props} />
-  ),
-
-  // Strong and emphasis
-  strong: ({ children, ...props }: ComponentProps<'strong'>) => (
-    <strong className="font-bold text-navy-900 dark:text-cloud-100" {...props}>
+  tr: ({ children, ...props }: ComponentProps<'tr'>) => (
+    <tr className="border-b border-gray-200 dark:border-gray-700" {...props}>
       {children}
-    </strong>
+    </tr>
   ),
-  em: ({ children, ...props }: ComponentProps<'em'>) => (
-    <em className="italic text-navy-700 dark:text-cloud-200" {...props}>
-      {children}
-    </em>
-  ),
-
-  // Images
-  img: ({ src, alt, ...props }: ComponentProps<'img'>) => (
-    <img
-      src={src}
-      alt={alt}
-      className="max-w-full h-auto rounded-lg shadow-md my-6"
+  // Lists
+  ul: ({ children, ...props }: ComponentProps<'ul'>) => (
+    <ul
+      className="list-disc list-inside mb-4 space-y-2 text-navy-600 dark:text-cloud-300"
       {...props}
-    />
+    >
+      {children}
+    </ul>
   ),
 };

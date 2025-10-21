@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
+import { ArrowLeft, Home, Youtube } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Home, Youtube, ArrowLeft } from 'lucide-react';
 import { SEO } from '../components';
 
 export default function NotFound() {
@@ -22,7 +22,7 @@ export default function NotFound() {
             className="text-8xl md:text-9xl font-bold text-blue-600 dark:text-blue-400 mb-4"
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
-            transition={{ duration: 0.8, type: 'spring', stiffness: 100 }}
+            transition={{ duration: 0.8, stiffness: 100, type: 'spring' }}
           >
             404
           </motion.h1>

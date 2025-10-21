@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Youtube, ExternalLink } from 'lucide-react';
-import { youtubeService } from '../lib/youtube';
-import { YouTubeCard } from './YouTubeCard';
-import { SITE } from '../site.config';
+import { ExternalLink, Youtube } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import type { YouTubeVideo } from '../lib/youtube';
+import { youtubeService } from '../lib/youtube';
+import { SITE } from '../site.config';
+import { YouTubeCard } from './YouTubeCard';
 
 export const YouTubeSection: React.FC = () => {
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);

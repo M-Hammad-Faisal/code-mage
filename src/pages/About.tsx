@@ -1,8 +1,8 @@
-import React from 'react';
 import { motion } from 'framer-motion';
+import { Code, Heart, Palette, Smartphone, Target, Users } from 'lucide-react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { SEO } from '../components';
-import { Code, Heart, Users, Target, Palette, Smartphone } from 'lucide-react';
 
 export const About: React.FC = () => {
   return (
@@ -32,7 +32,7 @@ export const About: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
+          transition={{ delay: 0.2, duration: 0.8 }}
           className="mb-20"
         >
           <h2 className="text-3xl font-bold text-navy-900 dark:text-cloud-100 mb-6">
@@ -65,7 +65,7 @@ export const About: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
+          transition={{ delay: 0.4, duration: 0.8 }}
           className="mb-20"
         >
           <h2 className="text-3xl font-bold text-navy-900 dark:text-cloud-100 text-center mb-12">
@@ -117,7 +117,7 @@ export const About: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
+          transition={{ delay: 0.6, duration: 0.8 }}
           className="mb-20"
         >
           <h2 className="text-3xl font-bold text-navy-900 dark:text-cloud-100 text-center mb-12">
@@ -169,7 +169,7 @@ export const About: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
+          transition={{ delay: 0.8, duration: 0.8 }}
           className="text-center"
         >
           <h2 className="text-3xl font-bold text-navy-900 dark:text-cloud-100 mb-6">

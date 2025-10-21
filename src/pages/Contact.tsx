@@ -1,7 +1,7 @@
-import React from 'react';
 import { motion } from 'framer-motion';
+import { Clock, Github, Heart, Linkedin, Youtube } from 'lucide-react';
+import React from 'react';
 import { SEO } from '../components';
-import { Github, Clock, Youtube, Linkedin, Heart } from 'lucide-react';
 import { SITE } from '../site.config';
 
 export const Contact: React.FC = () => {
@@ -33,7 +33,7 @@ export const Contact: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
             className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl p-6 border border-gray-200 dark:border-gray-600/50 backdrop-blur-sm"
           >
             <h2 className="text-2xl font-bold text-navy-900 dark:text-cloud-100 mb-6">
@@ -113,7 +113,7 @@ export const Contact: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
             className="space-y-8"
           >
             <div className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl p-6 border border-gray-200 dark:border-gray-600/50 backdrop-blur-sm">
@@ -183,7 +183,7 @@ export const Contact: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
+          transition={{ delay: 0.6, duration: 0.8 }}
           className="bg-white dark:bg-gray-800/80 rounded-xl shadow-lg dark:shadow-2xl p-6 border border-gray-200 dark:border-gray-600/50 backdrop-blur-sm"
         >
           <h3 className="text-2xl font-bold text-navy-900 dark:text-cloud-100 mb-6 text-center">

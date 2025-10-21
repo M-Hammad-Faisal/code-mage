@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Youtube,
-  Github,
-  Linkedin,
-  Heart,
-  Mail,
   ArrowRight,
-  Code,
   BookOpen,
-  Users,
-  Star,
+  Code,
   DollarSign,
+  Github,
+  Heart,
+  Linkedin,
+  Mail,
+  Star,
+  Users,
+  Youtube,
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ASSETS } from '../utils/assets';
 import { WebPImage } from './WebPImage';
 
@@ -32,8 +32,8 @@ export const Footer: React.FC = () => {
     // Listen for theme changes
     const observer = new MutationObserver(checkDarkMode);
     observer.observe(document.documentElement, {
-      attributes: true,
       attributeFilter: ['class'],
+      attributes: true,
     });
 
     return () => observer.disconnect();
@@ -41,36 +41,36 @@ export const Footer: React.FC = () => {
 
   const socialLinks = [
     {
-      icon: Youtube,
-      href: 'https://youtube.com/@code_your_magic',
-      label: 'YouTube',
       color: 'hover:bg-red-600',
+      href: 'https://youtube.com/@code_your_magic',
+      icon: Youtube,
+      label: 'YouTube',
     },
     {
-      icon: Github,
-      href: 'https://github.com/hammad-faisal',
-      label: 'GitHub',
       color: 'hover:bg-gray-700',
+      href: 'https://github.com/hammad-faisal',
+      icon: Github,
+      label: 'GitHub',
     },
     {
-      icon: Linkedin,
-      href: 'https://linkedin.com/in/hammad-faisal-dev',
-      label: 'LinkedIn',
       color: 'hover:bg-blue-600',
+      href: 'https://linkedin.com/in/hammad-faisal-dev',
+      icon: Linkedin,
+      label: 'LinkedIn',
     },
     {
-      icon: DollarSign,
-      href: 'https://patreon.com/code_your_magic',
-      label: 'Patreon',
       color: 'hover:bg-orange-600',
+      href: 'https://patreon.com/code_your_magic',
+      icon: DollarSign,
+      label: 'Patreon',
     },
   ];
 
   const quickLinks = [
-    { name: 'Courses', href: '/learn', icon: BookOpen },
-    { name: 'Blog', href: '/blog', icon: Code },
-    { name: 'About', href: '/about', icon: Users },
-    { name: 'Contact', href: '/contact', icon: Mail },
+    { href: '/learn', icon: BookOpen, name: 'Courses' },
+    { href: '/blog', icon: Code, name: 'Blog' },
+    { href: '/about', icon: Users, name: 'About' },
+    { href: '/contact', icon: Mail, name: 'Contact' },
   ];
 
   return (
@@ -102,8 +102,8 @@ export const Footer: React.FC = () => {
           >
             <div className="flex items-center space-x-3 mb-6">
               <motion.div
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                transition={{ type: 'spring', stiffness: 300 }}
+                whileHover={{ rotate: 5, scale: 1.05 }}
+                transition={{ stiffness: 300, type: 'spring' }}
               >
                 <WebPImage
                   webpSrc={ASSETS.LOGO.WEBP}
@@ -132,28 +132,28 @@ export const Footer: React.FC = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {[
                 {
+                  color: 'from-blue-500 to-cyan-500',
                   icon: Code,
                   label: 'Projects',
                   value: '10K+',
-                  color: 'from-blue-500 to-cyan-500',
                 },
                 {
+                  color: 'from-green-500 to-emerald-500',
                   icon: BookOpen,
                   label: 'Courses',
                   value: '50+',
-                  color: 'from-green-500 to-emerald-500',
                 },
                 {
+                  color: 'from-purple-500 to-pink-500',
                   icon: Users,
                   label: 'Students',
                   value: '100+',
-                  color: 'from-purple-500 to-pink-500',
                 },
                 {
+                  color: 'from-yellow-500 to-orange-500',
                   icon: Star,
                   label: 'Rating',
                   value: '4.9',
-                  color: 'from-yellow-500 to-orange-500',
                 },
               ].map((stat, index) => (
                 <motion.div
@@ -167,13 +167,13 @@ export const Footer: React.FC = () => {
                   }}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  transition={{ delay: index * 0.1, duration: 0.5 }}
                   viewport={{ once: true }}
                   whileHover={{
-                    scale: 1.05,
                     backgroundColor: isDarkMode
                       ? 'rgba(17, 24, 39, 0.8)'
                       : 'rgba(255, 255, 255, 0.2)',
+                    scale: 1.05,
                   }}
                 >
                   <div
@@ -208,9 +208,9 @@ export const Footer: React.FC = () => {
                   aria-label={`Visit our ${social.label} page`}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  transition={{ delay: index * 0.1, duration: 0.5 }}
                   viewport={{ once: true }}
-                  whileHover={{ y: -3, scale: 1.05 }}
+                  whileHover={{ scale: 1.05, y: -3 }}
                   whileTap={{ scale: 0.95 }}
                   className="group p-3 backdrop-blur-sm rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
                   style={{
@@ -236,7 +236,7 @@ export const Footer: React.FC = () => {
             className="lg:col-span-3"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
             viewport={{ once: true }}
           >
             <h3
@@ -252,7 +252,7 @@ export const Footer: React.FC = () => {
                   key={link.name}
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  transition={{ delay: index * 0.1, duration: 0.5 }}
                   viewport={{ once: true }}
                 >
                   <Link
@@ -291,7 +291,7 @@ export const Footer: React.FC = () => {
             className="lg:col-span-4"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
             viewport={{ once: true }}
           >
             <h3
@@ -413,7 +413,7 @@ export const Footer: React.FC = () => {
                 className="flex space-x-2 relative"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.6 }}
+                transition={{ delay: 0.6, duration: 0.8 }}
               >
                 <div className="flex-1 relative group">
                   <motion.input
@@ -428,7 +428,7 @@ export const Footer: React.FC = () => {
                       color: isDarkMode ? '#ffffff' : '#312e81',
                     }}
                     whileFocus={{ scale: 1.02 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    transition={{ damping: 30, stiffness: 300, type: 'spring' }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                 </div>
@@ -437,7 +437,7 @@ export const Footer: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-xl relative overflow-hidden group"
-                  transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                  transition={{ damping: 17, stiffness: 400, type: 'spring' }}
                   aria-label="Subscribe to newsletter"
                 >
                   <span className="relative z-10 flex items-center">
@@ -457,7 +457,7 @@ export const Footer: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.8 }}
+                transition={{ delay: 0.8, duration: 0.6 }}
                 className="mt-4 flex items-center gap-4 text-xs text-navy-600 dark:text-cloud-400 relative"
               >
                 <div className="flex items-center gap-1">

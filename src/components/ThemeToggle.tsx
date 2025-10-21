@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
 import { Moon, Sun } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 export const ThemeToggle: React.FC = () => {
   const [isDark, setIsDark] = useState(() => {

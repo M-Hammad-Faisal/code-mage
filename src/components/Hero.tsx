@@ -1,7 +1,7 @@
+import { motion } from 'framer-motion';
+import { ArrowRight, BookOpen, Play } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Play, BookOpen, ArrowRight } from 'lucide-react';
 import { SITE } from '../site.config';
 import { ASSETS } from '../utils/assets';
 
@@ -26,8 +26,8 @@ export const Hero: React.FC = () => {
     // Listen for theme changes
     const observer = new MutationObserver(checkDarkMode);
     observer.observe(document.documentElement, {
-      attributes: true,
       attributeFilter: ['class'],
+      attributes: true,
     });
 
     return () => observer.disconnect();
@@ -52,39 +52,39 @@ export const Hero: React.FC = () => {
         <motion.div
           className="absolute top-20 left-10 w-2 h-2 bg-red-400 dark:bg-red-500 rounded-full opacity-60 dark:opacity-80"
           animate={{
-            y: [0, -20, 0],
             opacity: [0.6, 1, 0.6],
+            y: [0, -20, 0],
           }}
           transition={{
             duration: 3,
-            repeat: Infinity,
             ease: 'easeInOut',
+            repeat: Infinity,
           }}
         />
         <motion.div
           className="absolute top-40 right-20 w-1 h-1 bg-cloud-300 dark:bg-gray-400 rounded-full opacity-40 dark:opacity-60"
           animate={{
-            y: [0, -15, 0],
             opacity: [0.4, 0.8, 0.4],
+            y: [0, -15, 0],
           }}
           transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: 'easeInOut',
             delay: 1,
+            duration: 4,
+            ease: 'easeInOut',
+            repeat: Infinity,
           }}
         />
         <motion.div
           className="absolute bottom-40 left-20 w-1.5 h-1.5 bg-red-300 dark:bg-red-400 rounded-full opacity-50 dark:opacity-70"
           animate={{
-            y: [0, -25, 0],
             opacity: [0.5, 1, 0.5],
+            y: [0, -25, 0],
           }}
           transition={{
-            duration: 5,
-            repeat: Infinity,
-            ease: 'easeInOut',
             delay: 2,
+            duration: 5,
+            ease: 'easeInOut',
+            repeat: Infinity,
           }}
         />
       </div>
@@ -105,16 +105,16 @@ export const Hero: React.FC = () => {
           {/* Main Heading */}
           <motion.h1
             className="text-4xl sm:text-5xl lg:text-7xl font-heading font-bold text-gray-900 dark:text-white mb-6 leading-tight"
-            initial={{ opacity: 0, y: 30, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 1, delay: 0.2, ease: 'easeOut' }}
+            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 1, ease: 'easeOut' }}
           >
             Welcome to{' '}
             <motion.span
               className="relative inline-block"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.5, ease: 'backOut' }}
+              transition={{ delay: 0.5, duration: 0.8, ease: 'backOut' }}
             >
               <span className="bg-gradient-to-r from-red-400 via-red-500 to-red-600 dark:from-red-300 dark:via-red-400 dark:to-red-500 bg-clip-text text-transparent">
                 Code Mage
@@ -127,8 +127,8 @@ export const Hero: React.FC = () => {
                 }}
                 transition={{
                   duration: 3,
-                  repeat: Infinity,
                   ease: 'easeInOut',
+                  repeat: Infinity,
                 }}
               />
             </motion.span>
@@ -139,7 +139,7 @@ export const Hero: React.FC = () => {
             className="text-xl sm:text-2xl text-gray-900 dark:text-gray-200 mb-8 font-medium tracking-wide"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6, ease: 'easeOut' }}
+            transition={{ delay: 0.6, duration: 0.8, ease: 'easeOut' }}
           >
             <motion.span
               animate={{
@@ -147,8 +147,8 @@ export const Hero: React.FC = () => {
               }}
               transition={{
                 duration: 3,
-                repeat: Infinity,
                 ease: 'linear',
+                repeat: Infinity,
               }}
               className="bg-gradient-to-r from-gray-800 via-gray-900 to-gray-800 dark:from-gray-200 dark:via-white dark:to-gray-200 bg-clip-text text-transparent bg-[length:200%_100%]"
             >
@@ -161,7 +161,7 @@ export const Hero: React.FC = () => {
             className="text-lg text-gray-700 dark:text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8, ease: 'easeOut' }}
+            transition={{ delay: 0.8, duration: 0.8, ease: 'easeOut' }}
           >
             Master Python through engaging short videos, challenging problems,
             and insightful book summaries. Join thousands of developers on their
@@ -173,7 +173,7 @@ export const Hero: React.FC = () => {
             className="flex flex-col sm:flex-row gap-6 justify-center items-center"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1.0, ease: 'easeOut' }}
+            transition={{ delay: 1.0, duration: 0.8, ease: 'easeOut' }}
           >
             <motion.a
               href={SITE.socials.youtube}
@@ -181,11 +181,11 @@ export const Hero: React.FC = () => {
               rel="noopener noreferrer"
               className="group relative inline-flex items-center px-8 py-4 bg-gradient-to-r from-red-600 to-red-700 dark:from-red-500 dark:to-red-600 text-white font-semibold rounded-xl overflow-hidden shadow-2xl"
               whileHover={{
-                scale: 1.05,
                 boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.5)',
+                scale: 1.05,
               }}
               whileTap={{ scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              transition={{ damping: 20, stiffness: 300, type: 'spring' }}
             >
               <motion.div
                 className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600 dark:from-red-400 dark:to-red-500"
@@ -201,7 +201,7 @@ export const Hero: React.FC = () => {
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              transition={{ damping: 20, stiffness: 300, type: 'spring' }}
             >
               <Link
                 to="/learn"
@@ -224,21 +224,21 @@ export const Hero: React.FC = () => {
             className="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-3xl mx-auto"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1.2, ease: 'easeOut' }}
+            transition={{ delay: 1.2, duration: 0.8, ease: 'easeOut' }}
           >
             {[
-              { number: '50+', label: 'Video Lessons', delay: 0 },
-              { number: '100+', label: 'Code Examples', delay: 0.1 },
-              { number: '24/7', label: 'Learning Access', delay: 0.2 },
+              { delay: 0, label: 'Video Lessons', number: '50+' },
+              { delay: 0.1, label: 'Code Examples', number: '100+' },
+              { delay: 0.2, label: 'Learning Access', number: '24/7' },
             ].map((stat, index) => (
               <motion.div
                 key={index}
                 className="text-center group cursor-pointer"
-                initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{
-                  duration: 0.6,
                   delay: 1.4 + stat.delay,
+                  duration: 0.6,
                   ease: 'backOut',
                 }}
                 whileHover={{
@@ -252,10 +252,10 @@ export const Hero: React.FC = () => {
                     backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
                   }}
                   transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: 'linear',
                     delay: stat.delay,
+                    duration: 3,
+                    ease: 'linear',
+                    repeat: Infinity,
                   }}
                   style={{
                     backgroundSize: '200% 100%',
@@ -275,7 +275,7 @@ export const Hero: React.FC = () => {
             className="mt-16 max-w-md mx-auto"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1.2 }}
+            transition={{ delay: 1.2, duration: 0.8 }}
           >
             <div
               className="backdrop-blur-sm rounded-lg p-6 shadow-lg dark:shadow-2xl"
@@ -314,7 +314,7 @@ export const Hero: React.FC = () => {
         className="absolute bottom-8 bg-red left-1/2 transform -translate-x-1/2"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 1, delay: 1.5 }}
+        transition={{ delay: 1.5, duration: 1 }}
       >
         <div className="w-6 h-10 border-2 border-gray-400/50 dark:border-gray-400/50 rounded-full flex justify-center">
           <motion.div

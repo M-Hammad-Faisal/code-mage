@@ -1,22 +1,22 @@
 export interface SEOConfig {
-  title: string;
   desc: string;
-  url: string;
   image: string;
+  title: string;
+  url: string;
 }
 
-export function seo({ title, desc, url, image }: SEOConfig) {
+export function seo({ desc, image, title, url }: SEOConfig) {
   return [
-    { name: 'description', content: desc },
-    { property: 'og:title', content: title },
-    { property: 'og:description', content: desc },
-    { property: 'og:type', content: 'website' },
-    { property: 'og:url', content: url },
-    { property: 'og:image', content: image },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: title },
-    { name: 'twitter:description', content: desc },
-    { name: 'twitter:image', content: image },
+    { content: desc, name: 'description' },
+    { content: title, property: 'og:title' },
+    { content: desc, property: 'og:description' },
+    { content: 'website', property: 'og:type' },
+    { content: url, property: 'og:url' },
+    { content: image, property: 'og:image' },
+    { content: 'summary_large_image', name: 'twitter:card' },
+    { content: title, name: 'twitter:title' },
+    { content: desc, name: 'twitter:description' },
+    { content: image, name: 'twitter:image' },
   ];
 }
 

@@ -1,72 +1,72 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Hero, SEO } from '../components';
-import LazySection from '../components/LazySection';
-import LazyImage from '../components/LazyImage';
 import {
+  ArrowRight,
   BookOpen,
-  FileText,
+  Clock,
   Code,
   Database,
+  FileText,
   Globe,
   Smartphone,
-  ArrowRight,
-  Clock,
-  Users,
   Star,
+  Users,
 } from 'lucide-react';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Hero, SEO } from '../components';
+import LazyImage from '../components/LazyImage';
+import LazySection from '../components/LazySection';
 
 export const Home: React.FC = () => {
   const highlights = [
     {
-      id: 1,
-      title: 'Python Fundamentals',
+      category: 'Course',
       description:
         'Master the basics of Python programming with hands-on examples and exercises.',
+      duration: '8 hours',
+      id: 1,
       image:
         'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-      category: 'Course',
-      duration: '8 hours',
-      students: '2.5k',
-      rating: 4.8,
       link: '/learn/1',
+      rating: 4.8,
+      students: '2.5k',
+      title: 'Python Fundamentals',
     },
     {
-      id: 2,
-      title: 'Data Structures Deep Dive',
+      category: 'Tutorial',
       description:
         'Comprehensive guide to data structures and algorithms in Python.',
+      duration: '12 hours',
+      id: 2,
       image:
         'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-      category: 'Tutorial',
-      duration: '12 hours',
-      students: '1.8k',
-      rating: 4.9,
       link: '/learn/2',
+      rating: 4.9,
+      students: '1.8k',
+      title: 'Data Structures Deep Dive',
     },
     {
-      id: 3,
-      title: 'Web Development with Flask',
+      category: 'Project',
       description:
         'Build modern web applications using Flask framework and best practices.',
+      duration: '15 hours',
+      id: 3,
       image:
         'https://images.unsplash.com/photo-1627398242454-45a1465c2479?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-      category: 'Project',
-      duration: '15 hours',
-      students: '3.2k',
-      rating: 4.7,
       link: '/learn/3',
+      rating: 4.7,
+      students: '3.2k',
+      title: 'Web Development with Flask',
     },
   ];
 
   const quickLinks = [
-    { name: 'Python Basics', icon: Code, link: '/learn?category=python' },
-    { name: 'Web Development', icon: Globe, link: '/learn?category=web' },
-    { name: 'Data Science', icon: Database, link: '/learn?category=data' },
-    { name: 'Mobile Apps', icon: Smartphone, link: '/learn?category=mobile' },
-    { name: 'Algorithms', icon: BookOpen, link: '/learn?category=algorithms' },
-    { name: 'Projects', icon: FileText, link: '/learn?category=projects' },
+    { icon: Code, link: '/learn?category=python', name: 'Python Basics' },
+    { icon: Globe, link: '/learn?category=web', name: 'Web Development' },
+    { icon: Database, link: '/learn?category=data', name: 'Data Science' },
+    { icon: Smartphone, link: '/learn?category=mobile', name: 'Mobile Apps' },
+    { icon: BookOpen, link: '/learn?category=algorithms', name: 'Algorithms' },
+    { icon: FileText, link: '/learn?category=projects', name: 'Projects' },
   ];
 
   return (
@@ -97,7 +97,7 @@ export const Home: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
                 viewport={{ once: true }}
                 className="inline-block"
               >
@@ -121,23 +121,23 @@ export const Home: React.FC = () => {
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
               viewport={{ once: true }}
             >
               {quickLinks.map((link, index) => (
                 <motion.div
                   key={link.name}
-                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  initial={{ opacity: 0, scale: 0.95, y: 30 }}
+                  whileInView={{ opacity: 1, scale: 1, y: 0 }}
                   transition={{
-                    duration: 0.6,
                     delay: index * 0.1,
+                    duration: 0.6,
                     ease: 'easeOut',
                   }}
                   viewport={{ once: true }}
                   whileHover={{
-                    y: -12,
                     transition: { duration: 0.3, ease: 'easeOut' },
+                    y: -12,
                   }}
                   className="group relative"
                 >
@@ -151,11 +151,11 @@ export const Home: React.FC = () => {
                     {/* Icon container */}
                     <motion.div
                       className="flex justify-center mb-6"
-                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      whileHover={{ rotate: 5, scale: 1.1 }}
                       transition={{
-                        type: 'spring',
-                        stiffness: 300,
                         damping: 20,
+                        stiffness: 300,
+                        type: 'spring',
                       }}
                     >
                       <div className="relative">
@@ -212,7 +212,7 @@ export const Home: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
                 viewport={{ once: true }}
                 className="inline-block"
               >
@@ -236,23 +236,23 @@ export const Home: React.FC = () => {
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
               viewport={{ once: true }}
             >
               {highlights.map((highlight, index) => (
                 <motion.div
                   key={highlight.id}
-                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  initial={{ opacity: 0, scale: 0.95, y: 30 }}
+                  whileInView={{ opacity: 1, scale: 1, y: 0 }}
                   transition={{
-                    duration: 0.6,
                     delay: index * 0.15,
+                    duration: 0.6,
                     ease: 'easeOut',
                   }}
                   viewport={{ once: true }}
                   whileHover={{
-                    y: -8,
                     transition: { duration: 0.3, ease: 'easeOut' },
+                    y: -8,
                   }}
                   className="group relative"
                 >
@@ -272,7 +272,7 @@ export const Home: React.FC = () => {
                       <motion.div
                         className="absolute top-4 left-4"
                         whileHover={{ scale: 1.05 }}
-                        transition={{ type: 'spring', stiffness: 300 }}
+                        transition={{ stiffness: 300, type: 'spring' }}
                       >
                         <span className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-semibold rounded-full shadow-lg backdrop-blur-sm">
                           {highlight.category}
@@ -283,7 +283,7 @@ export const Home: React.FC = () => {
                       <motion.div
                         className="absolute top-4 right-4 flex items-center space-x-1 bg-black/60 backdrop-blur-md rounded-full px-3 py-1.5"
                         whileHover={{ scale: 1.05 }}
-                        transition={{ type: 'spring', stiffness: 300 }}
+                        transition={{ stiffness: 300, type: 'spring' }}
                       >
                         <Star className="w-3 h-3 text-yellow-400 fill-current" />
                         <span className="text-white text-xs font-semibold">
@@ -341,14 +341,14 @@ export const Home: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
+              transition={{ delay: 0.6, duration: 0.8 }}
               viewport={{ once: true }}
               className="text-center mt-16"
             >
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                transition={{ damping: 20, stiffness: 300, type: 'spring' }}
               >
                 <Link
                   to="/learn"
