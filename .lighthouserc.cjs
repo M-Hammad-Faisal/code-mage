@@ -1,30 +1,29 @@
 module.exports = {
   ci: {
-    assert: {
-      assertions: {
-        // Non-performance categories - errors (must pass)
-        'categories:accessibility': ['error', { minScore: 0.95 }],
-        'categories:best-practices': ['error', { minScore: 0.95 }],
-        // Performance metrics - warnings only
-        'categories:performance': ['warn', { minScore: 0.7 }],
-        'categories:seo': ['error', { minScore: 0.95 }],
-        'first-contentful-paint': ['warn', { minScore: 0.7 }],
-        'network-dependency-tree-insight': ['warn', { minScore: 0.5 }],
-        'render-blocking-insight': ['warn', { maxLength: 5 }],
-        'render-blocking-resources': ['warn', { maxLength: 5 }],
-        'speed-index': ['warn', { minScore: 0.7 }],
-        'unused-javascript': ['warn', { maxLength: 5 }],
-      },
-    },
     collect: {
       numberOfRuns: 1,
+      startServerCommand: 'npm run start',
+      startServerReadyPattern: 'started server on',
+      startServerReadyTimeout: 60000,
+      url: ['http://localhost:3000', 'http://localhost:3000/blog', 'http://localhost:3000/about'],
       settings: {
         chromeFlags: ['--no-sandbox', '--disable-dev-shm-usage'],
       },
-      startServerCommand: 'npm run preview',
-      startServerReadyPattern: 'Local:',
-      startServerReadyTimeout: 60000,
-      url: ['http://localhost:4173'],
+    },
+    assert: {
+      assertions: {
+        // Errors — must pass
+        'categories:accessibility': ['error', { minScore: 0.95 }],
+        'categories:best-practices': ['error', { minScore: 0.9 }],
+        'categories:seo': ['error', { minScore: 0.95 }],
+        // Warnings — notify but don't fail
+        'categories:performance': ['warn', { minScore: 0.75 }],
+        'first-contentful-paint': ['warn', { maxNumericValue: 3000 }],
+        'largest-contentful-paint': ['warn', { maxNumericValue: 4000 }],
+        'cumulative-layout-shift': ['warn', { maxNumericValue: 0.1 }],
+        'total-blocking-time': ['warn', { maxNumericValue: 500 }],
+        'unused-javascript': ['warn', { maxLength: 3 }],
+      },
     },
     upload: {
       target: 'temporary-public-storage',

@@ -1,19 +1,24 @@
-# Ignore MDX files as they need special handling
-*.mdx
-
 # Build outputs
-dist/
-build/
 .next/
+out/
+build/
 
 # Dependencies
 node_modules/
-
-# Generated files
-*.min.js
-*.min.css
 
 # Lock files
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# Generated
+next-env.d.ts
+
+# MDX (needs special handling — prettier sometimes breaks frontmatter)
+*.mdx
+
+# Binary / assets
+public/brand/*.png
+public/brand/*.jpg
+public/brand/*.webp
+public/brand/*.ico

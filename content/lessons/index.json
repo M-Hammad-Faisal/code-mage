@@ -1,40 +1,36 @@
 [
   {
-    "slug": "python-variables-basics",
+    "id": "python-variables-basics",
     "title": "Python Variables in 5 Minutes",
     "category": "Basics",
-    "level": "Beginner",
+    "level": "beginner",
     "duration": "5:12",
     "youtubeId": "VIDEO_ID_HERE",
-    "summary": "Quick intro to variables, types, and reassignment.",
+    "description": "Quick intro to variables, types, and reassignment.",
     "tags": ["python", "basics", "variables"],
-    "code": [
-      { "filename": "variables.py", "path": "/code/basics/variables.py" }
-    ],
+    "code": [{ "filename": "variables.py", "path": "/code/basics/variables.py" }],
     "bodyMdx": "/content/lessons/python-variables-basics.md"
   },
   {
-    "slug": "python-functions-deep-dive",
+    "id": "python-functions-deep-dive",
     "title": "Python Functions: Beyond the Basics",
     "category": "Tricky Problems",
-    "level": "Intermediate",
+    "level": "intermediate",
     "duration": "8:45",
     "youtubeId": "VIDEO_ID_HERE",
-    "summary": "Explore advanced function concepts including closures and decorators.",
+    "description": "Explore advanced function concepts including closures and decorators.",
     "tags": ["python", "functions", "advanced"],
-    "code": [
-      { "filename": "functions.py", "path": "/code/advanced/functions.py" }
-    ],
+    "code": [{ "filename": "functions.py", "path": "/code/advanced/functions.py" }],
     "bodyMdx": "/content/lessons/python-functions-deep-dive.md"
   },
   {
-    "slug": "fluent-python-chapter-1",
+    "id": "fluent-python-chapter-1",
     "title": "Fluent Python Chapter 1: Data Model",
     "category": "Book Summaries",
-    "level": "Intermediate",
+    "level": "intermediate",
     "duration": "12:30",
     "youtubeId": "VIDEO_ID_HERE",
-    "summary": "Understanding Python's data model and special methods.",
+    "description": "Understanding Python's data model and special methods.",
     "tags": ["python", "book-summary", "data-model"],
     "code": [
       {
@@ -45,13 +41,13 @@
     "bodyMdx": "/content/lessons/fluent-python-chapter-1.md"
   },
   {
-    "slug": "python-list-comprehensions",
+    "id": "python-list-comprehensions",
     "title": "Master List Comprehensions",
     "category": "Basics",
-    "level": "Beginner",
+    "level": "beginner",
     "duration": "6:20",
     "youtubeId": "VIDEO_ID_HERE",
-    "summary": "Learn to write clean, efficient list comprehensions.",
+    "description": "Learn to write clean, efficient list comprehensions.",
     "tags": ["python", "basics", "comprehensions"],
     "code": [
       {
@@ -62,25 +58,25 @@
     "bodyMdx": "/content/lessons/python-list-comprehensions.md"
   },
   {
-    "slug": "python-web-scraper",
+    "id": "python-web-scraper",
     "title": "Build a Web Scraper in 15 Minutes",
     "category": "Mini Projects",
-    "level": "Intermediate",
+    "level": "intermediate",
     "duration": "15:45",
     "youtubeId": "VIDEO_ID_HERE",
-    "summary": "Create a simple web scraper using requests and BeautifulSoup.",
+    "description": "Create a simple web scraper using requests and BeautifulSoup.",
     "tags": ["python", "projects", "web-scraping"],
     "code": [{ "filename": "scraper.py", "path": "/code/projects/scraper.py" }],
     "bodyMdx": "/content/lessons/python-web-scraper.md"
   },
   {
-    "slug": "python-async-await",
+    "id": "python-async-await",
     "title": "Async/Await Explained Simply",
     "category": "Tricky Problems",
-    "level": "Advanced",
+    "level": "advanced",
     "duration": "10:15",
     "youtubeId": "VIDEO_ID_HERE",
-    "summary": "Demystify asynchronous programming in Python.",
+    "description": "Demystify asynchronous programming in Python.",
     "tags": ["python", "async", "advanced"],
     "code": [
       {

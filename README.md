@@ -1,143 +1,193 @@
-# Code Mage 🧙‍♂️
+# Code Mage v2 — Next.js + Supabase 🪄
 
-A modern, interactive coding education platform built with React, TypeScript, and Vite. Code Mage provides an engaging learning experience with syntax-highlighted code examples, interactive lessons, and a beautiful, responsive design.
+> Personal brand site for **Muhammad Hammad Faisal** — rebuilt from React+Vite to **Next.js 15 + Supabase** with realtime features.
 
-## 🌟 Features
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://code-mage.vercel.app)
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
+[![Supabase](https://img.shields.io/badge/Supabase-3.x-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript)](https://typescriptlang.org)
+[![Tailwind CSS 4](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=flat-square&logo=tailwindcss)](https://tailwindcss.com)
 
-- **Interactive Lessons**: Step-by-step coding tutorials with syntax highlighting
-- **Modern UI**: Beautiful, responsive design with smooth animations using Framer Motion
-- **Multi-Language Support**: Syntax highlighting for multiple programming languages
-- **Markdown-Based Content**: Easy-to-maintain lesson content using Markdown with frontmatter
-- **Responsive Design**: Optimized for desktop, tablet, and mobile devices
-- **Fast Performance**: Built with Vite for lightning-fast development and builds
-- **Type Safety**: Full TypeScript support for better development experience
-- **Code Quality**: Pre-commit hooks with ESLint and Prettier for consistent code style
+---
 
-## 🚀 Live Demo
+## 👤 Author
 
-Visit the live application: [https://code-mage.vercel.app/](https://code-mage.vercel.app/)
+**Muhammad Hammad Faisal**
+
+- 💼 Software Engineer @ [Arbisoft](https://arbisoft.com)
+- 📍 Lahore, Punjab, Pakistan
+- 🌐 [m-hammad-faisal.github.io](https://m-hammad-faisal.github.io)
+- 💌 [hammadfaisal178@gmail.com](mailto:hammadfaisal178@gmail.com)
+- 🐙 [@M-Hammad-Faisal](https://github.com/M-Hammad-Faisal)
+- 💼 [linkedin.com/in/m-hammad-faisal](https://linkedin.com/in/m-hammad-faisal)
+- 🎥 [@code_your_magic](https://www.youtube.com/@code_your_magic)
+- ❤️ [Patreon](https://www.patreon.com/cw/code_your_magic)
+
+---
+
+## ✨ What's New in v2
+
+| Feature      | v1 (React+Vite)  | v2 (Next.js+Supabase) |
+| ------------ | ---------------- | --------------------- |
+| Rendering    | CSR only         | SSG + ISR + SSR       |
+| Blog SEO     | Basic            | Full OG + metadata    |
+| Newsletter   | UI only          | Supabase persistence  |
+| Contact form | mailto fallback  | Supabase persistence  |
+| View counts  | None             | Realtime (Supabase)   |
+| Reactions    | None             | Realtime (Supabase)   |
+| API security | None             | Server-side routes    |
+| Routing      | React Router DOM | Next.js App Router    |
+
+---
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 19, TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **Animations**: Framer Motion
-- **Routing**: React Router DOM
-- **Markdown Processing**: Remark, Rehype
-- **Syntax Highlighting**: Rehype Highlight
-- **Icons**: Lucide React
-- **Code Quality**: ESLint, Prettier, Husky, Lint-staged
+| Layer      | Tech                           |
+| ---------- | ------------------------------ |
+| Framework  | Next.js 15 (App Router)        |
+| Language   | TypeScript 5.8                 |
+| Styling    | Tailwind CSS v4                |
+| Animations | Framer Motion 11               |
+| Database   | Supabase (PostgreSQL)          |
+| Auth       | Supabase (future)              |
+| Content    | MDX via next-mdx-remote        |
+| Icons      | Lucide React                   |
+| Fonts      | Syne + Outfit + JetBrains Mono |
+| Deployment | Vercel                         |
 
-## 📦 Installation
+---
 
-1. **Clone the repository**
+## 🚀 Getting Started
 
-   ```bash
-   git clone https://github.com/M-Hammad-Faisal/code-mage.git
-   cd code-mage
-   ```
+### 1. Clone & install
 
-2. **Install dependencies**
+```bash
+git clone https://github.com/M-Hammad-Faisal/code-mage.git
+cd code-mage
+npm install
+```
 
-   ```bash
-   npm install
-   ```
+### 2. Set up Supabase
 
-3. **Start the development server**
+1. Create a project at [supabase.com](https://supabase.com)
+2. Go to SQL Editor and run `lib/supabase/migrations.sql`
+3. Copy your project URL and anon key
 
-   ```bash
-   npm run dev
-   ```
+### 3. Environment variables
 
-4. **Open your browser**
-   Navigate to `http://localhost:5173` to see the application.
+```bash
+cp .env.example .env.local
+```
 
-## 🔧 Available Scripts
+Fill in your `.env.local`:
 
-- `npm run dev` - Start the development server
-- `npm run build` - Build the project for production
-- `npm run preview` - Preview the production build locally
-- `npm run lint` - Run ESLint and Prettier checks
-- `npm run format` - Format code with Prettier
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxxxxxxxxx
+SUPABASE_SECRET_KEY=sb_secret_xxxxxxxxxxxx
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+### 4. Run dev server
+
+```bash
+npm run dev
+```
+
+Visit [http://localhost:3000](http://localhost:3000)
+
+---
 
 ## 📁 Project Structure
 
 ```
 code-mage/
-├── public/                 # Static assets
-├── src/
-│   ├── components/        # Reusable React components
-│   ├── pages/            # Page components
-│   ├── data/             # Lesson data and content
-│   ├── types/            # TypeScript type definitions
-│   ├── utils/            # Utility functions
-│   └── styles/           # Global styles
-├── .husky/               # Git hooks configuration
-├── .github/workflows/    # GitHub Actions CI/CD
-└── ...
+├── app/
+│   ├── layout.tsx              # Root layout
+│   ├── page.tsx                # Home
+│   ├── blog/
+│   │   ├── page.tsx            # Blog listing (SSG)
+│   │   ├── BlogClient.tsx      # Search/filter (client)
+│   │   └── [slug]/page.tsx     # Post detail + view tracking
+│   ├── learn/
+│   │   ├── page.tsx            # Lessons listing
+│   │   └── [id]/page.tsx       # Lesson detail
+│   ├── about/page.tsx          # About (static)
+│   ├── contact/
+│   │   ├── page.tsx            # Contact (server)
+│   │   └── ContactClient.tsx   # Form (client → Supabase)
+│   └── api/
+│       ├── newsletter/route.ts # POST → Supabase
+│       ├── contact/route.ts    # POST → Supabase
+│       └── views/[slug]/route.ts # GET/POST views+reactions
+├── components/
+│   ├── Navbar.tsx
+│   ├── Footer.tsx
+│   ├── ThemeProvider.tsx
+│   ├── NewsletterForm.tsx      # Client component
+│   ├── ViewCounter.tsx         # Client component
+│   ├── ReactionBar.tsx         # Client component
+│   ├── PostCard.tsx
+│   └── HeroAnimation.tsx
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts           # Browser Supabase client
+│   │   ├── server.ts           # Server + service role client
+│   │   ├── types.ts            # TypeScript DB types
+│   │   └── migrations.sql      # Run in Supabase SQL Editor
+│   ├── mdx.ts                  # Content loader (gray-matter)
+│   └── site.config.ts          # Site-wide config & author info
+├── content/
+│   ├── blog/                   # .mdx files
+│   └── lessons/                # .md files
+└── public/
+    └── brand/                  # Logos, banners, profile photo
 ```
-
-## 📝 Adding New Lessons
-
-1. Create a new Markdown file in `src/data/lessons/`
-2. Add frontmatter with lesson metadata:
-
-   ```markdown
-   ---
-   title: "Your Lesson Title"
-   description: "Brief description of the lesson"
-   difficulty: "beginner" | "intermediate" | "advanced"
-   duration: "30 minutes"
-   language: "javascript"
-   ---
-
-   # Your lesson content here
-   ```
-
-3. Update the lessons index to include your new lesson
-
-## 🔄 Pre-commit Hooks
-
-This project uses Husky and lint-staged to ensure code quality:
-
-- **ESLint**: Checks for code quality and potential errors
-- **Prettier**: Ensures consistent code formatting
-- **TypeScript**: Type checking for better code reliability
-
-The pre-commit hooks automatically run on staged files before each commit.
-
-## 🚀 Deployment
-
-The project is automatically deployed to GitHub Pages using GitHub Actions when changes are pushed to the main branch.
-
-### Manual Deployment
-
-1. **Build the project**
-
-   ```bash
-   npm run build
-   ```
-
-2. **Deploy to GitHub Pages**
-   The `deploy.yml` workflow handles automatic deployment.
-
-## 💡 Suggestions
-
-Have ideas for new topics or content? Feel free to reach out with suggestions for tutorials, courses, or programming topics you'd like to see covered. Your input helps shape the content that benefits the developer community.
-
-## 👨‍💻 Author
-
-**Muhammad Hammad Faisal**
-
-- GitHub: [@M-Hammad-Faisal](https://github.com/M-Hammad-Faisal)
-
-## 🙏 Acknowledgments
-
-- React team for the amazing framework
-- Vite team for the blazing fast build tool
-- All the open-source contributors who made this project possible
 
 ---
 
-Made with ❤️ by [Muhammad Hammad Faisal](https://github.com/M-Hammad-Faisal)
+## 🗃️ Supabase Tables
+
+| Table                    | Purpose                               |
+| ------------------------ | ------------------------------------- |
+| `newsletter_subscribers` | Email + source + confirmed status     |
+| `contact_messages`       | Contact form submissions              |
+| `blog_views`             | Per-slug view counter                 |
+| `blog_reactions`         | Per-slug emoji reactions (🔥💡👏🤯❤️) |
+
+---
+
+## 📝 Writing Content
+
+Add `.mdx` files to `content/blog/`:
+
+```mdx
+---
+title: 'Your Post Title'
+date: '2025-01-15'
+category: 'Python Deep Dive'
+tags: ['python', 'tutorial']
+excerpt: 'Short description shown in cards'
+featured: true
+---
+
+# Your content here...
+```
+
+Valid categories: `Python Deep Dive`, `Test Automation`, `Project Breakdown`, `Self Improvement`, `Finance`, `Communication`, `Career`
+
+---
+
+## 🔮 Roadmap
+
+- [ ] Supabase Auth for admin dashboard (view subscribers, messages)
+- [ ] RSS feed (`/feed.xml`)
+- [ ] Sitemap auto-generation
+- [ ] Comment system (Supabase)
+- [ ] Search across all content
+
+---
+
+## 📄 License
+
+MIT © 2025 [Muhammad Hammad Faisal](https://github.com/M-Hammad-Faisal)
