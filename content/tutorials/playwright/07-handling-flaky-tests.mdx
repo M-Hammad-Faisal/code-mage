@@ -1,0 +1,254 @@
+---
+title: "Handling Flaky Tests"
+description: "Diagnose and fix the intermittent failures that make your test suite unreliable"
+order: 6
+framework: "playwright"
+chapter: "handling-flaky-tests"
+---
+
+A flaky test is one that sometimes passes and sometimes fails for the same code. It's the most demoralizing problem in test automation — and the most common.
+
+Once your team learns to ignore failing tests because "they're probably just flaky," your test suite has lost its value. The fix is not to retry until they pass. The fix is to understand why they're flaky and eliminate the root cause.
+
+## The Most Common Causes
+
+### 1. Race Conditions
+
+The test interacts with an element before the app is ready for it. This is the most common cause.
+
+```typescript
+// FLAKY — clicks before navigation completes
+await page.getByRole('button', { name: 'Login' }).click();
+await page.getByRole('button', { name: 'Add to cart' }).click(); // might fail
+```
+
+Playwright's auto-waiting helps here but doesn't solve everything. If the page loads new content after a navigation, wait for a stable element before interacting:
+
+```typescript
+// STABLE — wait for inventory page to be ready
+await page.getByRole('button', { name: 'Login' }).click();
+await expect(page.getByRole('heading', { name: 'Products' })).toBeVisible();
+await page.getByRole('button', { name: 'Add to cart' }).first().click();
+```
+
+### 2. Test Order Dependency
+
+Test A leaves state behind. Test B assumes clean state. B passes when run alone, fails when run after A.
+
+```typescript
+// Test A adds items to the cart
+// Test B assumes cart is empty — fails when run after A
+test('cart is empty on fresh load', async ({ page }) => {
+  await page.goto('/cart.html');
+  await expect(page.locator('.cart_item')).toHaveCount(0); // fails if A ran first
+});
+```
+
+The fix: each test must set up its own state. Never rely on state left by another test.
+
+On SauceDemo, the cart persists via localStorage. Reset it before each test:
+
+```typescript
+test.beforeEach(async ({ page }) => {
+  // Clear localStorage before each test
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+});
+```
+
+Or use a fresh browser context for each test (Playwright's default with `test.beforeEach` using `{ page }` fixture — each test gets a clean context).
+
+### 3. Timing Issues with Animations
+
+An element is visible but still animating. Playwright waits for it to be stable before interacting, but some animations confuse this detection.
+
+```typescript
+// If a modal animates in, wait for it to finish before clicking inside
+await expect(modal).toBeVisible();
+await page.waitForTimeout(300); // sometimes necessary for CSS transitions
+```
+
+`waitForTimeout` is a code smell but sometimes the only option for CSS animations. Keep it short and comment why it's there.
+
+### 4. Network-Dependent Tests
+
+Tests that depend on real API calls fail when the network is slow or the API is down. SauceDemo is mostly static but in real apps this is constant.
+
+Mock the network layer for unit-level tests. For true E2E tests, accept that they require a stable environment and don't run them in every CI stage.
+
+### 5. Shared State Between Parallel Tests
+
+Tests running in parallel can interfere with each other if they share state — same database record, same test user account, same localStorage.
+
+Playwright runs each test file in its own worker by default. Tests within the same file run serially. To run tests within a file in parallel:
+
+```typescript
+test.describe.configure({ mode: 'parallel' });
+```
+
+Only do this if the tests are genuinely independent.
+
+### 6. Environment-Specific Failures
+
+Tests pass locally, fail in CI. Common reasons:
+
+- Different screen sizes (Playwright uses `1280x720` by default in CI)
+- Different locale/timezone
+- Missing environment variables
+- CI machine is slower → timeouts
+
+For screen size, set it explicitly in config:
+
+```typescript
+use: {
+  viewport: { width: 1280, height: 720 },
+},
+```
+
+For timeouts in CI, don't increase them globally. Instead, identify which tests are slow and optimize them.
+
+## Diagnosing Flaky Tests
+
+### Step 1: Reproduce It
+
+Run the test in a loop:
+
+```bash
+# Run the test 10 times
+for i in {1..10}; do npx playwright test tests/cart/add-to-cart.spec.ts; done
+```
+
+Or use Playwright's built-in repeat:
+
+```bash
+npx playwright test --repeat-each=10
+```
+
+If it fails 2 out of 10 times, you have a reproducible flaky test. Note the failure rate.
+
+### Step 2: Read the Trace
+
+Always run with traces when debugging:
+
+```bash
+npx playwright test --trace=on tests/cart/add-to-cart.spec.ts
+```
+
+Open the trace:
+
+```bash
+npx playwright show-report
+```
+
+The trace shows every action, the DOM state before and after each action, network requests, and console logs. You can see exactly what was on screen when the failure happened.
+
+### Step 3: Run in Headed Mode
+
+```bash
+npx playwright test --headed --slow-mo=500
+```
+
+`--slow-mo=500` adds a 500ms delay between actions. This makes it easy to see what's happening visually. Often the problem becomes obvious.
+
+### Step 4: Add Explicit Waits for the Right Thing
+
+If you see a race condition in the trace, add a wait for the specific condition — not a general `waitForTimeout`.
+
+```typescript
+// Instead of this
+await page.waitForTimeout(2000);
+
+// Wait for specific network request
+await page.waitForResponse('**/api/products');
+
+// Wait for specific DOM state
+await expect(page.locator('.inventory_list')).toBeVisible();
+
+// Wait for navigation
+await page.waitForURL('/inventory.html');
+```
+
+## Playwright's Built-In Retry Mechanism
+
+Configure retries for CI:
+
+```typescript
+// playwright.config.ts
+retries: process.env.CI ? 2 : 0,
+```
+
+This retries failing tests up to 2 times in CI. A test that passes on retry is marked as "flaky" in the report — not as passing. You get visibility into which tests are flaky without hiding failures.
+
+**Never rely on retries to hide real flakiness.** Retries are a safety net while you investigate, not a solution.
+
+## Isolating Tests with storageState
+
+For tests that require login, repeating the login flow for every test is slow and adds unnecessary failure points. Save authenticated state and reuse it:
+
+```typescript
+// setup/auth.setup.ts
+import { test as setup } from '@playwright/test';
+
+const authFile = 'playwright/.auth/user.json';
+
+setup('authenticate', async ({ page }) => {
+  await page.goto('/');
+  await page.getByPlaceholder('Username').fill('standard_user');
+  await page.getByPlaceholder('Password').fill('secret_sauce');
+  await page.getByRole('button', { name: 'Login' }).click();
+  await page.waitForURL('/inventory.html');
+
+  // Save the storage state (cookies + localStorage)
+  await page.context().storageState({ path: authFile });
+});
+```
+
+```typescript
+// playwright.config.ts
+projects: [
+  {
+    name: 'setup',
+    testMatch: '**/auth.setup.ts',
+  },
+  {
+    name: 'chromium',
+    use: {
+      ...devices['Desktop Chrome'],
+      storageState: 'playwright/.auth/user.json',
+    },
+    dependencies: ['setup'],
+  },
+],
+```
+
+Now every test starts already logged in — no login step, no login-related flakiness.
+
+Add `playwright/.auth/` to `.gitignore`.
+
+## Quarantining Flaky Tests
+
+When you find a genuinely flaky test you cannot immediately fix, quarantine it rather than letting it pollute the suite:
+
+```typescript
+test.fixme('cart count sometimes shows stale value', async ({ page }) => {
+  // Known flaky — timing issue with cart badge update
+  // Tracked in: https://github.com/your-org/repo/issues/42
+});
+```
+
+`test.fixme()` marks the test as expected to fail. It runs, fails, and is reported as "fixme" — not as a test failure that blocks the build. The comment and issue link ensure it gets fixed eventually.
+
+## The Flaky Test Checklist
+
+When a test is flaky, go through this in order:
+
+1. **Can you reproduce it?** Run `--repeat-each=10`. If it never fails, it may have been a one-off environment issue.
+2. **Is it a race condition?** Open the trace. Look for actions on elements that weren't fully loaded.
+3. **Is it state pollution?** Run the test in isolation. If it passes, another test is leaving behind state.
+4. **Is it an environment issue?** Run on a different machine or in a Docker container matching CI.
+5. **Is there an animation?** Slow the test down with `--slow-mo` and watch the browser.
+6. **Is it network-dependent?** Mock the API call and see if the flakiness disappears.
+
+Once you know the cause, the fix is usually straightforward. The hard part is the diagnosis.
+
+Next chapter: getting your tests into CI/CD so they run on every push.

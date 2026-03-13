@@ -1,0 +1,90 @@
+---
+title: "What is Playwright and Why Should You Care"
+description: "Why Playwright has become the go-to tool for modern web testing — and what makes it different from the rest"
+order: 1
+framework: "playwright"
+chapter: "introduction"
+---
+
+If you've been in test automation for a while, you've probably used Selenium at some point. Maybe you've tried Cypress too. Playwright is the newer one — released by Microsoft in 2020 — and it's been eating everyone's lunch ever since.
+
+This guide isn't going to waste your time with a "what is testing" explanation. You already know testing matters. What you're here for is Playwright specifically, and whether it's worth learning.
+
+Short answer: yes. Here's why.
+
+## What Playwright Actually Is
+
+Playwright is an open-source browser automation library that lets you control Chromium, Firefox, and WebKit (Safari's engine) with a single API. You write tests in TypeScript, JavaScript, Python, Java, or C# — and the same test runs across all three browser engines without modification.
+
+That's not just a marketing claim. It genuinely works. The browser-specific hacks you needed with Selenium are mostly gone.
+
+## Why It Wins Against the Competition
+
+### vs Selenium
+
+Selenium is the grandfather of browser automation. It works by sending HTTP commands to a browser driver (ChromeDriver, GeckoDriver, etc.) which then controls the browser. This round-trip communication is slow and flaky.
+
+Playwright communicates directly with the browser over the Chrome DevTools Protocol (CDP), or a similar protocol for Firefox and WebKit. It's faster, more reliable, and has direct access to browser internals.
+
+Selenium also has no built-in waiting strategy. You manually add `driver.implicitly_wait()` or `WebDriverWait` everywhere. Playwright has **auto-waiting** built in — it waits for elements to be ready before interacting with them.
+
+### vs Cypress
+
+Cypress is excellent and has a great developer experience. But it has real limitations:
+
+- Cypress only runs in Chromium-based browsers (Firefox support is experimental and limited)
+- No native mobile testing
+- Can't test across multiple tabs or windows easily
+- No built-in support for non-browser protocols (API testing, etc.)
+
+Playwright handles all of these out of the box.
+
+### vs Puppeteer
+
+Puppeteer is also from Google/Chrome and uses CDP too. But it's Chromium-only and designed for browser automation, not specifically for testing. Playwright started as a fork of Puppeteer and has long surpassed it.
+
+## What Makes Playwright Actually Good
+
+These are the features you'll use constantly — not theoretical advantages, but things that will save you hours every week.
+
+**Auto-waiting** — Playwright waits for elements to be visible, enabled, and stable before clicking or typing. No more `sleep(2)` or explicit waits sprinkled everywhere.
+
+**Locators** — The modern way to find elements. Unlike raw `page.$(selector)`, locators are lazy (evaluated on interaction), auto-retrying, and stricter. You'll use these for everything.
+
+```typescript
+const button = page.getByRole('button', { name: 'Add to Cart' });
+await button.click(); // auto-waits until button is clickable
+```
+
+**Traces** — When a test fails in CI, you get a trace file with a full timeline: every action, every network request, screenshots at each step, and even a video. You can open it in a browser and scrub through what happened. This alone is worth switching for.
+
+**Network interception** — Block requests, mock API responses, simulate offline mode. All built in, no plugins needed.
+
+**Parallelism** — Tests run in parallel by default across workers. On a decent machine, 50 tests can finish in the same time it used to take to run 10.
+
+**Codegen** — Run `npx playwright codegen https://saucedemo.com` and Playwright records your browser interactions into test code. Useful for bootstrapping, not for production tests — but you'll use it.
+
+## What We're Building in This Tutorial
+
+Every chapter in this tutorial uses **SauceDemo** (`https://www.saucedemo.com`) — a purpose-built e-commerce test site with intentional bugs, different user types, and real user flows.
+
+We'll build a complete, professional test suite from scratch:
+
+| Chapter | What You'll Build |
+|---|---|
+| Installation & Setup | Working Playwright project, first test |
+| Selectors | Selector strategy that scales |
+| Page Object Model | Test suite that doesn't collapse when the UI changes |
+| Assertions | Confident, non-flaky assertions |
+| Handling Flaky Tests | Diagnose and fix the flakiness you'll inevitably hit |
+| CI/CD | Tests running in GitHub Actions on every push |
+
+By the end, you'll have a real test suite — not a toy example — that you can adapt for any project.
+
+## Prerequisites
+
+- Node.js 18 or later
+- Basic TypeScript (you don't need to be an expert — we'll keep it practical)
+- A terminal you're comfortable with
+
+That's it. Let's install Playwright.

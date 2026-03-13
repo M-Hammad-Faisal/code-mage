@@ -33,11 +33,12 @@ export const SITE = {
 };
 
 export const NAV_LINKS = [
-  { href: '/', label: 'Home' },
-  { href: '/learn', label: 'Learn' },
-  { href: '/blog', label: 'Blog' },
-  { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' },
+  { label: 'Home', href: '/' },
+  { label: 'Tutorial', href: '/tutorial' },
+  { label: 'Blog', href: '/blog' },
+  { label: 'Learn', href: '/learn' },
+  { label: 'About', href: '/about' },
+  { label: 'Contact', href: '/contact' },
 ];
 
 export const CATEGORY_COLORS: Record<string, string> = {

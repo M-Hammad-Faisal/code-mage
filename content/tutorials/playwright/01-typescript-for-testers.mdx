@@ -1,0 +1,332 @@
+---
+title: "TypeScript for Testers — Just Enough to Get Started"
+description: "async/await, types, classes, and interfaces — the only TypeScript concepts you need to write Playwright tests"
+order: 1
+framework: "playwright"
+chapter: "typescript-for-testers"
+---
+
+You don't need to be a TypeScript expert to write Playwright tests. You need to understand about 20% of the language — the parts that show up in every test file. This chapter covers exactly that.
+
+If you already know TypeScript or JavaScript, skim this chapter or skip it entirely.
+
+## TypeScript vs JavaScript — What's the Difference?
+
+JavaScript is the language browsers understand. TypeScript is JavaScript with types added on top.
+
+```javascript
+// JavaScript — no types
+function add(a, b) {
+  return a + b;
+}
+```
+
+```typescript
+// TypeScript — types added
+function add(a: number, b: number): number {
+  return a + b;
+}
+```
+
+The `: number` tells TypeScript that `a` and `b` must be numbers, and the function returns a number. If you try to call `add('hello', 5)`, TypeScript shows an error before you even run the code.
+
+Why use TypeScript for tests? Because your IDE can tell you when you mistype a method name, use the wrong argument type, or call something that doesn't exist. Playwright's TypeScript support is excellent — you get autocomplete on every method.
+
+TypeScript files end in `.ts` or `.tsx`. They get compiled to JavaScript before running. Playwright handles this automatically — you never run `tsc` manually.
+
+## Variables — let and const
+
+```typescript
+// const — value never changes
+const username = 'standard_user';
+const timeout = 5000;
+
+// let — value can change
+let count = 0;
+count = count + 1;
+
+// Never use var — it has weird scoping rules
+```
+
+In test files you'll mostly use `const`. Use `let` only when you need to reassign a variable.
+
+## Types You'll See in Playwright Tests
+
+```typescript
+// String
+const username: string = 'standard_user';
+
+// Number
+const retries: number = 3;
+
+// Boolean
+const isVisible: boolean = true;
+
+// Array
+const productNames: string[] = ['Backpack', 'Bike Light'];
+
+// Union type — can be one of several values
+type SortOption = 'az' | 'za' | 'lohi' | 'hilo';
+const sort: SortOption = 'az';
+
+// Optional — can be the type or undefined
+const message: string | undefined = undefined;
+```
+
+TypeScript infers types most of the time, so you don't always need to write them explicitly:
+
+```typescript
+const username = 'standard_user'; // TypeScript knows this is a string
+```
+
+## Functions
+
+```typescript
+// Regular function
+function login(username: string, password: string): void {
+  // do something
+}
+
+// Arrow function (same thing, different syntax)
+const login = (username: string, password: string): void => {
+  // do something
+};
+
+// Function that returns something
+function getPageTitle(page: Page): string {
+  return page.title();
+}
+```
+
+In Playwright tests you'll mostly use arrow functions. The `void` return type means the function doesn't return anything.
+
+## async and await — The Most Important Concept
+
+Almost every line in a Playwright test uses `async` and `await`. If you don't understand this, your tests will not make sense.
+
+Here's the problem: talking to a browser takes time. Clicking a button, waiting for a page to load, finding an element — these all take a moment. JavaScript normally doesn't wait for slow operations — it moves on immediately.
+
+```javascript
+// Without async/await — this doesn't work correctly
+page.click('#login-button');       // starts clicking, doesn't wait
+page.fill('#username', 'hammad'); // runs immediately, might fail
+```
+
+`async` and `await` tell JavaScript to wait for an operation to finish before moving to the next line:
+
+```typescript
+// With async/await — correct
+await page.click('#login-button');       // waits for click to complete
+await page.fill('#username', 'hammad'); // then fills the input
+```
+
+`await` can only be used inside a function marked with `async`:
+
+```typescript
+// The test function is marked async
+test('login works', async ({ page }) => {
+  await page.goto('/');                          // wait for navigation
+  await page.fill('#username', 'standard_user'); // wait for fill
+  await page.click('#login-button');             // wait for click
+  await expect(page).toHaveURL('/inventory');    // wait for assertion
+});
+```
+
+Every time you interact with the browser or assert something, you `await` it. Think of it as saying "wait for this to finish before continuing."
+
+**The most common beginner mistake is forgetting `await`:**
+
+```typescript
+// WRONG — assertion runs immediately, might pass before the element appears
+expect(page.getByText('Products')).toBeVisible();
+
+// CORRECT
+await expect(page.getByText('Products')).toBeVisible();
+```
+
+## Interfaces — Describing the Shape of Data
+
+An interface describes what properties an object has:
+
+```typescript
+interface User {
+  username: string;
+  password: string;
+}
+
+const standardUser: User = {
+  username: 'standard_user',
+  password: 'secret_sauce',
+};
+```
+
+You'll see interfaces used for test data and page object types. They're just a way of saying "this object must have these properties."
+
+## Classes — How Page Objects Work
+
+A class is a blueprint for creating objects. Page Objects (which we cover in a later chapter) are written as classes.
+
+```typescript
+class LoginPage {
+  // Property declarations
+  page: Page;
+  usernameInput: Locator;
+
+  // Constructor — runs when you create a new LoginPage
+  constructor(page: Page) {
+    this.page = page;
+    this.usernameInput = page.getByPlaceholder('Username');
+  }
+
+  // Method — a function attached to the class
+  async login(username: string, password: string) {
+    await this.usernameInput.fill(username);
+    await page.getByPlaceholder('Password').fill(password);
+    await page.getByRole('button', { name: 'Login' }).click();
+  }
+}
+```
+
+To use the class:
+
+```typescript
+const loginPage = new LoginPage(page); // creates a new instance
+await loginPage.login('standard_user', 'secret_sauce'); // calls the method
+```
+
+`this` refers to the current instance of the class. `this.page` means "the `page` property on this particular `LoginPage` object."
+
+## Imports and Exports
+
+Every file in TypeScript is a module. You export things from one file and import them in another.
+
+```typescript
+// utils/test-data.ts — exporting
+export const USERS = {
+  standard: { username: 'standard_user', password: 'secret_sauce' },
+};
+
+export interface UserCredentials {
+  username: string;
+  password: string;
+}
+```
+
+```typescript
+// tests/login.spec.ts — importing
+import { USERS } from '../utils/test-data';
+import type { UserCredentials } from '../utils/test-data';
+
+// use it
+const { username, password } = USERS.standard;
+```
+
+The path `'../utils/test-data'` means: go up one folder (`..`), then into `utils`, then the file `test-data`. No `.ts` extension needed.
+
+## Destructuring — A Shortcut You'll See Everywhere
+
+Instead of:
+
+```typescript
+const username = USERS.standard.username;
+const password = USERS.standard.password;
+```
+
+You can write:
+
+```typescript
+const { username, password } = USERS.standard;
+```
+
+This is called destructuring. Playwright uses it heavily:
+
+```typescript
+// This is destructuring — page comes from the test fixture
+test('login', async ({ page }) => {
+  // page is now available
+});
+```
+
+## Template Literals — String Formatting
+
+Instead of concatenating strings with `+`:
+
+```typescript
+const url = 'https://www.saucedemo.com/' + path; // messy
+```
+
+Use template literals with backticks:
+
+```typescript
+const url = `https://www.saucedemo.com/${path}`; // clean
+const message = `Found ${count} items in cart`;
+```
+
+## The readonly Keyword
+
+In Page Object classes, locators are marked `readonly`:
+
+```typescript
+class LoginPage {
+  readonly usernameInput: Locator;
+
+  constructor(page: Page) {
+    this.usernameInput = page.getByPlaceholder('Username');
+  }
+}
+```
+
+`readonly` means the property can be set in the constructor but not reassigned afterward. It's just a safety mechanism — it prevents accidentally overwriting a locator.
+
+## Quick Reference
+
+```typescript
+// Variable
+const name: string = 'Hammad';
+let count: number = 0;
+
+// Function
+async function doSomething(input: string): Promise<void> {
+  await someAsyncOperation(input);
+}
+
+// Arrow function
+const doSomething = async (input: string): Promise<void> => {
+  await someAsyncOperation(input);
+};
+
+// Interface
+interface Config {
+  baseUrl: string;
+  timeout: number;
+}
+
+// Class
+class MyPage {
+  readonly page: Page;
+  constructor(page: Page) {
+    this.page = page;
+  }
+  async goto() {
+    await this.page.goto('/');
+  }
+}
+
+// Import / Export
+export const value = 'hello';
+import { value } from './module';
+
+// Destructuring
+const { username, password } = user;
+const [first, ...rest] = array;
+
+// Template literal
+const msg = `Hello ${name}, you have ${count} items`;
+
+// await (inside async function only)
+const title = await page.title();
+```
+
+That's all the TypeScript you need. You'll pick up the rest naturally as you write tests. Don't try to learn all of TypeScript before starting — just refer back to this chapter when you see something unfamiliar.
+
+Next chapter: how Playwright actually runs your tests — what happens under the hood when you type `npx playwright test`.

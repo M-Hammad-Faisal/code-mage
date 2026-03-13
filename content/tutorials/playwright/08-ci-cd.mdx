@@ -1,0 +1,433 @@
+---
+title: "CI/CD — Running Tests on Every Push"
+description: "Set up GitHub Actions to run your Playwright tests automatically with reports, artifacts, and smart failure handling"
+order: 9
+framework: "playwright"
+chapter: "ci-cd"
+---
+
+Tests that only run locally are not CI/CD tests. They're manual tests with extra steps. The whole point of automation is that it runs without you.
+
+This chapter sets up GitHub Actions to run your Playwright suite on every push and pull request — with HTML reports, trace artifacts, and failure notifications.
+
+## The Basic Workflow
+
+When you ran `npm init playwright@latest`, it created `.github/workflows/playwright.yml`. Replace it with this:
+
+```yaml
+name: Playwright Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Run Playwright Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox
+
+      - name: Run Playwright tests
+        run: npx playwright test
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+```
+
+Key decisions:
+
+- `timeout-minutes: 30` — kills the job if it hangs. Without this, a hung test blocks your CI queue for hours.
+- `if: always()` on the report upload — the report uploads even when tests fail. You need it most when things break.
+- `if: failure()` on traces — only upload trace artifacts when there's a failure. Saves storage.
+- `npm ci` instead of `npm install` — faster, uses the lockfile exactly, no surprise dependency changes.
+- Only install `chromium` and `firefox` — WebKit requires extra system deps and is slower. Add it later if you need it.
+
+## Sharding for Faster Runs
+
+When your suite grows past 50 tests, a single runner takes too long. Shard across multiple runners:
+
+```yaml
+name: Playwright Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: "Playwright Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shardIndex: [1, 2, 3, 4]
+        shardTotal: [4]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium firefox
+
+      - name: Run Playwright tests (shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})
+        run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+
+      - name: Upload blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shardIndex }}
+          path: blob-report/
+          retention-days: 1
+
+  merge-reports:
+    name: Merge Test Reports
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+
+      - name: Download blob reports
+        uses: actions/download-artifact@v4
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Merge into HTML report
+        run: npx playwright merge-reports --reporter html ./all-blob-reports
+
+      - name: Upload merged report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+```
+
+This runs 4 shards in parallel. A 20-minute suite becomes a 5-minute suite. The merge job combines all shard results into one HTML report.
+
+Update `playwright.config.ts` to use blob reporter when sharding:
+
+```typescript
+reporter: process.env.CI
+  ? [['blob'], ['list']]
+  : [['html'], ['list']],
+```
+
+## Authenticated Tests in CI
+
+If you set up `storageState` in the flaky tests chapter, the auth setup needs to run before the test shards. Add a setup job:
+
+```yaml
+jobs:
+  setup:
+    name: Authentication Setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Run auth setup
+        run: npx playwright test setup/auth.setup.ts
+
+      - name: Upload auth state
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-state
+          path: playwright/.auth/
+          retention-days: 1
+
+  test:
+    needs: setup
+    steps:
+      - name: Download auth state
+        uses: actions/download-artifact@v4
+        with:
+          name: auth-state
+          path: playwright/.auth/
+
+      - name: Run tests
+        run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+```
+
+## Environment Variables in CI
+
+Never hardcode credentials. Use GitHub Actions secrets:
+
+In your repo: Settings → Secrets and variables → Actions → New repository secret
+
+Add:
+- `SAUCEDEMO_USERNAME` → `standard_user`
+- `SAUCEDEMO_PASSWORD` → `secret_sauce`
+
+Reference them in the workflow:
+
+```yaml
+- name: Run Playwright tests
+  run: npx playwright test
+  env:
+    SAUCEDEMO_USERNAME: ${{ secrets.SAUCEDEMO_USERNAME }}
+    SAUCEDEMO_PASSWORD: ${{ secrets.SAUCEDEMO_PASSWORD }}
+```
+
+In your test code:
+
+```typescript
+export const USERS = {
+  standard: {
+    username: process.env.SAUCEDEMO_USERNAME ?? 'standard_user',
+    password: process.env.SAUCEDEMO_PASSWORD ?? 'secret_sauce',
+  },
+};
+```
+
+## Caching Playwright Browsers
+
+Installing browsers on every run adds 1-2 minutes. Cache them:
+
+```yaml
+- name: Cache Playwright browsers
+  uses: actions/cache@v4
+  id: playwright-cache
+  with:
+    path: ~/.cache/ms-playwright
+    key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+- name: Install Playwright browsers
+  if: steps.playwright-cache.outputs.cache-hit != 'true'
+  run: npx playwright install --with-deps chromium firefox
+```
+
+## Blocking PRs on Failure
+
+Repository settings → Branches → Branch protection rules → Add rule for `main`:
+
+- Check "Require status checks to pass before merging"
+- Add your workflow job name
+
+Now PRs cannot be merged until all tests pass.
+
+## Scheduled Runs
+
+Run your full suite nightly:
+
+```yaml
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC every day
+```
+
+## The Final Workflow
+
+```yaml
+name: Playwright Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 2 * * *'
+
+jobs:
+  test:
+    name: "Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shardIndex: [1, 2]
+        shardTotal: [2]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium firefox
+
+      - name: Run tests
+        run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+        env:
+          SAUCEDEMO_USERNAME: ${{ secrets.SAUCEDEMO_USERNAME }}
+          SAUCEDEMO_PASSWORD: ${{ secrets.SAUCEDEMO_PASSWORD }}
+
+      - name: Upload blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shardIndex }}
+          path: blob-report/
+          retention-days: 1
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traces-shard-${{ matrix.shardIndex }}
+          path: test-results/
+          retention-days: 7
+
+  merge-reports:
+    name: Merge Reports
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - run: npx playwright merge-reports --reporter html ./all-blob-reports
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+```
+
+---
+
+## Download the Full Example Suite
+
+The complete working test suite from this tutorial is available to clone and run immediately.
+
+**GitHub Repository:** [github.com/M-Hammad-Faisal/playwright-saucedemo-example](https://github.com/M-Hammad-Faisal/playwright-saucedemo-example)
+
+```bash
+git clone https://github.com/M-Hammad-Faisal/playwright-saucedemo-example.git
+cd playwright-saucedemo-example
+npm install
+npx playwright install chromium
+npx playwright test
+```
+
+Or download individual spec files if you want to drop them into your own project:
+
+import { DownloadCard } from '@/components/DownloadCard';
+
+<DownloadCard
+  filename="login.spec.ts"
+  href="/downloads/playwright/login.spec.ts"
+  description="Login flow — happy path + all error states"
+  tests={9}
+/>
+
+<DownloadCard
+  filename="cart.spec.ts"
+  href="/downloads/playwright/cart.spec.ts"
+  description="Cart — add, remove, persist, navigate"
+  tests={9}
+/>
+
+<DownloadCard
+  filename="checkout.spec.ts"
+  href="/downloads/playwright/checkout.spec.ts"
+  description="Two full E2E flows — happy path and form validation"
+  tests={2}
+/>
+
+Each file is self-contained with inline page objects and test data. Drop any of them into a fresh Playwright project with `baseURL: 'https://www.saucedemo.com'` and they'll run.
+
+---
+
+## What You've Built
+
+Over these 10 chapters you've gone from zero to a production-grade Playwright setup:
+
+- ✅ Node.js, npm, and VS Code configured
+- ✅ TypeScript fundamentals for test automation
+- ✅ Understanding of how the test runner works
+- ✅ Playwright installed and configured
+- ✅ Real tests against SauceDemo
+- ✅ Stable selector strategy
+- ✅ Page Object Model with fixtures
+- ✅ Meaningful assertions
+- ✅ Flaky test diagnosis and prevention
+- ✅ GitHub Actions CI with sharding, caching, and artifact reports
+
+This is the setup you'd put on a real team. The WebdriverIO tutorial is next — same test site, completely different tool, so you can compare the approaches directly.

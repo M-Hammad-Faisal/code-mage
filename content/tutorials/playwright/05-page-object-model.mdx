@@ -1,0 +1,433 @@
+---
+title: "Page Object Model"
+description: "Structure your test suite so it doesn't collapse the moment the UI changes"
+order: 4
+framework: "playwright"
+chapter: "page-object-model"
+---
+
+The Page Object Model (POM) is the most important pattern in test automation. Without it, your test suite becomes unmaintainable the moment the UI changes — and UI always changes.
+
+The idea is simple: create one class per page (or component) that owns all the selectors and actions for that page. Tests talk to page objects, not to the DOM directly.
+
+## Why You Need It
+
+Without POM, your tests look like this:
+
+```typescript
+// test 1
+await page.getByPlaceholder('Username').fill('standard_user');
+await page.getByPlaceholder('Password').fill('secret_sauce');
+await page.getByRole('button', { name: 'Login' }).click();
+
+// test 2
+await page.getByPlaceholder('Username').fill('problem_user');
+await page.getByPlaceholder('Password').fill('secret_sauce');
+await page.getByRole('button', { name: 'Login' }).click();
+
+// test 3 — same thing again
+```
+
+When the login button label changes from "Login" to "Sign In", you update it in 20 places. Miss one and you have a false failure.
+
+With POM:
+
+```typescript
+// test 1
+await loginPage.login('standard_user', 'secret_sauce');
+
+// test 2
+await loginPage.login('problem_user', 'secret_sauce');
+```
+
+One change in `LoginPage.ts` fixes everything.
+
+## Building the Login Page Object
+
+Create `pages/LoginPage.ts`:
+
+```typescript
+import { type Page, type Locator, expect } from '@playwright/test';
+
+export class LoginPage {
+  readonly page: Page;
+
+  // Locators
+  readonly usernameInput: Locator;
+  readonly passwordInput: Locator;
+  readonly loginButton: Locator;
+  readonly errorMessage: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.usernameInput = page.getByPlaceholder('Username');
+    this.passwordInput = page.getByPlaceholder('Password');
+    this.loginButton = page.getByRole('button', { name: 'Login' });
+    this.errorMessage = page.locator('[data-test="error"]');
+  }
+
+  async goto() {
+    await this.page.goto('/');
+  }
+
+  async login(username: string, password: string) {
+    await this.usernameInput.fill(username);
+    await this.passwordInput.fill(password);
+    await this.loginButton.click();
+  }
+
+  async expectErrorMessage(message: string) {
+    await expect(this.errorMessage).toBeVisible();
+    await expect(this.errorMessage).toContainText(message);
+  }
+}
+```
+
+## Building the Inventory Page Object
+
+Create `pages/InventoryPage.ts`:
+
+```typescript
+import { type Page, type Locator, expect } from '@playwright/test';
+
+export class InventoryPage {
+  readonly page: Page;
+
+  readonly pageTitle: Locator;
+  readonly inventoryItems: Locator;
+  readonly cartBadge: Locator;
+  readonly cartLink: Locator;
+  readonly sortDropdown: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.pageTitle = page.getByRole('heading', { name: 'Products' });
+    this.inventoryItems = page.locator('.inventory_item');
+    this.cartBadge = page.locator('[data-test="shopping-cart-badge"]');
+    this.cartLink = page.locator('[data-test="shopping-cart-link"]');
+    this.sortDropdown = page.locator('[data-test="product-sort-container"]');
+  }
+
+  async goto() {
+    await this.page.goto('/inventory.html');
+  }
+
+  async addToCart(productName: string) {
+    await this.page
+      .getByRole('listitem')
+      .filter({ hasText: productName })
+      .getByRole('button', { name: 'Add to cart' })
+      .click();
+  }
+
+  async removeFromCart(productName: string) {
+    await this.page
+      .getByRole('listitem')
+      .filter({ hasText: productName })
+      .getByRole('button', { name: 'Remove' })
+      .click();
+  }
+
+  async sortBy(option: 'az' | 'za' | 'lohi' | 'hilo') {
+    await this.sortDropdown.selectOption(option);
+  }
+
+  async getProductNames(): Promise<string[]> {
+    return this.page.locator('.inventory_item_name').allTextContents();
+  }
+
+  async expectCartCount(count: number) {
+    if (count === 0) {
+      await expect(this.cartBadge).not.toBeVisible();
+    } else {
+      await expect(this.cartBadge).toHaveText(String(count));
+    }
+  }
+
+  async expectOnPage() {
+    await expect(this.page).toHaveURL('/inventory.html');
+    await expect(this.pageTitle).toBeVisible();
+  }
+}
+```
+
+## Building the Cart Page Object
+
+Create `pages/CartPage.ts`:
+
+```typescript
+import { type Page, type Locator, expect } from '@playwright/test';
+
+export class CartPage {
+  readonly page: Page;
+
+  readonly cartItems: Locator;
+  readonly checkoutButton: Locator;
+  readonly continueShoppingButton: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.cartItems = page.locator('.cart_item');
+    this.checkoutButton = page.locator('[data-test="checkout"]');
+    this.continueShoppingButton = page.locator('[data-test="continue-shopping"]');
+  }
+
+  async goto() {
+    await this.page.goto('/cart.html');
+  }
+
+  async expectItemInCart(productName: string) {
+    await expect(
+      this.page.locator('.cart_item').filter({ hasText: productName })
+    ).toBeVisible();
+  }
+
+  async expectItemNotInCart(productName: string) {
+    await expect(
+      this.page.locator('.cart_item').filter({ hasText: productName })
+    ).not.toBeVisible();
+  }
+
+  async expectCartItemCount(count: number) {
+    await expect(this.cartItems).toHaveCount(count);
+  }
+
+  async proceedToCheckout() {
+    await this.checkoutButton.click();
+  }
+}
+```
+
+## Building the Checkout Page Object
+
+Create `pages/CheckoutPage.ts`:
+
+```typescript
+import { type Page, type Locator, expect } from '@playwright/test';
+
+export class CheckoutPage {
+  readonly page: Page;
+
+  readonly firstNameInput: Locator;
+  readonly lastNameInput: Locator;
+  readonly postalCodeInput: Locator;
+  readonly continueButton: Locator;
+  readonly finishButton: Locator;
+  readonly confirmationHeader: Locator;
+  readonly errorMessage: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.firstNameInput = page.locator('[data-test="firstName"]');
+    this.lastNameInput = page.locator('[data-test="lastName"]');
+    this.postalCodeInput = page.locator('[data-test="postalCode"]');
+    this.continueButton = page.locator('[data-test="continue"]');
+    this.finishButton = page.locator('[data-test="finish"]');
+    this.confirmationHeader = page.getByRole('heading', { name: 'Thank you for your order!' });
+    this.errorMessage = page.locator('[data-test="error"]');
+  }
+
+  async fillShippingInfo(firstName: string, lastName: string, postalCode: string) {
+    await this.firstNameInput.fill(firstName);
+    await this.lastNameInput.fill(lastName);
+    await this.postalCodeInput.fill(postalCode);
+  }
+
+  async continue() {
+    await this.continueButton.click();
+  }
+
+  async finish() {
+    await this.finishButton.click();
+  }
+
+  async expectOrderConfirmed() {
+    await expect(this.page).toHaveURL('/checkout-complete.html');
+    await expect(this.confirmationHeader).toBeVisible();
+  }
+
+  async expectErrorMessage(message: string) {
+    await expect(this.errorMessage).toBeVisible();
+    await expect(this.errorMessage).toContainText(message);
+  }
+}
+```
+
+## Using Page Objects in Tests
+
+Now your tests are clean. Create `tests/auth/login.spec.ts`:
+
+```typescript
+import { test } from '@playwright/test';
+import { LoginPage } from '../../pages/LoginPage';
+import { InventoryPage } from '../../pages/InventoryPage';
+import { USERS } from '../../utils/test-data';
+
+test.describe('Login', () => {
+  let loginPage: LoginPage;
+  let inventoryPage: InventoryPage;
+
+  test.beforeEach(async ({ page }) => {
+    loginPage = new LoginPage(page);
+    inventoryPage = new InventoryPage(page);
+    await loginPage.goto();
+  });
+
+  test('successful login with standard user', async () => {
+    await loginPage.login(USERS.standard.username, USERS.standard.password);
+    await inventoryPage.expectOnPage();
+  });
+
+  test('fails with locked out user', async () => {
+    await loginPage.login(USERS.lockedOut.username, USERS.lockedOut.password);
+    await loginPage.expectErrorMessage('Sorry, this user has been locked out');
+  });
+
+  test('fails with invalid credentials', async () => {
+    await loginPage.login('invalid_user', 'wrong_pass');
+    await loginPage.expectErrorMessage('Username and password do not match');
+  });
+});
+```
+
+Create `tests/cart/add-to-cart.spec.ts`:
+
+```typescript
+import { test } from '@playwright/test';
+import { LoginPage } from '../../pages/LoginPage';
+import { InventoryPage } from '../../pages/InventoryPage';
+import { CartPage } from '../../pages/CartPage';
+import { USERS } from '../../utils/test-data';
+
+test.describe('Cart', () => {
+  let inventoryPage: InventoryPage;
+  let cartPage: CartPage;
+
+  test.beforeEach(async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    inventoryPage = new InventoryPage(page);
+    cartPage = new CartPage(page);
+
+    await loginPage.goto();
+    await loginPage.login(USERS.standard.username, USERS.standard.password);
+    await inventoryPage.expectOnPage();
+  });
+
+  test('add single item to cart', async () => {
+    await inventoryPage.addToCart('Sauce Labs Backpack');
+    await inventoryPage.expectCartCount(1);
+  });
+
+  test('add multiple items to cart', async () => {
+    await inventoryPage.addToCart('Sauce Labs Backpack');
+    await inventoryPage.addToCart('Sauce Labs Bike Light');
+    await inventoryPage.expectCartCount(2);
+  });
+
+  test('remove item from cart', async () => {
+    await inventoryPage.addToCart('Sauce Labs Backpack');
+    await inventoryPage.removeFromCart('Sauce Labs Backpack');
+    await inventoryPage.expectCartCount(0);
+  });
+
+  test('cart persists after navigation', async ({ page }) => {
+    await inventoryPage.addToCart('Sauce Labs Backpack');
+    await cartPage.goto();
+    await cartPage.expectItemInCart('Sauce Labs Backpack');
+    await cartPage.expectCartItemCount(1);
+  });
+});
+```
+
+## Authentication Fixture
+
+Logging in before every test is slow. Use a fixture to share authenticated state:
+
+Create `fixtures/auth.fixture.ts`:
+
+```typescript
+import { test as base } from '@playwright/test';
+import { LoginPage } from '../pages/LoginPage';
+import { InventoryPage } from '../pages/InventoryPage';
+import { USERS } from '../utils/test-data';
+
+type AuthFixtures = {
+  inventoryPage: InventoryPage;
+};
+
+export const test = base.extend<AuthFixtures>({
+  inventoryPage: async ({ page }, use) => {
+    const loginPage = new LoginPage(page);
+    const inventoryPage = new InventoryPage(page);
+
+    await loginPage.goto();
+    await loginPage.login(USERS.standard.username, USERS.standard.password);
+    await inventoryPage.expectOnPage();
+
+    await use(inventoryPage);
+  },
+});
+
+export { expect } from '@playwright/test';
+```
+
+Now tests that need a logged-in state just use this fixture:
+
+```typescript
+import { test, expect } from '../../fixtures/auth.fixture';
+
+test('add item to cart', async ({ inventoryPage, page }) => {
+  await inventoryPage.addToCart('Sauce Labs Backpack');
+  await inventoryPage.expectCartCount(1);
+});
+```
+
+No login boilerplate. The fixture handles it.
+
+## What Goes in a Page Object
+
+**Do put in a page object:**
+- Locators for elements on that page
+- Actions (click, fill, select, navigate)
+- Assertions scoped to that page (`expectOnPage`, `expectErrorMessage`)
+
+**Do not put in a page object:**
+- Test data
+- Business logic
+- Assertions about other pages
+- `test.beforeEach` setup
+
+Page objects should be dumb wrappers around the UI. Keep the test logic in the test files.
+
+## Full Checkout Flow Test
+
+Here is what a complete end-to-end test looks like with page objects:
+
+```typescript
+import { test, expect } from '../../fixtures/auth.fixture';
+import { CartPage } from '../../pages/CartPage';
+import { CheckoutPage } from '../../pages/CheckoutPage';
+
+test('complete checkout flow', async ({ inventoryPage, page }) => {
+  const cartPage = new CartPage(page);
+  const checkoutPage = new CheckoutPage(page);
+
+  await inventoryPage.addToCart('Sauce Labs Backpack');
+  await inventoryPage.addToCart('Sauce Labs Bike Light');
+  await inventoryPage.cartLink.click();
+
+  await cartPage.expectItemInCart('Sauce Labs Backpack');
+  await cartPage.expectItemInCart('Sauce Labs Bike Light');
+  await cartPage.proceedToCheckout();
+
+  await checkoutPage.fillShippingInfo('Hammad', 'Faisal', '54000');
+  await checkoutPage.continue();
+  await checkoutPage.finish();
+
+  await checkoutPage.expectOrderConfirmed();
+});
+```
+
+Clean, readable, and maintainable. Each line says what it does, not how it does it.
+
+Next chapter: assertions — making sure your tests are checking the right things the right way.

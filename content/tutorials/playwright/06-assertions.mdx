@@ -1,0 +1,265 @@
+---
+title: "Assertions — Testing What Actually Matters"
+description: "How to write assertions that catch real bugs without producing false failures"
+order: 5
+framework: "playwright"
+chapter: "assertions"
+---
+
+An assertion is the part of your test that actually checks something. Everything else — navigation, filling forms, clicking buttons — is just setup. The assertion is where the test earns its place.
+
+Bad assertions produce false positives (passing tests that should fail) and false negatives (failing tests caused by the test itself, not the app). This chapter is about writing assertions that mean something.
+
+## Web-First Assertions — Always Use These
+
+Playwright has two types of assertions:
+
+1. **Web-first assertions** — `expect(locator).toBeVisible()` — these auto-retry until the condition is met or the timeout expires
+2. **Value assertions** — `expect(value).toBe(x)` — these evaluate once, immediately
+
+Always use web-first assertions for anything in the DOM. They are built for async UIs.
+
+```typescript
+// GOOD — auto-retries, handles async rendering
+await expect(page.getByText('Products')).toBeVisible();
+
+// BAD — evaluates once, will fail if element hasn't rendered yet
+const text = await page.getByText('Products').textContent();
+expect(text).toBe('Products');
+```
+
+The second version looks fine but is a common source of flakiness. The element might not be in the DOM yet when `textContent()` is called.
+
+## The Essential Assertions
+
+These are the ones you'll use in 90% of your tests.
+
+### Visibility
+
+```typescript
+await expect(locator).toBeVisible();
+await expect(locator).not.toBeVisible();
+await expect(locator).toBeHidden(); // same as not.toBeVisible()
+```
+
+Use `toBeVisible()` to confirm something appeared. Use `not.toBeVisible()` to confirm something disappeared (modal closed, error cleared, element removed).
+
+### URL
+
+```typescript
+await expect(page).toHaveURL('/inventory.html');
+await expect(page).toHaveURL(/checkout/); // regex
+```
+
+After navigation, always assert the URL. It confirms the redirect actually happened.
+
+### Text Content
+
+```typescript
+await expect(locator).toHaveText('Sauce Labs Backpack');
+await expect(locator).toHaveText(/backpack/i); // regex, case insensitive
+await expect(locator).toContainText('Backpack'); // partial match
+await expect(locator).not.toHaveText('Error');
+```
+
+`toHaveText` does an exact match. `toContainText` does a partial match. For dynamic text with some static parts, use regex.
+
+### Input Values
+
+```typescript
+await expect(page.getByLabel('First Name')).toHaveValue('Hammad');
+await expect(page.getByLabel('First Name')).not.toHaveValue('');
+```
+
+Use `toHaveValue` for inputs, not `toHaveText` — text content of an input is always empty.
+
+### Count
+
+```typescript
+await expect(page.locator('.inventory_item')).toHaveCount(6);
+await expect(page.locator('.cart_item')).toHaveCount(2);
+```
+
+Great for product lists, cart items, search results — any list where the count is meaningful.
+
+### Enabled / Disabled State
+
+```typescript
+await expect(page.getByRole('button', { name: 'Checkout' })).toBeEnabled();
+await expect(page.getByRole('button', { name: 'Submit' })).toBeDisabled();
+```
+
+Form validation tests live or die by these. Check that the submit button is disabled before required fields are filled.
+
+### Checked State
+
+```typescript
+await expect(page.getByRole('checkbox')).toBeChecked();
+await expect(page.getByRole('checkbox')).not.toBeChecked();
+```
+
+### CSS Class
+
+```typescript
+await expect(locator).toHaveClass('active');
+await expect(locator).toHaveClass(/selected/);
+```
+
+Use sparingly — class names change. Prefer checking visible state or text instead.
+
+### Attribute
+
+```typescript
+await expect(locator).toHaveAttribute('href', '/inventory.html');
+await expect(locator).toHaveAttribute('aria-expanded', 'true');
+await expect(locator).not.toHaveAttribute('disabled');
+```
+
+Useful for checking `href` on links, `src` on images, ARIA attributes on dynamic components.
+
+## Soft Assertions — Check Multiple Things Without Stopping
+
+By default, a failing assertion stops the test immediately. Soft assertions let you check multiple things and report all failures at once.
+
+```typescript
+test('product card shows all details', async ({ page }) => {
+  await page.goto('/inventory.html');
+
+  const item = page.locator('.inventory_item').first();
+
+  await expect.soft(item.locator('.inventory_item_name')).toBeVisible();
+  await expect.soft(item.locator('.inventory_item_desc')).toBeVisible();
+  await expect.soft(item.locator('.inventory_item_price')).toBeVisible();
+  await expect.soft(item.getByRole('button')).toBeVisible();
+
+  // All four are checked — test reports all failures, not just the first
+});
+```
+
+Use soft assertions when you want a full picture of what's broken, not just the first failure.
+
+## Custom Error Messages
+
+When an assertion fails, the error message should tell you *what* failed, not just *that* it failed.
+
+```typescript
+await expect(
+  page.locator('[data-test="shopping-cart-badge"]'),
+  'Cart badge should show 2 items after adding two products'
+).toHaveText('2');
+```
+
+The second argument to `expect()` is a custom message that appears in the failure output. Use it for any assertion that might be ambiguous.
+
+## Real Assertions on SauceDemo
+
+Here are practical examples for common scenarios.
+
+### After Login
+
+```typescript
+test('login redirects to inventory', async ({ page }) => {
+  await loginPage.login(USERS.standard.username, USERS.standard.password);
+
+  await expect(page).toHaveURL('/inventory.html');
+  await expect(page.getByRole('heading', { name: 'Products' })).toBeVisible();
+  await expect(page.locator('.inventory_item')).toHaveCount(6);
+});
+```
+
+### After Adding to Cart
+
+```typescript
+test('cart updates after adding item', async ({ page }) => {
+  await inventoryPage.addToCart('Sauce Labs Backpack');
+
+  // Button text changes from "Add to cart" to "Remove"
+  await expect(
+    page.getByRole('listitem')
+      .filter({ hasText: 'Sauce Labs Backpack' })
+      .getByRole('button')
+  ).toHaveText('Remove');
+
+  // Cart badge appears
+  await expect(
+    page.locator('[data-test="shopping-cart-badge"]')
+  ).toHaveText('1');
+});
+```
+
+### Sorting Assertion
+
+```typescript
+test('sort by price low to high', async ({ page }) => {
+  await inventoryPage.sortBy('lohi');
+
+  const prices = await page.locator('.inventory_item_price').allTextContents();
+  const numeric = prices.map((p) => parseFloat(p.replace('$', '')));
+
+  // Check that each price is less than or equal to the next
+  for (let i = 0; i < numeric.length - 1; i++) {
+    expect(numeric[i], `Price at index ${i} should be <= price at index ${i + 1}`).toBeLessThanOrEqual(numeric[i + 1]);
+  }
+});
+```
+
+This is a data-driven assertion — you're not hardcoding expected prices, you're asserting a property of the sorted result. Much more resilient.
+
+### Checkout Complete
+
+```typescript
+test('order confirmation page shows correct content', async ({ page }) => {
+  // ... (add item, fill checkout form, finish)
+
+  await expect(page).toHaveURL('/checkout-complete.html');
+  await expect(
+    page.getByRole('heading', { name: 'Thank you for your order!' })
+  ).toBeVisible();
+  await expect(
+    page.getByText('Your order has been dispatched')
+  ).toBeVisible();
+});
+```
+
+## Timeouts
+
+Every web-first assertion retries until a timeout. The default is 5 seconds. You can override it:
+
+```typescript
+// For one assertion
+await expect(locator).toBeVisible({ timeout: 10_000 });
+
+// Globally in playwright.config.ts
+export default defineConfig({
+  expect: {
+    timeout: 10_000,
+  },
+});
+```
+
+If you find yourself increasing timeouts often, that's a sign of a slow app or a race condition — not a signal to increase the timeout globally. Investigate the root cause.
+
+## What Not to Assert
+
+Some things feel like they should be tested but rarely are worth it:
+
+**Exact pixel positions** — These break on any layout change. Test visibility instead.
+
+**Dynamic timestamps** — `"Added 2 minutes ago"` will fail a minute later. Use regex or skip it.
+
+**Exact animation state** — Playwright waits for stability before interactions, but asserting mid-animation is fragile.
+
+**Console logs** — Only assert console errors if you've set up the listener at the start of the test. Don't assert on logs from previous tests.
+
+## Assertion Checklist
+
+Before committing a test, ask:
+
+- Does this assertion test the right thing, or just that the test ran?
+- Would this assertion catch a real bug?
+- Is it checking a visible state the user would care about?
+- Would it produce a false failure if the app is correct but slow?
+
+If the answer to the last question is yes, switch to a web-first assertion.
+
+Next chapter: what to do when tests are flaky.

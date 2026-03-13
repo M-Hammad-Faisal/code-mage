@@ -1,0 +1,212 @@
+---
+title: "Selectors — Finding Elements the Right Way"
+description: "data-testid vs ARIA roles vs CSS — a practical strategy that won't break when the UI changes"
+order: 3
+framework: "playwright"
+chapter: "selectors"
+---
+
+Bad selectors are the number one cause of flaky tests. A test that breaks every time a class name changes, or a button moves in the DOM, is worse than no test at all — it trains your team to ignore failures.
+
+This chapter is about building a selector strategy that's actually stable.
+
+## The Selector Hierarchy
+
+Use selectors in this priority order. Go as high up the list as you can:
+
+1. `getByRole` — preferred for interactive elements
+2. `getByLabel` — preferred for form inputs
+3. `getByPlaceholder` — for inputs without visible labels
+4. `getByText` — for static text content
+5. `getByTestId` — when nothing semantic works
+6. CSS/XPath — last resort only
+
+The top of the list uses attributes a real user would perceive (role, label, visible text). These selectors survive UI redesigns. A button moving from left to right does not break your test. A button being renamed from "Add" to "Add to Cart" does — which is correct behavior, because the test is checking something meaningful.
+
+## getByRole — Your Primary Tool
+
+ARIA roles describe what an element *is*, not what it *looks like*. Buttons, links, checkboxes, headings, tables — all have roles.
+
+```typescript
+// Click a button by its accessible name
+await page.getByRole('button', { name: 'Add to cart' }).click();
+
+// Click a link
+await page.getByRole('link', { name: 'About' }).click();
+
+// Find a heading
+await expect(page.getByRole('heading', { name: 'Products' })).toBeVisible();
+
+// Check a checkbox
+await page.getByRole('checkbox', { name: 'Remember me' }).check();
+```
+
+On SauceDemo, almost all interactive elements have proper ARIA roles. Use them.
+
+Common roles you'll use daily:
+
+| Role | Element |
+|---|---|
+| `button` | `<button>`, `<input type="submit">` |
+| `link` | `<a href="...">` |
+| `checkbox` | `<input type="checkbox">` |
+| `textbox` | `<input type="text">`, `<textarea>` |
+| `heading` | `<h1>` through `<h6>` |
+| `img` | `<img>` with `alt` attribute |
+| `listitem` | `<li>` |
+
+## getByLabel — For Form Inputs
+
+When an input has a `<label>` element linked to it, use `getByLabel`. This is more stable than placeholder text because labels are part of the form's semantic structure.
+
+```typescript
+// <label for="username">Username</label>
+// <input id="username" type="text" />
+await page.getByLabel('Username').fill('standard_user');
+```
+
+SauceDemo uses placeholder attributes instead of proper labels, so you'll use `getByPlaceholder` there. But in real apps, always prefer `getByLabel`.
+
+## getByPlaceholder — When There's No Label
+
+```typescript
+await page.getByPlaceholder('Username').fill('standard_user');
+await page.getByPlaceholder('Password').fill('secret_sauce');
+```
+
+This is stable as long as the placeholder text doesn't change — which is rare. Fine to use.
+
+## getByText — For Static Content
+
+```typescript
+// Exact match
+await page.getByText('Sauce Labs Backpack').click();
+
+// Partial match
+await page.getByText('Backpack').click();
+
+// Exact match explicitly
+await page.getByText('Products', { exact: true }).click();
+```
+
+Be careful with `getByText` on dynamic content. If the text changes (prices, counts, user-generated content), the test breaks. Use it for stable UI labels, not data.
+
+## getByTestId — The Escape Hatch
+
+When nothing semantic works, add a `data-testid` attribute to the element and use `getByTestId`.
+
+```html
+<button data-testid="checkout-button">Proceed to Checkout</button>
+```
+
+```typescript
+await page.getByTestId('checkout-button').click();
+```
+
+This is the most explicit and deliberate selector. The downside is that it requires coordination with whoever writes the frontend code. In your own projects, add `data-testid` to any element that's hard to reach semantically.
+
+On SauceDemo, most elements already have `data-test` attributes. You can use them directly:
+
+```typescript
+// SauceDemo uses data-test not data-testid
+await page.locator('[data-test="add-to-cart-sauce-labs-backpack"]').click();
+```
+
+## CSS and XPath — Last Resort
+
+```typescript
+// CSS
+await page.locator('.inventory_item_name').first().click();
+await page.locator('#login-button').click();
+
+// XPath
+await page.locator('//button[@class="btn_primary"]').click();
+```
+
+These work, but they break constantly. Class names change in refactors. IDs get removed. DOM structure shifts. If you find yourself reaching for CSS selectors, that's a signal to ask the frontend team for `data-testid` attributes instead.
+
+The one exception: CSS attribute selectors on stable attributes like `data-test` are fine.
+
+```typescript
+// This is acceptable — data attributes are stable
+await page.locator('[data-test="shopping_cart_link"]').click();
+```
+
+## Chaining and Filtering
+
+When you have multiple matching elements, narrow them down:
+
+```typescript
+// First match
+await page.getByRole('button', { name: 'Add to cart' }).first().click();
+
+// Nth match (0-indexed)
+await page.getByRole('listitem').nth(2).click();
+
+// Filter by child content
+await page
+  .getByRole('listitem')
+  .filter({ hasText: 'Sauce Labs Backpack' })
+  .getByRole('button', { name: 'Add to cart' })
+  .click();
+```
+
+The `.filter()` + child locator pattern is the cleanest way to handle lists of similar items. You'll use it constantly on SauceDemo's product list.
+
+## Real Example: Adding a Specific Product to Cart
+
+Here's how you'd add the Backpack to the cart using a stable, chained selector:
+
+```typescript
+test('add specific product to cart', async ({ page }) => {
+  await page.goto('/inventory.html');
+
+  // Find the list item containing the Backpack, then click its button
+  await page
+    .getByRole('listitem')
+    .filter({ hasText: 'Sauce Labs Backpack' })
+    .getByRole('button', { name: 'Add to cart' })
+    .click();
+
+  // Cart badge should show 1
+  await expect(page.locator('[data-test="shopping-cart-badge"]')).toHaveText('1');
+});
+```
+
+This test will survive:
+- The button moving position on the page
+- Other products being added or removed
+- CSS class renames
+- DOM restructuring
+
+It will only break if the product name changes or the button label changes — both of which are real product changes you'd want to catch.
+
+## Debugging Selectors
+
+When you're not sure if a selector works, use Playwright Inspector:
+
+```bash
+npx playwright test --debug
+```
+
+This opens a headed browser with a step-by-step debugger. You can pause, inspect elements, and test selectors in the console.
+
+Or use the Playwright VS Code extension — it has a built-in selector picker that highlights matching elements as you type.
+
+## Quick Reference
+
+```typescript
+page.getByRole('button', { name: 'Login' })
+page.getByLabel('Email address')
+page.getByPlaceholder('Username')
+page.getByText('Products')
+page.getByTestId('checkout-button')
+page.locator('[data-test="cart-link"]')
+page.locator('.item-name').first()
+
+// Chaining
+page.getByRole('listitem').filter({ hasText: 'Backpack' }).getByRole('button')
+page.getByRole('listitem').nth(0)
+```
+
+Next chapter: Page Object Model — how to organize all these selectors so they don't end up scattered across 20 test files.

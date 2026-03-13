@@ -5,6 +5,7 @@ import { MDXRemote } from 'next-mdx-remote/rsc';
 import { Calendar, Clock, ArrowLeft, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { getAllPosts, getPostBySlug } from '@/lib/mdx';
+import { getMDXComponents } from '@/lib/mdx-components';
 import { SITE, CATEGORY_COLORS } from '@/lib/site.config';
 import { ViewCounter } from '@/components/ViewCounter';
 import { ReactionBar } from '@/components/ReactionBar';
@@ -109,7 +110,7 @@ export default async function BlogPostPage({ params }: Props) {
 
           {/* MDX Content */}
           <article className="prose prose-gray dark:prose-invert max-w-none prose-headings:font-heading prose-code:font-mono prose-pre:bg-gray-900 prose-a:text-red-600 dark:prose-a:text-red-400">
-            <MDXRemote source={post.content} />
+            <MDXRemote source={post.content} components={getMDXComponents()} />
           </article>
 
           {/* Reactions */}

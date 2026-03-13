@@ -1,0 +1,236 @@
+---
+title: "Installation & Your First Test"
+description: "Set up Playwright from scratch and write a real test against SauceDemo"
+order: 2
+framework: "playwright"
+chapter: "installation-setup"
+---
+
+Let's get Playwright installed and write a test that actually does something useful — not a "check the page title" toy example.
+
+## Installing Playwright
+
+In your project directory:
+
+```bash
+npm init playwright@latest
+```
+
+The CLI will ask you a few questions:
+
+- **TypeScript or JavaScript?** → TypeScript (always)
+- **Where to put tests?** → `tests`
+- **Add GitHub Actions?** → Yes (we'll customize it later)
+- **Install browsers?** → Yes
+
+This creates:
+
+```
+playwright.config.ts
+tests/
+  example.spec.ts
+tests-examples/
+  demo-todo-app.spec.ts
+```
+
+Delete both spec files. We're starting fresh.
+
+## Configuring for SauceDemo
+
+Open `playwright.config.ts` and replace it with this:
+
+```typescript
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 2 : undefined,
+  reporter: [
+    ['html'],
+    ['list'],
+  ],
+
+  use: {
+    baseURL: 'https://www.saucedemo.com',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'on-first-retry',
+  },
+
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+  ],
+});
+```
+
+Key decisions here:
+
+- `baseURL` means you write `page.goto('/')` instead of the full URL everywhere
+- `retries: 2` in CI only — local retries hide real failures
+- `fullyParallel: true` — every test file runs in its own worker
+- `trace: 'on-first-retry'` — traces only when something fails, not on every run
+
+## Project Structure
+
+Set up this folder structure before writing any tests:
+
+```
+tests/
+  auth/
+    login.spec.ts
+  inventory/
+    product-list.spec.ts
+  cart/
+    add-to-cart.spec.ts
+  checkout/
+    checkout-flow.spec.ts
+pages/
+  LoginPage.ts
+  InventoryPage.ts
+  CartPage.ts
+  CheckoutPage.ts
+fixtures/
+  auth.fixture.ts
+utils/
+  test-data.ts
+```
+
+We'll fill these in across the chapters. For now just create the folders.
+
+## Your First Real Test
+
+Create `tests/auth/login.spec.ts`:
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test.describe('Login', () => {
+  test('successful login with standard user', async ({ page }) => {
+    await page.goto('/');
+
+    await page.getByPlaceholder('Username').fill('standard_user');
+    await page.getByPlaceholder('Password').fill('secret_sauce');
+    await page.getByRole('button', { name: 'Login' }).click();
+
+    await expect(page).toHaveURL('/inventory.html');
+    await expect(page.getByText('Products')).toBeVisible();
+  });
+
+  test('fails with wrong password', async ({ page }) => {
+    await page.goto('/');
+
+    await page.getByPlaceholder('Username').fill('standard_user');
+    await page.getByPlaceholder('Password').fill('wrong_password');
+    await page.getByRole('button', { name: 'Login' }).click();
+
+    await expect(
+      page.getByText('Username and password do not match')
+    ).toBeVisible();
+  });
+
+  test('fails with locked out user', async ({ page }) => {
+    await page.goto('/');
+
+    await page.getByPlaceholder('Username').fill('locked_out_user');
+    await page.getByPlaceholder('Password').fill('secret_sauce');
+    await page.getByRole('button', { name: 'Login' }).click();
+
+    await expect(
+      page.getByText('Sorry, this user has been locked out')
+    ).toBeVisible();
+  });
+});
+```
+
+Run it:
+
+```bash
+npx playwright test tests/auth/login.spec.ts
+```
+
+All three should pass. If they do, your setup is working.
+
+## SauceDemo Users Worth Knowing
+
+SauceDemo ships with several test users — each exposing different behavior:
+
+| Username | Password | Behavior |
+|---|---|---|
+| `standard_user` | `secret_sauce` | Normal working user |
+| `locked_out_user` | `secret_sauce` | Blocked at login |
+| `problem_user` | `secret_sauce` | Broken UI: wrong images, broken sort |
+| `performance_glitch_user` | `secret_sauce` | Intentional slowness |
+| `error_user` | `secret_sauce` | Random errors on interactions |
+| `visual_user` | `secret_sauce` | Visual bugs |
+
+Store these in `utils/test-data.ts`:
+
+```typescript
+export const USERS = {
+  standard: {
+    username: 'standard_user',
+    password: 'secret_sauce',
+  },
+  lockedOut: {
+    username: 'locked_out_user',
+    password: 'secret_sauce',
+  },
+  problem: {
+    username: 'problem_user',
+    password: 'secret_sauce',
+  },
+  performanceGlitch: {
+    username: 'performance_glitch_user',
+    password: 'secret_sauce',
+  },
+} as const;
+```
+
+## Useful Commands
+
+```bash
+# Run all tests
+npx playwright test
+
+# Run a specific file
+npx playwright test tests/auth/login.spec.ts
+
+# Run in headed mode (see the browser)
+npx playwright test --headed
+
+# Run a specific test by name
+npx playwright test -g "successful login"
+
+# Open the HTML report after a run
+npx playwright show-report
+
+# Record a test (codegen)
+npx playwright codegen https://www.saucedemo.com
+
+# Open last trace
+npx playwright show-trace trace.zip
+```
+
+## What Just Happened
+
+When you ran those tests, Playwright:
+
+1. Launched a Chromium browser in headless mode
+2. Navigated to `https://www.saucedemo.com`
+3. Found elements using accessible attributes (placeholder text, button name)
+4. Waited automatically for each element to be ready before interacting
+5. Asserted the outcome
+
+No manual waits. No driver setup. No browser version mismatch errors.
+
+Next chapter we'll talk about the most important skill in Playwright: choosing the right selector.

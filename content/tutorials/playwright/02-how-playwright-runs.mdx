@@ -1,0 +1,310 @@
+---
+title: "How Playwright Runs Your Tests"
+description: "What actually happens when you run npx playwright test — the test runner, workers, hooks, and the browser lifecycle"
+order: 2
+framework: "playwright"
+chapter: "how-playwright-runs"
+---
+
+Before writing tests you need to understand what's happening when you run them. Most beginners treat the test runner as a black box. When something goes wrong — and it will — they have no idea where to look.
+
+This chapter explains the full picture: from typing `npx playwright test` to a pass or fail result.
+
+## The Mental Model
+
+When you run `npx playwright test`, here's what happens at a high level:
+
+1. Playwright reads `playwright.config.ts` to understand your settings
+2. It finds all files matching `**/*.spec.ts` in your `testDir`
+3. It launches **worker processes** (separate Node.js processes) to run tests in parallel
+4. Each worker gets a **browser context** — an isolated browser instance
+5. Tests run inside that context
+6. Results are collected and reported
+
+The key insight: **each test file runs in its own worker**. Workers are separate processes, not threads — they don't share memory. This is why tests in different files can run in parallel safely.
+
+## The Test File Structure
+
+Every test file follows the same structure:
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+// A describe block groups related tests
+test.describe('Login page', () => {
+
+  // beforeEach runs before EVERY test in this describe block
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+  });
+
+  // An individual test
+  test('shows login form', async ({ page }) => {
+    await expect(page.getByPlaceholder('Username')).toBeVisible();
+    await expect(page.getByPlaceholder('Password')).toBeVisible();
+  });
+
+  // Another test in the same describe block
+  test('shows login button', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Login' })).toBeVisible();
+  });
+
+});
+```
+
+### What `test.describe` Does
+
+`test.describe` is just a way to group related tests under a label. It doesn't affect how tests run — just how they're reported and organized.
+
+You can nest `describe` blocks:
+
+```typescript
+test.describe('Login', () => {
+  test.describe('with valid credentials', () => {
+    test('redirects to inventory', async ({ page }) => { /* ... */ });
+  });
+
+  test.describe('with invalid credentials', () => {
+    test('shows error message', async ({ page }) => { /* ... */ });
+  });
+});
+```
+
+### What `test.beforeEach` Does
+
+`beforeEach` runs before every `test` in its scope. Use it to set up state that every test needs — like navigating to a page or logging in.
+
+```typescript
+test.describe('Inventory page', () => {
+  test.beforeEach(async ({ page }) => {
+    // This runs before EACH test below
+    await page.goto('/inventory.html');
+  });
+
+  test('shows 6 products', async ({ page }) => {
+    // page is already on /inventory.html
+    await expect(page.locator('.inventory_item')).toHaveCount(6);
+  });
+
+  test('shows sort dropdown', async ({ page }) => {
+    // page is already on /inventory.html here too
+    await expect(page.locator('[data-test="product-sort-container"]')).toBeVisible();
+  });
+});
+```
+
+Other hooks that work the same way:
+- `test.afterEach` — runs after each test (cleanup)
+- `test.beforeAll` — runs once before all tests in the describe block
+- `test.afterAll` — runs once after all tests
+
+**Important:** `beforeAll` and `afterAll` share state across tests in the block. Use them carefully. `beforeEach` and `afterEach` are safer because each test gets a clean setup.
+
+## The `page` Fixture — Where It Comes From
+
+You've seen `async ({ page }) => { ... }` in every test. Where does `page` come from?
+
+This is a **fixture** — a value that Playwright automatically provides to your test. Fixtures are injected into your test function through destructuring.
+
+```typescript
+test('my test', async ({ page, request, context }) => {
+  // page    — a Page object for browser interaction
+  // request — for making API requests
+  // context — the browser context (multiple tabs, etc.)
+});
+```
+
+The `page` fixture gives you a fresh browser page for every test. By default:
+- Each test gets its own `page`
+- Each test gets its own `context` (isolated cookies, localStorage, sessions)
+- Multiple tests can run simultaneously in different workers
+
+This is why tests don't interfere with each other — they're in completely separate browser contexts.
+
+## What a Page Object Actually Is
+
+`page` is an instance of Playwright's `Page` class. It represents a single browser tab. Every method on it communicates with the browser:
+
+```typescript
+await page.goto('https://www.saucedemo.com');   // navigate
+await page.click('#login-button');               // click
+await page.fill('#username', 'standard_user');   // type in input
+await page.screenshot({ path: 'screen.png' });  // take screenshot
+const title = await page.title();                // get page title
+```
+
+`page` is not the DOM. It's a JavaScript object that controls the browser through an internal protocol. Every method that interacts with the browser is `async` — it sends a command and waits for the browser to respond.
+
+## The Browser Lifecycle
+
+Here's the exact lifecycle for a single test:
+
+```
+Worker starts
+  └── Browser launches (Chromium / Firefox / WebKit)
+        └── Browser context created (isolated session)
+              └── New page created
+                    └── beforeAll hooks run (once per describe block)
+                          └── beforeEach hooks run
+                                └── Test body runs
+                          └── afterEach hooks run
+                    └── Page closes
+              └── Context closes
+        (next test in same file reuses the same browser)
+  └── afterAll hooks run
+Worker closes
+```
+
+The browser is shared across tests in the same file. The context and page are fresh for each test. This gives you both speed (no browser restart) and isolation (clean session).
+
+## How `expect` Works
+
+`expect` is how you assert things in Playwright. It wraps a value or locator and gives you assertion methods.
+
+```typescript
+// Asserting a locator (web-first — auto-retries)
+await expect(page.getByText('Products')).toBeVisible();
+
+// Asserting a plain value (evaluates once)
+expect(count).toBe(6);
+expect(names).toEqual(['Backpack', 'Bike Light']);
+expect(url).toContain('/inventory');
+```
+
+When you `await expect(locator).toBeVisible()`, Playwright keeps checking the DOM until the element is visible or the timeout expires (default 5 seconds). This is called **auto-waiting** and it's how Playwright handles the fact that UIs are async.
+
+If the assertion never becomes true, the test fails with a clear error:
+
+```
+Error: expect(locator).toBeVisible()
+Locator: getByText('Products')
+Expected: visible
+Received: <element not found>
+```
+
+## How Parallelism Works
+
+By default, test **files** run in parallel. Tests **within a file** run serially (one after another).
+
+```
+Worker 1: login.spec.ts     (runs tests 1, 2, 3 one by one)
+Worker 2: inventory.spec.ts (runs tests 1, 2, 3 one by one)
+Worker 3: cart.spec.ts      (runs tests 1, 2, 3 one by one)
+```
+
+All three workers run at the same time. This is why a suite with 30 tests in 3 files finishes much faster than 30 tests in 1 file.
+
+You can control parallelism:
+
+```typescript
+// playwright.config.ts
+workers: 4, // max 4 workers at once
+fullyParallel: true, // also run tests within files in parallel
+```
+
+`fullyParallel: true` means every individual test runs in its own worker — maximum speed, but requires that all tests are fully independent.
+
+## Reading Test Output
+
+When you run `npx playwright test`, you see output like this:
+
+```
+Running 9 tests using 3 workers
+
+  ✓  login.spec.ts:8:3 › Login › successful login (1.2s)
+  ✓  login.spec.ts:17:3 › Login › fails with wrong password (0.8s)
+  ✗  cart.spec.ts:12:3 › Cart › add to cart (2.1s)
+  ✓  inventory.spec.ts:6:3 › Inventory › shows 6 products (0.9s)
+
+  1 failed
+```
+
+Each line shows:
+- `✓` or `✗` — pass or fail
+- The file path and line number of the test
+- The test name (from `test.describe` and `test()`)
+- How long it took
+
+When a test fails, Playwright prints the assertion error:
+
+```
+Error: expect(locator).toHaveURL()
+Expected string: "/inventory.html"
+Received string: "/"
+Call log:
+  - expect.toHaveURL with timeout 5000ms
+  - waiting for "/"... 
+```
+
+Read the "Expected" vs "Received" — this tells you exactly what went wrong.
+
+## The HTML Report
+
+After every run, Playwright generates an HTML report:
+
+```bash
+npx playwright show-report
+```
+
+This opens a browser with a visual breakdown of every test — pass/fail, duration, screenshots on failure, and traces. This is the best way to understand what happened in a test run.
+
+## Running Specific Tests
+
+```bash
+# All tests
+npx playwright test
+
+# One file
+npx playwright test tests/auth/login.spec.ts
+
+# Tests matching a name pattern
+npx playwright test -g "successful login"
+
+# Tests in a specific folder
+npx playwright test tests/auth/
+
+# In headed mode (see the browser)
+npx playwright test --headed
+
+# One browser only
+npx playwright test --project=chromium
+
+# With trace always on
+npx playwright test --trace=on
+```
+
+## Skipping and Focusing Tests
+
+```typescript
+// Skip this test — it still shows in the report as skipped
+test.skip('known broken feature', async ({ page }) => { /* ... */ });
+
+// Only run this test — all others are skipped
+test.only('the one I'm working on', async ({ page }) => { /* ... */ });
+
+// Skip based on a condition
+test('mobile layout', async ({ page }) => {
+  test.skip(process.env.CI === 'true', 'Skipping on CI');
+  // ...
+});
+```
+
+**Never commit `test.only`** — it would make all other tests stop running in CI.
+
+## What Goes Wrong and Why
+
+The most common errors beginners see:
+
+**`Timeout exceeded`** — an element wasn't found within 5 seconds. Either the selector is wrong, the page didn't load, or the element genuinely isn't there.
+
+**`strict mode violation`** — your selector matched more than one element and Playwright couldn't decide which one to use. Make your selector more specific.
+
+**`Element is not visible`** — the element exists in the DOM but is hidden (display:none, visibility:hidden, opacity:0). Use `.isVisible()` to check, or wait for it to become visible.
+
+**`Navigation timeout`** — `page.goto()` waited too long for the page to load. The site might be slow, or the URL might be wrong.
+
+**`Cannot read property of undefined`** — you forgot `await` somewhere and got a Promise object instead of the actual value.
+
+---
+
+Now you understand what's happening under the hood. In the next chapter we get into Playwright specifically — what it is, why it exists, and why it's worth learning.
