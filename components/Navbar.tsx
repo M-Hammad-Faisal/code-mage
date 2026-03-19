@@ -20,6 +20,7 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', fn);
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- closing mobile menu on route change is intentional
   useEffect(() => setOpen(false), [pathname]);
 
   return (
