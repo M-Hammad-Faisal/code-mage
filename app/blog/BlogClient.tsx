@@ -151,9 +151,64 @@ function BlogInner({ posts, categories }: { posts: BlogPost[]; categories: strin
   );
 }
 
+function BlogFallback({ posts, categories }: { posts: BlogPost[]; categories: string[] }) {
+  return (
+    <div className="min-h-screen py-16">
+      <div className="container-max">
+        <div className="mb-12">
+          <p className="text-xs font-mono text-red-500 dark:text-red-400 tracking-widest uppercase mb-3">
+            — Writing
+          </p>
+          <h1 className="text-4xl md:text-5xl font-heading font-bold text-gray-900 dark:text-white tracking-tight mb-4">
+            Blog
+          </h1>
+          <p className="text-base text-gray-500 dark:text-gray-400 max-w-lg">
+            Deep dives, tutorials, and real-world breakdowns on Python, automation, and software
+            dev.
+          </p>
+        </div>
+        <div className="mb-8 space-y-4">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              disabled
+              placeholder="Search posts..."
+              aria-label="Search blog posts"
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none transition-all opacity-60"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {['All', ...categories].map((cat) => {
+              const baseColor =
+                cat === 'All' ? '' : (CATEGORY_COLORS[cat] ?? CATEGORY_COLORS['Uncategorized']);
+              return (
+                <span
+                  key={cat}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium border ${
+                    cat === 'All' ? 'bg-red-600 text-white border-red-600' : baseColor
+                  }`}
+                >
+                  {cat}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-6">{posts.length} posts</p>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {posts.map((post) => (
+            <PostCard key={post.slug} post={post} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function BlogClient({ posts, categories }: { posts: BlogPost[]; categories: string[] }) {
   return (
-    <Suspense>
+    <Suspense fallback={<BlogFallback posts={posts} categories={categories} />}>
       <BlogInner posts={posts} categories={categories} />
     </Suspense>
   );

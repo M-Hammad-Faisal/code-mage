@@ -1,0 +1,107 @@
+---
+title: "Introduction to Cypress"
+description: "What Cypress is, how it works, and when to use it over other testing tools"
+order: 1
+framework: "cypress"
+chapter: "introduction"
+---
+
+Cypress is a JavaScript end-to-end testing framework built specifically for the modern web. Unlike Selenium-based tools, Cypress runs directly inside the browser — not outside it. That architectural decision changes everything about how you write and debug tests.
+
+## What Makes Cypress Different
+
+Most testing tools work by sending commands to the browser over a protocol (WebDriver). Cypress takes a different approach: it runs in the same browser process as your application.
+
+This means:
+- **No async headaches** — Cypress automatically waits for elements, no `sleep()` calls needed
+- **Real-time reloading** — tests re-run as you edit them
+- **Time travel debugging** — hover over any step in the test runner to see a screenshot of the DOM at that moment
+- **Direct access to the browser** — you can stub network requests, control the clock, and access application code
+
+## When to Use Cypress
+
+Cypress is excellent for:
+- **Frontend-heavy applications** — React, Vue, Angular, anything with a JavaScript frontend
+- **Fast feedback loops** — the interactive test runner is best-in-class for debugging
+- **Teams new to testing** — the learning curve is gentler than Selenium/WebdriverIO
+- **Component testing** — Cypress can test React/Vue/Angular components in isolation
+
+Cypress has limitations too:
+- **JavaScript/TypeScript only** — no Python, Java, or C# support
+- **Single domain per test** — you can't navigate between different origins in one test (by default)
+- **No native mobile support** — it's a browser tool only
+- **Slower than Playwright** for large test suites
+
+If you need multi-browser support, mobile testing, or cross-origin workflows, consider Playwright. For single-page applications with a JavaScript codebase, Cypress is a great choice.
+
+## Core Concepts
+
+### Commands Are Asynchronous (but feel synchronous)
+
+Cypress commands don't return values — they yield subjects to the next command:
+
+```javascript
+cy.get('#username')     // finds the element
+  .type('standard_user') // types into it
+  .should('have.value', 'standard_user') // asserts on it
+```
+
+You never use `await`. Cypress handles the async nature internally — each command waits for the previous one to complete.
+
+### Automatic Waiting
+
+This is Cypress's biggest practical advantage. By default, Cypress waits up to 4 seconds for:
+- An element to exist in the DOM
+- An element to become visible
+- An element to become enabled
+- An assertion to pass
+
+```javascript
+// Cypress waits for the button to appear — no need for explicit waits
+cy.get('[data-testid="submit-btn"]').click()
+
+// Waits for the URL to change
+cy.url().should('include', '/dashboard')
+```
+
+This eliminates most flaky test issues that plague Selenium-based setups.
+
+### Chainability
+
+Every Cypress command chains off the previous one. The "subject" (the thing you're working with) flows through the chain:
+
+```javascript
+cy.get('ul.products')       // subject: the <ul> element
+  .children()               // subject: all <li> children
+  .first()                  // subject: first <li>
+  .find('h2')               // subject: <h2> inside that <li>
+  .should('contain', 'Backpack') // assertion on the <h2>
+```
+
+## The Cypress Test Runner
+
+When you run `npx cypress open`, you get an interactive UI with:
+
+- **Spec list** — all your test files
+- **Command log** — every command executed, with timestamps
+- **App preview** — the actual browser running your tests
+- **Time travel** — click any command to "snapshot" the DOM at that point
+
+This is what makes debugging Cypress tests fast. You see exactly what happened, when, and what the DOM looked like at every step.
+
+## What We'll Build
+
+In this tutorial, we'll test [SauceDemo](https://www.saucedemo.com) — a practice e-commerce site built for automation testing. We'll cover:
+
+1. **Installation & Setup** — installing Cypress, configuring it, writing your first test
+2. **Selectors & Commands** — finding elements, interacting with them, handling common scenarios
+3. **Assertions** — making your tests actually assert something meaningful
+4. **Page Object Model** — organising tests so they don't fall apart at scale
+5. **Network Interception** — stubbing API calls for faster, more reliable tests
+6. **CI/CD** — running Cypress in GitHub Actions
+
+SauceDemo credentials you'll use throughout:
+- Username: `standard_user`
+- Password: `secret_sauce`
+
+Let's get started.

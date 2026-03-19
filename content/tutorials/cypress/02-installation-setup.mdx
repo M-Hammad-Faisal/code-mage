@@ -1,0 +1,205 @@
+---
+title: "Installation & Your First Test"
+description: "Install Cypress, configure it, and write a working login test from scratch"
+order: 2
+framework: "cypress"
+chapter: "installation-setup"
+---
+
+Let's get Cypress installed and write a real test. By the end of this chapter, you'll have a passing test that logs into SauceDemo.
+
+## Prerequisites
+
+You need Node.js (version 18 or later) and npm. Check your versions:
+
+```bash
+node --version  # v18.0.0 or higher
+npm --version   # 8.0.0 or higher
+```
+
+## Project Setup
+
+Create a project and install Cypress:
+
+```bash
+mkdir cypress-saucedemo
+cd cypress-saucedemo
+npm init -y
+npm install --save-dev cypress
+```
+
+## First Launch
+
+Run the Cypress UI:
+
+```bash
+npx cypress open
+```
+
+On first launch, Cypress detects your project and walks you through setup. Choose **E2E Testing**, then select a browser (Chrome is recommended for development).
+
+Cypress creates a `cypress/` folder with this structure:
+
+```
+cypress/
+  e2e/           ← your test files go here
+  fixtures/      ← static test data (JSON files)
+  support/
+    commands.js  ← custom commands
+    e2e.js       ← runs before every test file
+cypress.config.js  ← main config file
+```
+
+## Configure the Base URL
+
+Open `cypress.config.js` and set your base URL:
+
+```javascript
+const { defineConfig } = require('cypress')
+
+module.exports = defineConfig({
+  e2e: {
+    baseUrl: 'https://www.saucedemo.com',
+    setupNodeEvents(on, config) {},
+  },
+})
+```
+
+With `baseUrl` set, you can use `cy.visit('/')` instead of `cy.visit('https://www.saucedemo.com')`.
+
+## Your First Test
+
+Create `cypress/e2e/login.cy.js`:
+
+```javascript
+describe('Login', () => {
+  beforeEach(() => {
+    cy.visit('/')
+  })
+
+  it('logs in with valid credentials', () => {
+    cy.get('[data-test="username"]').type('standard_user')
+    cy.get('[data-test="password"]').type('secret_sauce')
+    cy.get('[data-test="login-button"]').click()
+
+    cy.url().should('include', '/inventory')
+    cy.get('.inventory_list').should('be.visible')
+  })
+
+  it('shows error for invalid credentials', () => {
+    cy.get('[data-test="username"]').type('wrong_user')
+    cy.get('[data-test="password"]').type('wrong_password')
+    cy.get('[data-test="login-button"]').click()
+
+    cy.get('[data-test="error"]')
+      .should('be.visible')
+      .and('contain', 'Username and password do not match')
+  })
+})
+```
+
+In the Cypress UI, click your spec file to run it. You'll see the browser open SauceDemo, fill in the form, click login, and verify the result — all in real time.
+
+## Understanding the Test Structure
+
+### describe and it
+
+`describe` groups related tests. `it` is a single test case. Cypress uses Mocha's test runner, so this structure is familiar if you've used Jest or Mocha.
+
+```javascript
+describe('Feature or page name', () => {
+  it('does something specific', () => {
+    // test steps
+  })
+})
+```
+
+### beforeEach
+
+`beforeEach` runs before every `it` block in the describe. Use it for setup that every test needs:
+
+```javascript
+beforeEach(() => {
+  cy.visit('/')  // navigate to home before each test
+})
+```
+
+### cy.get()
+
+`cy.get(selector)` finds an element. Use `data-test` attributes as selectors — they're stable and not affected by CSS or HTML structure changes:
+
+```javascript
+// Fragile — breaks if CSS changes
+cy.get('.login-form input.username')
+
+// Stable — only breaks if you remove the attribute
+cy.get('[data-test="username"]')
+```
+
+## Running Tests Headlessly
+
+For CI and quick checks, run without the UI:
+
+```bash
+npx cypress run
+```
+
+This runs all tests in a headless Chrome and outputs results to the terminal.
+
+## TypeScript Setup (Optional but Recommended)
+
+If you prefer TypeScript:
+
+```bash
+npm install --save-dev typescript
+```
+
+Create `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["es5", "dom"],
+    "types": ["cypress", "node"]
+  },
+  "include": ["**/*.ts"]
+}
+```
+
+Rename your spec file to `login.cy.ts` and update the content:
+
+```typescript
+describe('Login', () => {
+  beforeEach(() => {
+    cy.visit('/')
+  })
+
+  it('logs in with valid credentials', () => {
+    cy.get('[data-test="username"]').type('standard_user')
+    cy.get('[data-test="password"]').type('secret_sauce')
+    cy.get('[data-test="login-button"]').click()
+
+    cy.url().should('include', '/inventory')
+  })
+})
+```
+
+## Common Issues
+
+**`cy.get()` times out:** The element doesn't exist or isn't visible. Use the Cypress DevTools to inspect the DOM. Check your selector in the browser console first: `document.querySelector('[data-test="username"]')`.
+
+**Tests pass locally but fail in CI:** Usually a timing issue. Increase the default timeout in `cypress.config.js`:
+
+```javascript
+module.exports = defineConfig({
+  e2e: {
+    defaultCommandTimeout: 8000, // default is 4000ms
+    baseUrl: 'https://www.saucedemo.com',
+  },
+})
+```
+
+**Flaky tests:** Often caused by animations or lazy-loaded content. Assert on the element state before interacting: `cy.get('#btn').should('be.visible').click()`.
+
+Next chapter: selectors, commands, and how to handle more complex interactions.
