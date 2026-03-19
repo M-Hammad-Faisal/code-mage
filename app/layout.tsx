@@ -11,6 +11,18 @@ export const metadata: Metadata = {
   authors: [{ name: SITE.author.name, url: SITE.author.portfolio }],
   creator: SITE.author.name,
   metadataBase: new URL(SITE.url),
+  icons: {
+    icon: [
+      { url: '/brand/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/brand/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/brand/favicon.ico' },
+    ],
+    apple: { url: '/brand/apple-touch-icon.png' },
+    other: [
+      { rel: 'android-chrome-192x192', url: '/brand/android-chrome-192x192.png' },
+      { rel: 'android-chrome-512x512', url: '/brand/android-chrome-512x512.png' },
+    ],
+  },
   openGraph: {
     type: 'website',
     locale: 'en_US',

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getAllFrameworks } from '@/lib/tutorials';
-import { BookOpen, ChevronRight } from 'lucide-react';
+import { BookOpen, ChevronRight, Clock } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Tutorials — Code Mage',
@@ -41,55 +41,73 @@ export default function TutorialsPage() {
 
           {/* Framework cards */}
           <div className="flex flex-col gap-6">
-            {frameworks.map((fw) => (
-              <div key={fw.slug} className={`rounded-2xl border p-6 ${fw.color}`}>
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{fw.icon}</span>
-                    <div>
-                      <h2 className="text-xl font-heading font-bold text-gray-900 dark:text-white">
-                        {fw.title}
-                      </h2>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                        {fw.description}
-                      </p>
+            {frameworks.map((fw) => {
+              const isInProgress = fw.chapters.length > 0 && fw.chapters.length < 5;
+              return (
+                <div key={fw.slug} className={`rounded-2xl border p-6 ${fw.color}`}>
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{fw.icon}</span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-xl font-heading font-bold text-gray-900 dark:text-white">
+                            {fw.title}
+                          </h2>
+                          {isInProgress && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                              <Clock className="w-3 h-3" /> In Progress
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                          {fw.description}
+                        </p>
+                      </div>
                     </div>
+                    {fw.chapters.length > 0 && (
+                      <Link
+                        href={`/tutorial/${fw.slug}`}
+                        className="shrink-0 inline-flex items-center gap-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:underline"
+                      >
+                        Start <ChevronRight className="w-4 h-4" />
+                      </Link>
+                    )}
                   </div>
-                  {fw.chapters.length > 0 && (
-                    <Link
-                      href={`/tutorial/${fw.slug}`}
-                      className="shrink-0 inline-flex items-center gap-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:underline"
-                    >
-                      Start <ChevronRight className="w-4 h-4" />
-                    </Link>
+
+                  {fw.chapters.length > 0 ? (
+                    <div className="flex flex-col gap-1">
+                      {fw.chapters.map((ch, i) => (
+                        <Link
+                          key={ch.chapter}
+                          href={`/tutorial/${fw.slug}/${ch.chapter}`}
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/5 transition-colors group"
+                        >
+                          <span className="text-xs font-mono text-gray-400 w-5 text-right">
+                            {i + 1}
+                          </span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                            {ch.title}
+                          </span>
+                        </Link>
+                      ))}
+                      {isInProgress && (
+                        <div className="flex items-center gap-2 px-3 py-2 mt-1 border-t border-current/10">
+                          <Clock className="w-3.5 h-3.5 text-gray-400" />
+                          <span className="text-xs text-gray-400 italic">
+                            More chapters coming soon
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 px-3 py-2">
+                      <BookOpen className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-400 italic">Coming soon</span>
+                    </div>
                   )}
                 </div>
-
-                {fw.chapters.length > 0 ? (
-                  <div className="flex flex-col gap-1">
-                    {fw.chapters.map((ch, i) => (
-                      <Link
-                        key={ch.chapter}
-                        href={`/tutorial/${fw.slug}/${ch.chapter}`}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/5 transition-colors group"
-                      >
-                        <span className="text-xs font-mono text-gray-400 w-5 text-right">
-                          {i + 1}
-                        </span>
-                        <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                          {ch.title}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 px-3 py-2">
-                    <BookOpen className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-400 italic">Coming soon</span>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
