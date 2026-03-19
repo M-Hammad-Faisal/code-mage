@@ -39,6 +39,11 @@ export default async function LessonPage({ params }: Props) {
   const lesson = getLessonById(id);
   if (!lesson) notFound();
 
+  const allLessons = getAllLessons();
+  const idx = allLessons.findIndex((l) => l.id === id);
+  const prevLesson = allLessons[idx - 1] ?? null;
+  const nextLesson = allLessons[idx + 1] ?? null;
+
   return (
     <div className="min-h-screen py-12">
       <div className="container-max">
@@ -86,7 +91,10 @@ export default async function LessonPage({ params }: Props) {
           </div>
         </div>
       </div>
-      <BackToTop />
+      <BackToTop
+        prev={prevLesson ? { href: `/learn/${prevLesson.id}`, title: prevLesson.title } : undefined}
+        next={nextLesson ? { href: `/learn/${nextLesson.id}`, title: nextLesson.title } : undefined}
+      />
     </div>
   );
 }
