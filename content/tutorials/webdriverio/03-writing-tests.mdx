@@ -1,0 +1,307 @@
+---
+title: "Writing Tests — Selectors & Commands"
+description: "Find elements reliably, interact with them, and write assertions in WebdriverIO"
+order: 3
+framework: "webdriverio"
+chapter: "writing-tests"
+---
+
+This chapter covers the practical side of writing WDIO tests — selecting elements, interacting with them, waiting for conditions, and asserting on the results.
+
+## Selectors
+
+WDIO's `$()` accepts several selector strategies:
+
+```typescript
+// CSS selector (most common)
+const btn = await $('[data-test="login-button"]')
+const input = await $('#user-name')
+const items = await $$('.inventory_item')
+
+// Text content (partial)
+const addBtn = await $('button=Add to cart')  // exact text
+const header = await $('*=Products')          // partial text
+
+// XPath (avoid unless necessary)
+const el = await $('//button[@id="login-button"]')
+
+// ARIA (accessible, recommended)
+const submitBtn = await $('aria/Login')
+```
+
+## Selector Best Practices
+
+Use `data-test` attributes when available — they're stable and not affected by styling:
+
+```typescript
+// Fragile — breaks if class names change
+await $('.login-btn.primary-action').click()
+
+// Stable — only breaks if you intentionally remove the attribute
+await $('[data-test="login-button"]').click()
+```
+
+For elements without `data-test`, prefer ARIA selectors:
+
+```typescript
+await $('aria/Submit').click()
+await $('aria/Username input').setValue('user')
+```
+
+## Element Commands
+
+```typescript
+const el = await $('[data-test="username"]')
+
+// Input interaction
+await el.setValue('standard_user')    // clears then types
+await el.addValue(' extra')           // appends without clearing
+await el.clearValue()                 // clears
+await el.click()                      // click
+await el.doubleClick()                // double click
+
+// Reading values
+const text = await el.getText()
+const value = await el.getValue()
+const attr = await el.getAttribute('placeholder')
+const prop = await el.getProperty('checked')  // DOM property
+const css = await el.getCSSProperty('color')
+
+// State checks
+const visible = await el.isDisplayed()
+const enabled = await el.isEnabled()
+const existing = await el.isExisting()
+const focused = await el.isFocused()
+const selected = await el.isSelected()  // checkboxes/options
+```
+
+## Browser-Level Commands
+
+```typescript
+// Navigation
+await browser.url('/')
+await browser.url('https://www.saucedemo.com')
+await browser.back()
+await browser.forward()
+await browser.refresh()
+
+// Page info
+const title = await browser.getTitle()
+const url = await browser.getUrl()
+
+// Waiting
+await browser.pause(500)  // use sparingly — prefer waitFor* methods
+await browser.waitUntil(
+  async () => (await browser.getTitle()).includes('Inventory'),
+  { timeout: 5000, timeoutMsg: 'Page title did not change' }
+)
+
+// Screenshots
+await browser.saveScreenshot('./screenshot.png')
+await browser.saveFullPageScreen('./fullpage.png')  // with wdio-image-comparison-service
+```
+
+## Working with Multiple Elements
+
+```typescript
+// Get all product names
+const nameEls = await $$('.inventory_item_name')
+const names = await Promise.all(nameEls.map(el => el.getText()))
+console.log(names)
+// ['Sauce Labs Backpack', 'Sauce Labs Bike Light', ...]
+
+// Find specific element within a parent
+const firstItem = await $$('.inventory_item')[0]
+const addBtn = await firstItem.$('[data-test^="add-to-cart"]')
+await addBtn.click()
+
+// Filter using JavaScript
+const priceEls = await $$('.inventory_item_price')
+const prices = await Promise.all(priceEls.map(async el => {
+  const text = await el.getText()
+  return parseFloat(text.replace('$', ''))
+}))
+const cheapest = Math.min(...prices)
+console.log(`Cheapest: $${cheapest}`)
+```
+
+## Waiting Strategies
+
+Automatic waiting handles most cases. For manual waits:
+
+```typescript
+// Wait for element to exist in DOM
+await $('[data-test="cart-badge"]').waitForExist({ timeout: 5000 })
+
+// Wait for element to be visible
+await $('[data-test="success-message"]').waitForDisplayed({ timeout: 8000 })
+
+// Wait for element to become clickable
+await $('[data-test="checkout-btn"]').waitForClickable()
+
+// Wait for element to disappear
+await $('[data-test="loading-spinner"]').waitForDisplayed({
+  timeout: 10000,
+  reverse: true  // wait for NOT displayed
+})
+
+// Custom wait condition
+await browser.waitUntil(
+  async () => {
+    const badge = await $('[data-test="shopping-cart-badge"]')
+    const text = await badge.getText()
+    return text === '3'
+  },
+  { timeout: 5000, timeoutMsg: 'Cart badge never showed 3 items' }
+)
+```
+
+## Assertions with expect-webdriverio
+
+WDIO includes `expect-webdriverio` for assertions:
+
+```typescript
+// Element assertions
+await expect($('[data-test="error"]')).toBeDisplayed()
+await expect($('.inventory_list')).toExist()
+await expect($('#login-button')).toBeEnabled()
+await expect($('[type="checkbox"]')).toBeChecked()
+await expect($('.product-name')).toHaveText('Sauce Labs Backpack')
+await expect($('.product-name')).toHaveText(expect.stringContaining('Backpack'))
+await expect($('input')).toHaveValue('standard_user')
+await expect($('.price')).toHaveAttr('data-price', '29.99')
+
+// Not assertions
+await expect($('[data-test="error"]')).not.toBeDisplayed()
+
+// Count
+const items = await $$('.inventory_item')
+await expect(items).toHaveLength(6)
+
+// Browser assertions
+await expect(browser).toHaveUrl('https://www.saucedemo.com/inventory.html')
+await expect(browser).toHaveUrl(expect.stringContaining('/inventory'))
+await expect(browser).toHaveTitle('Swag Labs')
+```
+
+## A Complete Test: Full Purchase Flow
+
+```typescript
+describe('Checkout Flow', () => {
+  before(async () => {
+    // Login once before all tests in this suite
+    await browser.url('/')
+    await $('#user-name').setValue('standard_user')
+    await $('#password').setValue('secret_sauce')
+    await $('#login-button').click()
+    await expect(browser).toHaveUrl(expect.stringContaining('/inventory'))
+  })
+
+  beforeEach(async () => {
+    // Start each test from inventory
+    await browser.url('/inventory.html')
+  })
+
+  it('should complete a purchase', async () => {
+    // Add item to cart
+    await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+    await expect($('[data-test="shopping-cart-badge"]')).toHaveText('1')
+
+    // Go to cart
+    await $('[data-test="shopping-cart-link"]').click()
+    await expect(browser).toHaveUrl(expect.stringContaining('/cart'))
+
+    // Verify cart contents
+    await expect($$('.cart_item')).toHaveLength(1)
+    await expect($('.inventory_item_name')).toHaveText('Sauce Labs Backpack')
+
+    // Start checkout
+    await $('[data-test="checkout"]').click()
+    await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-one'))
+
+    // Fill in customer info
+    await $('[data-test="firstName"]').setValue('Hammad')
+    await $('[data-test="lastName"]').setValue('Faisal')
+    await $('[data-test="postalCode"]').setValue('54000')
+    await $('[data-test="continue"]').click()
+
+    // Verify order summary
+    await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-two'))
+    await expect($('.summary_total_label')).toBeDisplayed()
+
+    // Complete order
+    await $('[data-test="finish"]').click()
+
+    // Verify success
+    await expect(browser).toHaveUrl(expect.stringContaining('/checkout-complete'))
+    await expect($('.complete-header')).toHaveText('Thank you for your order!')
+  })
+
+  it('should sort products by price', async () => {
+    await $('[data-test="product_sort_container"]').selectByAttribute('value', 'lohi')
+
+    const priceEls = await $$('.inventory_item_price')
+    const prices = await Promise.all(priceEls.map(async el => {
+      const text = await el.getText()
+      return parseFloat(text.replace('$', ''))
+    }))
+
+    // Verify prices are sorted ascending
+    for (let i = 1; i < prices.length; i++) {
+      expect(prices[i]).toBeGreaterThanOrEqual(prices[i - 1])
+    }
+  })
+})
+```
+
+## Handling Alerts and Dialogs
+
+```typescript
+// Native browser alerts
+await browser.acceptAlert()
+await browser.dismissAlert()
+await browser.getAlertText()
+await browser.sendAlertText('input value')
+```
+
+## Executing JavaScript
+
+When no WDIO command does what you need:
+
+```typescript
+// Scroll element into view
+await browser.execute((el) => el.scrollIntoView(), await $('.footer'))
+
+// Get a value not accessible via WDIO API
+const itemCount = await browser.execute(() => {
+  return document.querySelectorAll('.inventory_item').length
+})
+
+// Trigger events
+await browser.execute((el) => el.dispatchEvent(new Event('change')), await $('select'))
+```
+
+## Hooks
+
+```typescript
+describe('Suite', () => {
+  before(async () => {
+    // Run once before all tests in suite
+  })
+
+  after(async () => {
+    // Run once after all tests in suite
+  })
+
+  beforeEach(async () => {
+    // Run before each test
+  })
+
+  afterEach(async () => {
+    // Run after each test — good place for cleanup
+    await browser.url('/')  // reset state
+  })
+})
+```
+
+Next chapter: Page Object Model — structuring your tests so they scale.

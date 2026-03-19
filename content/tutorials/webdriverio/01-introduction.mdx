@@ -1,0 +1,144 @@
+---
+title: "Introduction to WebdriverIO"
+description: "What WebdriverIO is, how it compares to other tools, and when to choose it"
+order: 1
+framework: "webdriverio"
+chapter: "introduction"
+---
+
+WebdriverIO (WDIO) is a browser and mobile automation framework for Node.js. It's built on the WebDriver protocol — the same standard that powers Selenium — but wraps it in a modern, developer-friendly API. If you're building a test suite for a large enterprise product, or you need to test both web and native mobile apps, WDIO is worth serious consideration.
+
+## What WebdriverIO Is
+
+At its core, WDIO is a JavaScript/TypeScript test runner that:
+
+- Talks to browsers via WebDriver protocol (or Chrome DevTools Protocol for Chrome/Edge)
+- Provides a clean, chainable API for browser interaction
+- Has a built-in test runner with parallelism, retries, and reporters
+- Supports web, native iOS, and native Android testing through Appium
+- Integrates with all major testing frameworks: Mocha, Jasmine, and Cucumber
+
+It's been around since 2012 and is actively maintained by a large community.
+
+## WDIO vs Playwright vs Cypress
+
+All three are legitimate choices. Here's the honest comparison:
+
+| Feature | WebdriverIO | Playwright | Cypress |
+|---|---|---|---|
+| Language | JS/TS only | JS/TS, Python, Java, C# | JS/TS only |
+| Protocol | WebDriver + CDP | CDP (proprietary) | In-browser |
+| Mobile testing | ✅ (Appium) | ❌ | ❌ |
+| Multi-tab | ✅ | ✅ | ⚠️ Limited |
+| Cross-origin | ✅ | ✅ | ⚠️ Limited |
+| Speed | Moderate | Fast | Fast (headed) |
+| Learning curve | Steeper | Moderate | Gentle |
+| Enterprise features | Excellent | Good | Good |
+
+**Choose WebdriverIO when:**
+- You need mobile testing (iOS/Android) alongside web
+- Your team works in a Cucumber/BDD workflow
+- You're on a Selenium/Java background and want to modernise
+- You need extensive cross-browser coverage including Safari on real devices
+- Your organisation already uses WDIO
+
+**Choose Playwright when:**
+- You need multi-language support (Python, Java, C#)
+- Speed is a top priority
+- You want the most modern CDP-based approach
+
+**Choose Cypress when:**
+- Your stack is purely JavaScript frontend
+- Developer experience and fast feedback loops are most important
+
+## The WDIO Architecture
+
+WDIO has several components:
+
+```
+Your Test File
+      ↓
+WDIO Test Runner  ← orchestrates workers, retries, reports
+      ↓
+WebdriverIO API   ← browser.$(), browser.url(), etc.
+      ↓
+WebDriver Protocol / CDP
+      ↓
+Browser Driver    ← chromedriver, geckodriver, safaridriver
+      ↓
+Browser           ← Chrome, Firefox, Safari, Edge
+```
+
+For mobile testing, Appium sits between WDIO and the mobile device, translating WebDriver commands to native gestures.
+
+## Synchronous-Style Code
+
+WDIO v8 (current) uses synchronous-style async code — all async operations are automatically awaited inside test files:
+
+```javascript
+// WDIO style — reads synchronously
+it('should login', async () => {
+  await browser.url('https://www.saucedemo.com')
+  await $('#user-name').setValue('standard_user')
+  await $('#password').setValue('secret_sauce')
+  await $('#login-button').click()
+  await expect(browser).toHaveUrl(expect.stringContaining('/inventory'))
+})
+```
+
+The `await` is explicit, unlike Cypress. But WDIO also has automatic waiting built in — by default it waits up to 3 seconds for elements to become interactable.
+
+## Key Concepts
+
+### browser
+
+`browser` is the global object for browser-level commands:
+
+```javascript
+await browser.url('https://example.com')   // navigate
+await browser.getTitle()                   // get page title
+await browser.getUrl()                     // get current URL
+await browser.pause(1000)                  // wait (avoid this)
+await browser.takeScreenshot()             // screenshot
+```
+
+### $ and $$
+
+`$` finds one element. `$$` finds multiple. They accept CSS selectors:
+
+```javascript
+const username = await $('#user-name')
+const allItems = await $$('.inventory_item')
+```
+
+Or you can use `browser.$()` and `browser.$$()` — same thing.
+
+### Element Interactions
+
+```javascript
+const input = await $('#user-name')
+await input.setValue('standard_user')
+await input.click()
+await input.getText()
+await input.getAttribute('placeholder')
+await input.isDisplayed()
+await input.waitForDisplayed({ timeout: 5000 })
+```
+
+## What We'll Build
+
+This tutorial uses [SauceDemo](https://www.saucedemo.com) throughout. Credentials:
+
+- `standard_user` / `secret_sauce` — normal user
+- `locked_out_user` / `secret_sauce` — locked out (useful for error testing)
+- `performance_glitch_user` / `secret_sauce` — slow UI (useful for timeout testing)
+
+We'll cover:
+
+1. **Installation & Configuration** — getting WDIO up and running
+2. **Writing Tests** — selectors, commands, assertions
+3. **Page Object Model** — structuring tests for maintainability
+4. **Appium & Mobile** — extending tests to iOS and Android
+5. **CI/CD** — running WDIO in GitHub Actions
+
+Let's start with installation.
