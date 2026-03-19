@@ -41,7 +41,8 @@ export default function HomePage() {
             </p>
 
             <p className="font-mono text-sm text-red-500 dark:text-red-400 mb-8">
-              &gt; <span className="opacity-70">python</span> learn_to_code.py --level=pro
+              &gt; <span className="text-red-700 dark:text-red-500">python</span> learn_to_code.py
+              --level=pro
             </p>
 
             <div className="flex flex-wrap gap-3 mb-12">

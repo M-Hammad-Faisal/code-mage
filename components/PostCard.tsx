@@ -30,18 +30,18 @@ export function PostCard({ post, featured = false }: Props) {
           )}
         </div>
 
-        <h3 className="font-heading font-semibold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors leading-snug mb-2 line-clamp-2">
+        <h2 className="font-heading font-semibold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors leading-snug mb-2 line-clamp-2 text-base">
           {post.title}
-        </h3>
+        </h2>
 
         {post.excerpt && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4 line-clamp-2 flex-1">
+          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed mb-4 line-clamp-2 flex-1">
             {post.excerpt}
           </p>
         )}
 
         <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
               {new Date(post.date).toLocaleDateString('en-US', {
