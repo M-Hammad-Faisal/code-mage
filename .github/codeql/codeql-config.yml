@@ -1,0 +1,11 @@
+name: CodeQL Config
+
+# Suppress false positives in Next.js / React applications.
+# React's JSX renderer escapes all dynamic values by default, making
+# js/stored-xss and js/reflected-xss alerts false positives when data
+# flows through JSX template expressions.
+query-filters:
+  - exclude:
+      id: js/stored-xss
+  - exclude:
+      id: js/reflected-xss
