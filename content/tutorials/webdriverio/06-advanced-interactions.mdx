@@ -1,0 +1,449 @@
+---
+title: "Advanced Interactions & Browser Control"
+description: "Handle dropdowns, file uploads, iframes, multi-tab, and direct JavaScript execution in WDIO"
+order: 6
+framework: "webdriverio"
+chapter: "advanced-interactions"
+---
+
+Basic click-and-type covers most tests. This chapter covers the interactions that trip people up: native select dropdowns, drag and drop, iframes, multiple windows, cookies, and when to reach for raw JavaScript.
+
+## Dropdowns (Native Select)
+
+For `<select>` elements, WDIO provides three selection methods:
+
+```typescript
+const sort = $('[data-test="product_sort_container"]')
+
+// By the text the user sees
+await sort.selectByVisibleText('Price (low to high)')
+
+// By the option's value attribute
+await sort.selectByAttribute('value', 'lohi')
+
+// By zero-based index
+await sort.selectByIndex(2)
+```
+
+`selectByVisibleText` is the most readable. Use `selectByAttribute` when the visible text might change (e.g., localised strings) but the value is stable.
+
+To assert the selection:
+
+```typescript
+await expect(sort).toHaveValue('lohi')
+```
+
+For custom dropdown components (not native `<select>`), treat them like any other element — click the trigger, wait for the menu, click the option:
+
+```typescript
+await $('[data-test="sort-trigger"]').click()
+await $('[data-test="sort-option-lohi"]').waitForDisplayed()
+await $('[data-test="sort-option-lohi"]').click()
+```
+
+## Drag and Drop
+
+WDIO's built-in `dragAndDrop()` works for most cases:
+
+```typescript
+const source = await $('[data-test="drag-source"]')
+const target = await $('[data-test="drop-target"]')
+await source.dragAndDrop(target)
+```
+
+For applications using HTML5 drag events that don't respond to the standard `dragAndDrop()`, use the Actions API for precise control:
+
+```typescript
+const source = await $('[data-test="drag-source"]')
+const target = await $('[data-test="drop-target"]')
+
+const sourceCoords = await source.getLocation()
+const targetCoords = await target.getLocation()
+
+await browser.action('pointer', { parameters: { pointerType: 'mouse' } })
+  .move({ x: sourceCoords.x + 5, y: sourceCoords.y + 5 })
+  .down({ button: 0 })
+  .pause(200)
+  .move({ x: targetCoords.x + 5, y: targetCoords.y + 5, duration: 500 })
+  .up({ button: 0 })
+  .perform()
+```
+
+The `pause()` and `duration` on the `move()` are important for drag implementations that require the pointer to settle before recognising the drag.
+
+## Keyboard Input
+
+```typescript
+// Type into a focused element using special keys
+await $('#search-input').click()
+await browser.keys(['Control', 'a'])  // select all
+await browser.keys('Delete')          // delete selection
+
+// Tab through form fields
+await $('[data-test="firstName"]').setValue('Hammad')
+await browser.keys('Tab')  // moves focus to next field
+
+// Submit a form with Enter
+await $('[data-test="lastName"]').setValue('Faisal')
+await browser.keys('Enter')
+
+// Press Escape to close a modal
+await browser.keys('Escape')
+
+// Arrow keys for navigating lists
+await $('[data-test="dropdown"]').click()
+await browser.keys('ArrowDown')
+await browser.keys('ArrowDown')
+await browser.keys('Enter')
+```
+
+For precise key sequences using the Actions API:
+
+```typescript
+await browser.action('key')
+  .down('Tab')
+  .up('Tab')
+  .perform()
+```
+
+## Hover / Tooltip
+
+Hovering over an element triggers `:hover` CSS and `mouseover` events:
+
+```typescript
+// Move the mouse pointer over the element
+await $('[data-test="item-name"]').moveTo()
+
+// Assert the tooltip appeared
+await expect($('[data-test="tooltip"]')).toBeDisplayed()
+
+// Hover with offset — useful if the element is tiny
+await $('[data-test="item-name"]').moveTo({ xOffset: 10, yOffset: 5 })
+```
+
+## File Upload
+
+For `<input type="file">` elements, set the file path directly — no need to interact with the OS file picker:
+
+```typescript
+const fileInput = $('input[type="file"]')
+await fileInput.setValue('/absolute/path/to/test-file.pdf')
+
+// Verify the upload was accepted
+await expect($('[data-test="file-name"]')).toHaveText('test-file.pdf')
+```
+
+The path must be absolute and accessible from the machine running the test. In CI, construct paths from `process.cwd()`:
+
+```typescript
+import path from 'path'
+
+const filePath = path.join(process.cwd(), 'test', 'fixtures', 'test-file.pdf')
+await $('input[type="file"]').setValue(filePath)
+```
+
+If the file input is hidden (common pattern where a styled button triggers the hidden input), use `browser.execute()` to make it visible first:
+
+```typescript
+await browser.execute((el) => {
+  (el as HTMLElement).style.display = 'block'
+}, await $('input[type="file"]'))
+
+await $('input[type="file"]').setValue(filePath)
+```
+
+## iframes
+
+WDIO operates in the top-level frame by default. To interact with content inside an iframe, switch to it first:
+
+```typescript
+// Switch to iframe by element reference
+const frame = await $('iframe[title="Payment Form"]')
+await browser.switchToFrame(frame)
+
+// Now you can interact with elements inside the iframe
+await $('[data-test="card-number"]').setValue('4111111111111111')
+await $('[data-test="card-expiry"]').setValue('12/26')
+
+// Switch back to the main page
+await browser.switchToParentFrame()
+
+// Now back to normal
+await $('[data-test="submit-payment"]').click()
+```
+
+Common mistake: forgetting to switch back. If your next selector unexpectedly fails to find an element, check whether the context is still inside an iframe.
+
+To switch by iframe index (fragile — avoid if possible):
+
+```typescript
+await browser.switchToFrame(0)  // first iframe on the page
+```
+
+## Multiple Windows and Tabs
+
+```typescript
+// Open a new tab (or window)
+await browser.newWindow('https://www.saucedemo.com', {
+  windowName: 'SauceDemo',
+  windowFeatures: 'width=1280,height=800'
+})
+
+// Get all window handles
+const handles = await browser.getWindowHandles()
+console.log(handles)  // ['CDwindow-XXXX', 'CDwindow-YYYY']
+
+// Switch to a specific window by handle
+await browser.switchToWindow(handles[1])
+
+// Do work in that window
+await expect(browser).toHaveUrl(expect.stringContaining('saucedemo.com'))
+
+// Switch back to the original window
+await browser.switchToWindow(handles[0])
+```
+
+For links that open a new tab (`target="_blank"`), capture the handle before clicking:
+
+```typescript
+const handlesBefore = await browser.getWindowHandles()
+await $('[data-test="terms-link"]').click()
+
+// Wait for the new tab to open
+await browser.waitUntil(async () => {
+  const handles = await browser.getWindowHandles()
+  return handles.length > handlesBefore.length
+})
+
+const handlesAfter = await browser.getWindowHandles()
+const newTab = handlesAfter.find(h => !handlesBefore.includes(h))!
+await browser.switchToWindow(newTab)
+
+await expect(browser).toHaveUrl(expect.stringContaining('terms'))
+
+// Close the tab and return
+await browser.closeWindow()
+await browser.switchToWindow(handlesBefore[0])
+```
+
+## Cookies and Local Storage
+
+```typescript
+// Read all cookies
+const cookies = await browser.getCookies()
+console.log(cookies)
+
+// Read a specific cookie
+const [sessionCookie] = await browser.getCookies(['session_id'])
+console.log(sessionCookie.value)
+
+// Set a cookie
+await browser.setCookies([{
+  name: 'session_id',
+  value: 'abc123',
+  domain: 'www.saucedemo.com',
+}])
+
+// Delete a specific cookie
+await browser.deleteCookies(['session_id'])
+
+// Delete all cookies
+await browser.deleteCookies()
+```
+
+Local storage and session storage require `browser.execute()`:
+
+```typescript
+// Set a localStorage item
+await browser.execute(() => {
+  localStorage.setItem('cart', JSON.stringify(['sauce-labs-backpack']))
+})
+
+// Read it back
+const cart = await browser.execute(() => localStorage.getItem('cart'))
+console.log(cart)  // '["sauce-labs-backpack"]'
+
+// Clear all localStorage
+await browser.execute(() => localStorage.clear())
+```
+
+## Scrolling
+
+```typescript
+// Scroll to absolute position
+await browser.execute(() => window.scrollTo(0, 500))
+
+// Scroll to bottom of page
+await browser.execute(() => window.scrollTo(0, document.body.scrollHeight))
+
+// Scroll a specific element into view
+await $('[data-test="footer-link"]').scrollIntoView()
+
+// Scroll into view with options (center in viewport)
+await $('[data-test="footer-link"]').scrollIntoView({ block: 'center' })
+```
+
+## Taking Screenshots
+
+```typescript
+// Full viewport screenshot
+await browser.saveScreenshot('./screenshots/current-state.png')
+
+// Element-level screenshot (crops to just that element)
+const header = $('[data-test="header"]')
+await header.saveScreenshot('./screenshots/header.png')
+```
+
+In hooks, build the path dynamically from the test title:
+
+```typescript
+afterEach(async function() {
+  if (this.currentTest?.state === 'failed') {
+    const name = this.currentTest.title.replace(/\s+/g, '-').toLowerCase()
+    await browser.saveScreenshot(`./screenshots/fail-${name}.png`)
+  }
+})
+```
+
+## Executing JavaScript
+
+`browser.execute()` runs synchronously in the browser context. Use it when WDIO has no native command for what you need:
+
+```typescript
+// Read a property not exposed by WDIO
+const scrollY = await browser.execute(() => window.scrollY)
+
+// Trigger an event
+await browser.execute((el) => {
+  el.dispatchEvent(new Event('input', { bubbles: true }))
+}, await $('[data-test="quantity"]'))
+
+// Click something that's obstructed by another element
+await browser.execute((el) => (el as HTMLElement).click(), await $('[data-test="hidden-btn"]'))
+
+// Read a deeply nested value
+const value = await browser.execute(() => {
+  return (document.querySelector('input[name="qty"]') as HTMLInputElement)?.value
+})
+```
+
+For async operations in the browser (like `fetch`), use `browser.executeAsync()`:
+
+```typescript
+const data = await browser.executeAsync((done) => {
+  fetch('/api/products')
+    .then(r => r.json())
+    .then(done)
+})
+```
+
+## Mobile Emulation with Chrome DevTools Protocol
+
+You can emulate mobile viewports without a real device:
+
+```typescript
+// In wdio.conf.ts capabilities:
+capabilities: [{
+  browserName: 'chrome',
+  'goog:chromeOptions': {
+    mobileEmulation: {
+      deviceName: 'iPhone 12'
+      // Or use custom metrics:
+      // deviceMetrics: { width: 390, height: 844, pixelRatio: 3 },
+      // userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) ...'
+    }
+  }
+}]
+```
+
+Or switch emulation mid-test using the CDP:
+
+```typescript
+await browser.cdp('Emulation', 'setDeviceMetricsOverride', {
+  width: 390,
+  height: 844,
+  deviceScaleFactor: 3,
+  mobile: true
+})
+```
+
+## Complete Example: File Upload with iframe Interaction
+
+```typescript
+import path from 'path'
+
+describe('Advanced Interactions', () => {
+  before(async () => {
+    await browser.url('/')
+    await $('#user-name').setValue('standard_user')
+    await $('#password').setValue('secret_sauce')
+    await $('#login-button').click()
+    await expect(browser).toHaveUrl(expect.stringContaining('/inventory'))
+  })
+
+  it('should interact with product sort and verify ordering', async () => {
+    await browser.url('/inventory.html')
+
+    // Sort by price ascending
+    await $('[data-test="product_sort_container"]').selectByAttribute('value', 'lohi')
+
+    // Scroll to the last product (might be off-screen)
+    const lastProduct = (await $$('.inventory_item')).at(-1)!
+    await lastProduct.scrollIntoView()
+    await expect(lastProduct).toBeDisplayed()
+
+    // Hover over the last product name to check tooltip behaviour
+    await lastProduct.$('.inventory_item_name').moveTo()
+
+    // Screenshot the sorted state for visual record
+    await browser.saveScreenshot('./screenshots/sorted-lohi.png')
+
+    // Verify prices are in ascending order
+    const priceEls = await $$('.inventory_item_price')
+    const prices = await Promise.all(
+      priceEls.map(async el => parseFloat((await el.getText()).replace('$', '')))
+    )
+    for (let i = 1; i < prices.length; i++) {
+      expect(prices[i]).toBeGreaterThanOrEqual(prices[i - 1])
+    }
+  })
+
+  it('should open and interact with a new tab from a link', async () => {
+    await browser.url('/inventory.html')
+
+    const handlesBefore = await browser.getWindowHandles()
+
+    // LinkedIn link in footer opens in a new tab
+    await $('[data-test="social-linkedin"]').click()
+
+    await browser.waitUntil(async () => {
+      return (await browser.getWindowHandles()).length > handlesBefore.length
+    }, { timeout: 5000 })
+
+    const newHandle = (await browser.getWindowHandles()).find(
+      h => !handlesBefore.includes(h)
+    )!
+    await browser.switchToWindow(newHandle)
+
+    await expect(browser).toHaveUrl(expect.stringContaining('linkedin'))
+
+    await browser.closeWindow()
+    await browser.switchToWindow(handlesBefore[0])
+
+    // Back on saucedemo
+    await expect(browser).toHaveUrl(expect.stringContaining('saucedemo'))
+  })
+
+  it('should use JavaScript execution to read localStorage after adding to cart', async () => {
+    await browser.url('/inventory.html')
+
+    await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+
+    // SauceDemo stores cart in localStorage — read it directly
+    const rawCart = await browser.execute(() => localStorage.getItem('cart-contents'))
+    expect(rawCart).not.toBeNull()
+  })
+})
+```
+
+Next chapter: flaky tests — how to diagnose intermittent failures and build a suite that gives you the same result every time.

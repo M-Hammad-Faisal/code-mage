@@ -1,0 +1,485 @@
+---
+title: "CI/CD Integration"
+description: "Run WebdriverIO in GitHub Actions, generate Allure reports, and parallelize across browsers"
+order: 8
+framework: "webdriverio"
+chapter: "ci-cd"
+---
+
+Running WDIO locally is straightforward. Running it reliably in CI — where there's no display, no human to retry failures, and results need to be shareable — requires a few extra steps. This chapter covers the complete setup: headless config, GitHub Actions, reporting, and parallelisation.
+
+## What Changes Between Local and CI
+
+| | Local | CI |
+|---|---|---|
+| Browser display | Headed (visible window) | Headless (no display server) |
+| Sandbox | Chrome's sandbox is enabled | Must disable (`--no-sandbox`) |
+| Shared memory | `/dev/shm` is normal size | Often very small — needs workaround |
+| Credentials | Hardcoded or in `.env` | Injected as GitHub Secrets |
+| Base URL | Hardcoded or local dev server | Dynamic — the deployed preview URL |
+| Parallelism | Limited by your laptop | As many as you pay for |
+
+## Headless Chrome Configuration
+
+Add these Chrome flags to `wdio.conf.ts` for CI compatibility:
+
+```typescript
+capabilities: [{
+  browserName: 'chrome',
+  'goog:chromeOptions': {
+    args: [
+      '--headless',
+      '--no-sandbox',              // required in most CI environments
+      '--disable-dev-shm-usage',  // avoids crashes on limited /dev/shm
+      '--disable-gpu',             // not needed in headless but harmless
+      '--window-size=1280,800',    // consistent viewport across runs
+    ]
+  }
+}]
+```
+
+**Why `--no-sandbox`?** Chrome's sandbox requires kernel features that most CI containers don't expose. Without this flag, Chrome exits immediately with a cryptic error.
+
+**Why `--disable-dev-shm-usage`?** Chrome uses `/dev/shm` (shared memory) for rendering. The default size in Docker containers is 64MB — Chrome can exhaust it on complex pages and crash. This flag falls back to `/tmp` instead.
+
+## Environment Variables
+
+Never hardcode URLs or credentials. Drive them from environment variables:
+
+```typescript
+// wdio.conf.ts
+export const config = {
+  baseUrl: process.env.BASE_URL ?? 'https://www.saucedemo.com',
+
+  // Use environment variables for credentials in tests
+  // access via process.env.TEST_USERNAME in your test files
+}
+```
+
+```typescript
+// test/data/users.ts
+export const Users = {
+  standard: {
+    username: process.env.TEST_USERNAME ?? 'standard_user',
+    password: process.env.TEST_PASSWORD ?? 'secret_sauce',
+  },
+}
+```
+
+In local development, put these in a `.env` file (add `.env` to `.gitignore`). In CI, inject them as secrets.
+
+## Reporters
+
+### spec Reporter (default)
+
+The built-in `spec` reporter prints colourful output with test names and durations. Fine for local development:
+
+```typescript
+reporters: ['spec']
+```
+
+### dot Reporter for CI
+
+`dot` is compact — useful when CI logs are long and you just want a summary at the end:
+
+```typescript
+reporters: process.env.CI ? ['dot'] : ['spec']
+```
+
+### Allure Reporter
+
+Allure produces an interactive HTML report with steps, screenshots, timing breakdowns, and history trends. It's the best option for sharing results with stakeholders.
+
+Install:
+
+```bash
+npm install --save-dev @wdio/allure-reporter allure-commandline
+```
+
+Configure:
+
+```typescript
+// wdio.conf.ts
+reporters: [
+  'spec',
+  ['allure', {
+    outputDir: 'allure-results',
+    disableWebdriverStepsReporting: true,  // reduce noise in report
+    disableWebdriverScreenshotsReporting: false,
+  }]
+]
+```
+
+Attach screenshots to the Allure report on failure:
+
+```typescript
+// wdio.conf.ts
+import addContext from 'mochawesome/addContext'  // or use Allure's own API
+
+afterEach: async function() {
+  if (this.currentTest?.state === 'failed') {
+    const screenshot = await browser.takeScreenshot()
+    // Allure reporter captures browser.takeScreenshot() automatically
+    // when disableWebdriverScreenshotsReporting is false
+  }
+}
+```
+
+Generate and open the report locally:
+
+```bash
+npx allure generate allure-results --clean -o allure-report
+npx allure open allure-report
+```
+
+### HTML Reporter
+
+For a simpler self-contained HTML file:
+
+```bash
+npm install --save-dev wdio-html-nice-reporter
+```
+
+```typescript
+reporters: [
+  ['html-nice', {
+    outputDir: './test-results/html-reports',
+    filename: 'report.html',
+    reportTitle: 'SauceDemo E2E Test Results',
+    linkScreenshots: true,
+    showInBrowser: false,  // set true for local use
+    useOnAfterCommandForScreenshot: false,
+  }]
+]
+```
+
+## Complete GitHub Actions Workflow
+
+```yaml
+# .github/workflows/wdio.yml
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    name: WebdriverIO E2E
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run E2E tests
+        env:
+          BASE_URL: ${{ vars.BASE_URL }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          CI: true
+        run: npx wdio run wdio.conf.ts
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ github.run_number }}
+          path: test-results/screenshots/
+          retention-days: 7
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-${{ github.run_number }}
+          path: allure-results/
+          retention-days: 7
+
+      - name: Generate Allure report
+        if: always()
+        run: npx allure generate allure-results --clean -o allure-report
+
+      - name: Upload Allure report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-${{ github.run_number }}
+          path: allure-report/
+          retention-days: 14
+```
+
+Key points:
+- `npm ci` instead of `npm install` — deterministic installs using the lockfile
+- `cache: 'npm'` caches the npm cache between runs
+- `if: failure()` on screenshots — only upload when tests fail
+- `if: always()` on Allure — upload even when tests pass, for trend tracking
+- Secrets are never echoed to logs by GitHub Actions
+
+## Running Tests Against a Local App
+
+If you're testing a locally served app (not an external URL), use `wait-on` to wait for the server to be ready before running tests:
+
+```bash
+npm install --save-dev wait-on start-server-and-test
+```
+
+```yaml
+- name: Start app and run tests
+  run: npx start-server-and-test "npm run dev" http://localhost:3000 "npx wdio run wdio.conf.ts"
+  env:
+    BASE_URL: http://localhost:3000
+```
+
+`start-server-and-test` starts the server, waits for the URL to respond, runs the test command, then kills the server.
+
+## Parallelisation
+
+### maxInstances
+
+`maxInstances` in `wdio.conf.ts` controls how many browser sessions run simultaneously:
+
+```typescript
+maxInstances: 5,  // run 5 tests at the same time in 5 separate browsers
+```
+
+Each test file gets its own browser instance. Tests within a single file run sequentially. Files run in parallel.
+
+For CI, match `maxInstances` to the number of CPUs available. GitHub-hosted `ubuntu-latest` runners have 2 vCPUs — use `maxInstances: 2` as a starting point:
+
+```typescript
+maxInstances: parseInt(process.env.MAX_INSTANCES ?? '2', 10),
+```
+
+Set `MAX_INSTANCES: 4` in the GitHub Actions env block if you use a larger runner.
+
+### Multi-Browser Runs
+
+Run against Chrome and Firefox in the same job:
+
+```typescript
+capabilities: [
+  {
+    browserName: 'chrome',
+    maxInstances: 3,
+    'goog:chromeOptions': {
+      args: ['--headless', '--no-sandbox', '--disable-dev-shm-usage']
+    }
+  },
+  {
+    browserName: 'firefox',
+    maxInstances: 2,
+    'moz:firefoxOptions': {
+      args: ['-headless']
+    }
+  }
+],
+```
+
+Firefox requires `geckodriver`. Install it:
+
+```bash
+npm install --save-dev wdio-geckodriver-service
+```
+
+### Sharding with GitHub Actions Matrix
+
+For large suites, split test files across multiple parallel jobs using a matrix strategy:
+
+```yaml
+# .github/workflows/wdio.yml
+jobs:
+  test:
+    strategy:
+      fail-fast: false  # don't cancel other shards if one fails
+      matrix:
+        shard: [1, 2, 3, 4]  # run 4 parallel jobs
+
+    name: E2E Tests (shard ${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run tests (shard ${{ matrix.shard }} of 4)
+        env:
+          CI: true
+          TEST_SHARD: ${{ matrix.shard }}
+          TEST_SHARD_TOTAL: 4
+        run: npx wdio run wdio.conf.ts
+```
+
+In `wdio.conf.ts`, filter specs based on the shard:
+
+```typescript
+import glob from 'glob'
+
+const allSpecs = glob.sync('./test/specs/**/*.ts').sort()
+const shard = parseInt(process.env.TEST_SHARD ?? '1', 10)
+const total = parseInt(process.env.TEST_SHARD_TOTAL ?? '1', 10)
+const shardedSpecs = allSpecs.filter((_, i) => i % total === shard - 1)
+
+export const config = {
+  specs: process.env.CI ? shardedSpecs : ['./test/specs/**/*.ts'],
+  // ...
+}
+```
+
+4 shards running in parallel reduce a 20-minute suite to about 5 minutes.
+
+## Running Specific Specs
+
+Run one file for faster feedback:
+
+```bash
+npx wdio run wdio.conf.ts --spec test/specs/checkout.e2e.ts
+```
+
+Run multiple:
+
+```bash
+npx wdio run wdio.conf.ts --spec test/specs/login.e2e.ts,test/specs/cart.e2e.ts
+```
+
+Run a specific test by its title (partial match):
+
+```bash
+npx wdio run wdio.conf.ts --mochaOpts.grep "should complete a purchase"
+```
+
+## Production-Ready Workflow
+
+Here's a complete, production-quality workflow that combines caching, parallelisation, Allure reporting, and secret management:
+
+```yaml
+# .github/workflows/e2e.yml
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true  # cancel old runs when a new commit is pushed
+
+jobs:
+  e2e:
+    name: E2E (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run E2E tests
+        env:
+          CI: true
+          BASE_URL: ${{ vars.BASE_URL }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          TEST_SHARD: ${{ matrix.shard }}
+          TEST_SHARD_TOTAL: ${{ strategy.job-total }}
+          MAX_INSTANCES: 3
+        run: npx wdio run wdio.conf.ts
+
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-shard-${{ matrix.shard }}-${{ github.run_number }}
+          path: test-results/screenshots/
+          retention-days: 7
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-shard-${{ matrix.shard }}
+          path: allure-results/
+          retention-days: 1  # short — the report job picks these up
+
+  allure-report:
+    name: Generate Allure Report
+    runs-on: ubuntu-latest
+    needs: e2e
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Download all Allure results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: allure-results-shard-*
+          path: allure-results
+          merge-multiple: true  # merge all shards into one directory
+
+      - name: Generate Allure report
+        run: npx allure generate allure-results --clean -o allure-report
+
+      - name: Upload Allure report
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-${{ github.run_number }}
+          path: allure-report/
+          retention-days: 30
+```
+
+This workflow:
+- Cancels stale runs immediately when a new commit is pushed
+- Runs 3 shards in parallel, each with up to 3 concurrent browsers (9 total)
+- Merges Allure results from all shards into one unified report
+- Keeps screenshots for 7 days, reports for 30 days
+- Never hardcodes credentials — they come from GitHub Secrets and Variables
+
+## Secrets Checklist
+
+Before going to production, verify:
+
+- [ ] No passwords, tokens, or API keys are in committed files
+- [ ] `.env` is in `.gitignore`
+- [ ] `TEST_PASSWORD` and `TEST_USERNAME` are stored in GitHub Secrets (Settings > Secrets and variables > Actions)
+- [ ] `BASE_URL` is stored as a GitHub Variable (not Secret — it's not sensitive)
+- [ ] `wdio.conf.ts` reads all sensitive values from `process.env.*`
+- [ ] `browser.debug()` calls are removed before committing
+
+That's the full WebdriverIO tutorial. You now have a test suite that's structured with Page Objects, has reliable waits, handles complex browser interactions, and runs in CI with parallel execution and actionable reports.

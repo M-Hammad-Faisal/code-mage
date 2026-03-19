@@ -1,0 +1,321 @@
+---
+title: "Testing Fundamentals"
+description: "What E2E testing is, how to write tests that actually catch bugs, and the patterns every automation engineer uses"
+order: 4
+framework: "prerequisites"
+chapter: "testing-fundamentals"
+---
+
+Writing test code is easy. Writing tests that reliably catch real bugs without constantly breaking on unrelated changes — that's harder. This chapter covers the fundamentals that separate working automation from automation that nobody trusts.
+
+## The Testing Pyramid
+
+Not all tests are the same. There are three main layers:
+
+**Unit tests** — test a single function or class in isolation. Fast, hundreds of them, run in milliseconds. Example: testing that a `formatPrice(2999)` function returns `"$29.99"`.
+
+**Integration tests** — test that multiple units work together correctly. Testing that your auth service correctly calls the database and returns the right user object.
+
+**End-to-end (E2E) tests** — test the entire system from a user's perspective. Open a real browser, navigate to the login page, fill in credentials, click submit, verify you land on the dashboard. Slower, but they catch problems no unit test will ever find.
+
+The pyramid describes how many of each you should have:
+
+```
+        /\
+       /E2E\       ← Fewer, slower, high confidence
+      /──────\
+     /Integr. \    ← Some, medium speed
+    /────────────\
+   /   Unit Tests  \  ← Many, fast, cheap to run
+  /──────────────────\
+```
+
+More unit tests than integration, more integration than E2E. E2E tests are expensive to write and maintain — they talk to real browsers, real servers, real databases. You don't write one for every function. You write them for the critical paths users actually take.
+
+## When to Write E2E Tests
+
+Write E2E tests for:
+- The login flow
+- Checkout / payment flow
+- The core user workflow your product is built around
+- Any flow where failure means revenue loss
+
+Don't write E2E tests for:
+- Every individual button on a page
+- Styling, color, pixel positions
+- Animations and transitions
+- Edge cases that only affect the UI layer (unit test those instead)
+
+The goal is coverage that catches real user-facing failures. If your checkout E2E test passes, users can buy things. That's the signal you need.
+
+## The AAA Pattern
+
+Every test, regardless of framework, follows the same three-step structure: **Arrange, Act, Assert**.
+
+```typescript
+test('user can add a product to the cart', async ({ page }) => {
+  // ARRANGE — set up the starting state
+  await page.goto('https://www.saucedemo.com');
+  await page.fill('[data-test="username"]', 'standard_user');
+  await page.fill('[data-test="password"]', 'secret_sauce');
+  await page.click('[data-test="login-button"]');
+  await page.waitForURL('**/inventory.html');
+
+  // ACT — perform the action being tested
+  await page.click('[data-test="add-to-cart-sauce-labs-backpack"]');
+
+  // ASSERT — verify the expected outcome
+  await expect(page.locator('[data-test="shopping-cart-badge"]')).toHaveText('1');
+});
+```
+
+The three sections should be visually distinct. Add blank lines between them. This pattern makes tests readable to anyone — even people who don't know the framework.
+
+## Writing Test Names That Mean Something
+
+Test names are the first thing you see when a test fails. Write them so the failure report tells you exactly what broke.
+
+Use two levels of grouping: a `describe` block for the feature or page, and individual test cases for specific behaviors.
+
+```typescript
+describe('Login Page', () => {
+  test('logs in successfully with valid credentials', async ({ page }) => { ... });
+  test('shows error message for wrong password', async ({ page }) => { ... });
+  test('shows error message for empty username', async ({ page }) => { ... });
+  test('locks out user after too many failed attempts', async ({ page }) => { ... });
+});
+```
+
+When a test fails, you see: **Login Page > shows error message for wrong password**. You immediately know what to investigate.
+
+Naming rules:
+- Use plain English, not code
+- Describe the behavior, not the implementation: "shows error for wrong password" not "validates credentials"
+- Start with a verb: "logs in", "shows", "redirects", "prevents"
+- Include the condition: "with valid credentials", "when session expires", "for a locked account"
+
+## One Concept Per Test
+
+"One assertion per test" is common advice, but it's often misunderstood. It doesn't mean you can only have one `expect()` call. It means each test should verify **one thing** — one scenario, one behavior, one outcome.
+
+```typescript
+// BAD — testing multiple unrelated things in one test
+test('login page', async ({ page }) => {
+  await page.goto('/login');
+  await expect(page.getByRole('heading')).toHaveText('Login');    // ← thing 1
+  await page.fill('#username', 'wrong_user');
+  await page.fill('#password', 'wrong_pass');
+  await page.click('#login-button');
+  await expect(page.getByText('Invalid credentials')).toBeVisible(); // ← thing 2
+  await page.fill('#username', 'standard_user');
+  await page.fill('#password', 'secret_sauce');
+  await page.click('#login-button');
+  await expect(page).toHaveURL('/inventory');                      // ← thing 3
+});
+```
+
+When this test fails, which thing broke? You don't know without reading the whole test.
+
+```typescript
+// GOOD — each test proves one specific thing
+test('shows Login heading on the login page', async ({ page }) => {
+  await page.goto('/login');
+  await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+});
+
+test('shows error message when credentials are wrong', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('#username', 'wrong_user');
+  await page.fill('#password', 'wrong_pass');
+  await page.click('#login-button');
+  await expect(page.getByText('Invalid credentials')).toBeVisible();
+});
+
+test('redirects to inventory after successful login', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('#username', 'standard_user');
+  await page.fill('#password', 'secret_sauce');
+  await page.click('#login-button');
+  await expect(page).toHaveURL('/inventory');
+});
+```
+
+Now each failure points directly at the broken behavior.
+
+## Test Isolation — Every Test Stands Alone
+
+Each test must set up its own state and not depend on any other test having run first. Tests run in isolation — sometimes in parallel, sometimes in random order, sometimes a single test is re-run after a failure.
+
+```typescript
+// BAD — test 2 depends on test 1 having logged in
+test('test 1: log in', async ({ page }) => {
+  await login(page, 'standard_user', 'secret_sauce');
+});
+
+test('test 2: add item to cart', async ({ page }) => {
+  // If test 1 didn't run or failed, this test starts on the login page, not inventory
+  await page.click('[data-test="add-to-cart-sauce-labs-backpack"]');
+});
+```
+
+```typescript
+// GOOD — each test handles its own setup
+test('add item to cart', async ({ page }) => {
+  // Set up state regardless of what other tests do
+  await login(page, 'standard_user', 'secret_sauce');
+  await page.goto('/inventory.html');
+  await page.click('[data-test="add-to-cart-sauce-labs-backpack"]');
+  await expect(page.locator('[data-test="shopping-cart-badge"]')).toHaveText('1');
+});
+```
+
+This feels repetitive — logging in at the start of every test. It is. That's okay. Repetition in tests is a feature, not a bug.
+
+## DRY vs DAMP in Tests
+
+In production code, DRY (Don't Repeat Yourself) is a core principle. In test code, DAMP (Descriptive And Meaningful Phrases) is better.
+
+```typescript
+// DRY production code — abstract everything
+// DAMP test code — keep setup visible and readable
+
+// This repetition is acceptable in tests
+test('checkout flow', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('[data-test="username"]', 'standard_user');
+  await page.fill('[data-test="password"]', 'secret_sauce');
+  await page.click('[data-test="login-button"]');
+  // ... rest of the test
+});
+```
+
+If the setup code is more than a few lines, extract it into a helper function or a `beforeEach` hook — but keep the test body self-explanatory. Someone reading the test should understand what's happening without jumping between files.
+
+```typescript
+// Helper function — acceptable abstraction
+async function loginAs(page: Page, username: string, password: string) {
+  await page.goto('/login');
+  await page.fill('[data-test="username"]', username);
+  await page.fill('[data-test="password"]', password);
+  await page.click('[data-test="login-button"]');
+}
+
+test('add item to cart', async ({ page }) => {
+  await loginAs(page, 'standard_user', 'secret_sauce'); // readable
+  await page.click('[data-test="add-to-cart-sauce-labs-backpack"]');
+  await expect(page.locator('[data-test="shopping-cart-badge"]')).toHaveText('1');
+});
+```
+
+## What Makes Tests Flaky
+
+A flaky test is one that sometimes passes and sometimes fails without any code changes. Flaky tests are worse than no tests — they train your team to ignore failures.
+
+Common causes and how to avoid them from the start:
+
+**Hardcoded waits:**
+```typescript
+// BAD — arbitrary sleep, wrong on fast machines, too slow on slow ones
+await page.waitForTimeout(3000);
+await page.click('#submit');
+
+// GOOD — wait for a specific condition
+await page.waitForURL('/dashboard');
+await expect(page.getByText('Welcome')).toBeVisible();
+await page.click('#submit');
+```
+
+**Selecting on implementation details:**
+```typescript
+// BAD — class names change in refactors
+await page.click('.sc-bdfBwQ.hQObhY.btn-primary');
+
+// GOOD — data-test attributes exist for this purpose
+await page.click('[data-test="submit-button"]');
+```
+
+**Test interdependence:**
+One test leaves state behind (items in a cart, a logged-in session) that breaks the next test. Fix: set up your own state at the start of every test.
+
+**Race conditions:**
+Asserting before the page has finished loading. Fix: use the framework's built-in waiting mechanisms instead of timeouts.
+
+**Environment-specific assumptions:**
+A test passes locally but fails in CI because the CI machine is slower. Fix: use conditions, not time-based waits.
+
+## A Real Example: Good vs Bad Test Structure
+
+Testing a login flow — bad version:
+
+```typescript
+// BAD
+test('login', async ({ page }) => {
+  await page.goto('https://www.saucedemo.com');
+  await page.waitForTimeout(1000); // ← hardcoded wait
+  await page.click('.input_wrapper input:nth-child(1)'); // ← fragile CSS path
+  await page.type('.input_wrapper input:nth-child(1)', 'standard_user');
+  await page.click('.input_wrapper input:nth-child(2)');
+  await page.type('.input_wrapper input:nth-child(2)', 'secret_sauce');
+  await page.click('[value="Login"]');
+  await page.waitForTimeout(2000); // ← hardcoded wait
+  // No assertion — the test passes even if login failed
+});
+```
+
+Testing a login flow — good version:
+
+```typescript
+// GOOD
+describe('Login', () => {
+  test('redirects to inventory after successful login', async ({ page }) => {
+    // Arrange
+    await page.goto('https://www.saucedemo.com');
+
+    // Act
+    await page.fill('[data-test="username"]', 'standard_user');
+    await page.fill('[data-test="password"]', 'secret_sauce');
+    await page.click('[data-test="login-button"]');
+
+    // Assert
+    await expect(page).toHaveURL(/inventory/);
+    await expect(page.getByRole('heading', { name: 'Products' })).toBeVisible();
+  });
+
+  test('shows error when password is wrong', async ({ page }) => {
+    // Arrange
+    await page.goto('https://www.saucedemo.com');
+
+    // Act
+    await page.fill('[data-test="username"]', 'standard_user');
+    await page.fill('[data-test="password"]', 'wrong_password');
+    await page.click('[data-test="login-button"]');
+
+    // Assert — check both the error message and that we didn't navigate away
+    await expect(page.locator('[data-test="error"]')).toHaveText(
+      'Epic sadface: Username and password do not match any user in this service'
+    );
+    await expect(page).toHaveURL('https://www.saucedemo.com/'); // stayed on login page
+  });
+});
+```
+
+What makes the good version better:
+- `data-test` selectors that won't break on CSS changes
+- No arbitrary waits — the framework waits for conditions
+- Assertions that would catch a silent failure
+- Separate tests for separate outcomes
+- Clear naming that describes exactly what's being tested
+
+## What Not to Test in E2E
+
+Save these for CSS tests, visual regression tools, or unit tests — not E2E:
+
+- **Exact pixel positions** — "the button is at x:120, y:340"
+- **Colors and styles** — "the error message is red"
+- **Animation timing** — "the modal fades in over 300ms"
+- **Font sizes and weights** — "the heading is 24px bold"
+- **Every possible input combination** — E2E tests the happy path and key error paths; unit tests cover exhaustive input validation
+
+E2E tests are for proving that users can complete their goals. Keep them focused on behavior, not appearance.
+
+You're ready to pick a framework. Start with Playwright if you're new to automation, Cypress for a beginner-friendly experience with excellent documentation, or WebdriverIO for enterprise setups that need broad browser and platform coverage.

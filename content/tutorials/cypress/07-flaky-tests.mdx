@@ -1,0 +1,227 @@
+---
+title: "Flaky Tests & Stability Patterns"
+description: "Why Cypress tests fail intermittently and the techniques to make them rock solid"
+order: 7
+framework: "cypress"
+chapter: "flaky-tests"
+---
+
+A flaky test is one that passes and fails on the same code without any changes. It's worse than a consistently failing test — at least a failing test is honest. Flakiness erodes trust in your entire test suite.
+
+## The Root Cause: Timing
+
+Ninety percent of flaky Cypress tests come down to timing. The test asserts before the UI has caught up. The most common form:
+
+```typescript
+// Clicks a button that triggers an async operation
+cy.get('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+
+// Immediately asserts — may run before the DOM updates
+cy.get('[data-test="shopping-cart-badge"]').should('have.text', '1')
+```
+
+This test might pass ten times and fail on the eleventh because one time the click triggered a slow API call and the badge hadn't updated yet.
+
+## How Cypress Retries (And Why It Usually Saves You)
+
+Cypress automatically retries `.should()` assertions until they pass or the `defaultCommandTimeout` (4 seconds) is reached. This built-in retry is why most Cypress tests are more stable than Selenium tests out of the box.
+
+```typescript
+// Cypress will retry this assertion for up to 4 seconds
+cy.get('[data-test="shopping-cart-badge"]').should('have.text', '1')
+```
+
+The problem arises when you do something between the action and the assertion that breaks the retry chain, or when you're waiting on the wrong thing.
+
+## The Anti-Pattern: cy.wait(ms)
+
+```typescript
+// BAD — a time-based wait
+cy.get('[data-test="login-button"]').click()
+cy.wait(2000) // wait 2 seconds... why? what are we waiting for?
+cy.url().should('include', '/inventory')
+```
+
+`cy.wait(2000)` is a code smell. It makes your suite slow and it's still unreliable — on a fast machine the wait is too long, on a slow CI runner it might not be enough. Every time you reach for `cy.wait(ms)`, stop and ask: what am I actually waiting for?
+
+**Replace it with a condition:**
+
+```typescript
+// GOOD — wait for the actual thing you care about
+cy.get('[data-test="login-button"]').click()
+cy.url().should('include', '/inventory') // Cypress retries until the URL changes
+```
+
+```typescript
+// GOOD — wait for an element to appear
+cy.get('[data-test="success-banner"]').should('be.visible')
+```
+
+## The Right Way to Wait: Intercept + Wait
+
+For tests that depend on network requests completing, combine `cy.intercept()` with `cy.wait()`. This waits for a specific network event — not a fixed duration.
+
+```typescript
+// BAD — race condition
+cy.get('[data-test="submit-order"]').click()
+cy.wait(3000) // hoping the API returns in time
+cy.get('[data-test="confirmation-number"]').should('be.visible')
+
+// GOOD — wait for the actual API call
+cy.intercept('POST', '/api/orders').as('submitOrder')
+cy.get('[data-test="submit-order"]').click()
+cy.wait('@submitOrder') // pauses until the POST request completes
+cy.get('[data-test="confirmation-number"]').should('be.visible')
+```
+
+`cy.wait('@alias')` yields the interception object and only continues once the response has been received. It's the most reliable way to synchronise tests with async operations.
+
+## Don't Assert Before the Page Is Ready
+
+Clicking a link or button that causes navigation is a common source of flakiness. Assert on the new page's URL or a landmark element before doing anything else:
+
+```typescript
+// BAD — might run before navigation completes
+cy.get('[data-test="shopping-cart-link"]').click()
+cy.get('.cart_item').should('have.length', 1)
+
+// GOOD — assert on navigation first
+cy.get('[data-test="shopping-cart-link"]').click()
+cy.url().should('include', '/cart') // waits for navigation
+cy.get('.cart_item').should('have.length', 1)
+```
+
+## cy.get() vs cy.find()
+
+Use `cy.get()` to query from the document root. Use `cy.find()` to query within a subject:
+
+```typescript
+// cy.get() — searches the whole page
+cy.get('.inventory_item').first().find('.inventory_item_name').should('be.visible')
+
+// Scope searches with within() when you need to assert on nested elements
+cy.get('.inventory_item').first().within(() => {
+  cy.get('.inventory_item_name').should('not.be.empty')
+  cy.get('[data-test^="add-to-cart"]').should('be.visible')
+})
+```
+
+`cy.find()` scopes the query to the current subject element. This prevents accidentally matching elements from other parts of the page, which is a subtle source of test brittleness.
+
+## cy.contains() vs cy.get() — Tradeoffs
+
+`cy.contains()` is convenient but can be fragile if text changes or if the same text appears in multiple places:
+
+```typescript
+// Fragile — 'Sauce Labs Backpack' might appear in a promo banner too
+cy.contains('Sauce Labs Backpack').click()
+
+// More precise — scoped to the correct element type
+cy.contains('h3', 'Sauce Labs Backpack').click()
+
+// Most precise — use data attributes when available
+cy.get('[data-test="item-sauce-labs-backpack-title"]')
+```
+
+Use `cy.contains()` when you're navigating by user-visible text and the text is unique on the page. Use `cy.get()` with `data-test` attributes when you want test stability independent of copy changes.
+
+## Test Isolation with beforeEach
+
+Tests should be independent. A test that depends on state left behind by a previous test is one that fails randomly depending on execution order:
+
+```typescript
+// BAD — test 2 depends on test 1 having added the item
+it('adds item to cart', () => {
+  inventoryPage.addToCartByName('sauce-labs-backpack')
+})
+
+it('removes item from cart', () => {
+  // What if the test above didn't run? Or ran in a different order?
+  cartPage.removeItem('sauce-labs-backpack')
+})
+
+// GOOD — each test sets up its own state
+describe('Cart', () => {
+  beforeEach(() => {
+    cy.loginWithSession('standard_user', 'secret_sauce')
+    cy.visit('/inventory')
+    cy.get('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+    cy.get('[data-test="shopping-cart-link"]').click()
+  })
+
+  it('shows the added item', () => {
+    cy.get('.cart_item').should('have.length', 1)
+  })
+
+  it('removes the item', () => {
+    cy.get('[data-test="remove-sauce-labs-backpack"]').click()
+    cy.get('.cart_item').should('not.exist')
+  })
+})
+```
+
+## cy.session() for Speed Without Sacrificing Isolation
+
+Running the full login flow in every `beforeEach` is slow. `cy.session()` caches the session between tests so each test starts with a valid logged-in session without re-running the UI login:
+
+```typescript
+beforeEach(() => {
+  // First test: runs login UI. Subsequent tests: restores cached session
+  cy.loginWithSession('standard_user', 'secret_sauce')
+  cy.visit('/inventory')
+})
+```
+
+Each test still gets a fresh page visit — isolation is preserved, but the network cost of login only happens once per spec file.
+
+## Retry on Failure in CI
+
+For genuinely intermittent failures (network hiccups in CI, slow containers), configure test retries in `cypress.config.ts`:
+
+```typescript
+import { defineConfig } from 'cypress'
+
+export default defineConfig({
+  e2e: {
+    retries: {
+      runMode: 2,    // retry up to 2 times in CI (cypress run)
+      openMode: 0,   // don't retry in interactive mode (cypress open)
+    },
+  },
+})
+```
+
+Retries are a safety net, not a fix. If a test needs retries regularly, the test has a real problem — find and fix it.
+
+## Screenshots and Videos
+
+Cypress saves a screenshot automatically on test failure. Videos are recorded for the entire spec run. Configure where they go:
+
+```typescript
+export default defineConfig({
+  e2e: {
+    screenshotsFolder: 'cypress/screenshots',
+    videosFolder: 'cypress/videos',
+    video: true, // default: true in run mode
+  },
+})
+```
+
+In CI, upload these as artifacts (covered in the next chapter). When debugging a flaky test, the video is often the fastest way to see exactly what happened.
+
+## Debugging a Flaky Test: Practical Checklist
+
+When a test is flaky, work through this list:
+
+1. **Is there a `cy.wait(ms)` in the test?** Replace it with a condition-based wait.
+2. **Does the test depend on network requests?** Add `cy.intercept().as()` and `cy.wait('@alias')`.
+3. **Does the test assert immediately after a click that causes navigation?** Assert on `cy.url()` first.
+4. **Are selectors unique on the page?** Scope with `cy.find()` or `within()`.
+5. **Does the test leave state behind?** Move setup into `beforeEach`, teardown into `afterEach`.
+6. **Are animations or transitions delaying element visibility?** Assert `.should('be.visible')` before interacting.
+7. **Is `cy.get()` finding multiple elements when it should find one?** Be more specific with the selector.
+8. **Does the test only fail in CI?** The app might load slower — check if increasing `defaultCommandTimeout` helps, or add explicit waits for slow API calls.
+9. **Is the test running in the correct order?** Wrap tests in `describe` and use `beforeEach` to guarantee setup order.
+10. **Is the underlying feature actually broken intermittently?** Open the app manually and look for real bugs.
+
+Next chapter: running Cypress in CI/CD with GitHub Actions and generating reports.

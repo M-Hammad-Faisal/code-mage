@@ -1,0 +1,281 @@
+---
+title: "Assertions with expect-webdriverio"
+description: "Master WDIO's built-in assertion library — element state, text, URL, and custom matchers"
+order: 4
+framework: "webdriverio"
+chapter: "assertions"
+---
+
+WDIO ships with `expect-webdriverio` out of the box. You don't install a separate assertion library — it's already there, globally available as `expect`, and every matcher understands WebdriverIO elements natively.
+
+## Why expect-webdriverio
+
+Standard Jest matchers like `expect(await el.getText()).toBe('Hello')` work, but they evaluate the value once and fail immediately. `expect-webdriverio` matchers are async-aware and retry automatically until the assertion passes or the timeout expires. That single difference eliminates a large class of flaky tests.
+
+```typescript
+// This will fail intermittently — evaluated once at call time
+expect(await $('[data-test="cart-badge"]').getText()).toBe('1')
+
+// This retries until it passes or times out — far more reliable
+await expect($('[data-test="cart-badge"]')).toHaveText('1')
+```
+
+Always use `expect-webdriverio` matchers when asserting on elements. Save plain Jest matchers for asserting on plain JavaScript values.
+
+## Element State Assertions
+
+```typescript
+// Is the element in the DOM at all?
+await expect($('[data-test="error"]')).toExist()
+
+// Is it visible on screen? (exists + not hidden)
+await expect($('.inventory_list')).toBeDisplayed()
+
+// Is the form field enabled?
+await expect($('[data-test="login-button"]')).toBeEnabled()
+
+// Is the checkbox/radio ticked?
+await expect($('[type="checkbox"]')).toBeChecked()
+
+// Can the user actually click it? (visible + enabled + not obscured)
+await expect($('[data-test="checkout"]')).toBeClickable()
+
+// Does the element currently have keyboard focus?
+await expect($('#user-name')).toHaveFocus()
+```
+
+The difference between `toExist()` and `toBeDisplayed()` matters. An element can exist in the DOM while hidden via `display: none` or `visibility: hidden`. `toExist()` passes in that case; `toBeDisplayed()` fails. Use the right one for what you actually want to assert.
+
+## Text and HTML Assertions
+
+```typescript
+// Exact text match
+await expect($('.complete-header')).toHaveText('Thank you for your order!')
+
+// Partial text match using expect.stringContaining
+await expect($('[data-test="error"]')).toHaveText(
+  expect.stringContaining('Username and password do not match')
+)
+
+// Regex match
+await expect($('.inventory_item_name')).toHaveText(
+  expect.stringMatching(/Sauce Labs .+/)
+)
+
+// Inner HTML (useful when text content isn't the whole story)
+await expect($('.product-description')).toHaveHTML(
+  expect.stringContaining('<b>Featured</b>')
+)
+```
+
+`toHaveText()` trims whitespace and normalises it automatically, so you don't need to worry about leading/trailing spaces in the DOM.
+
+## Value and Attribute Assertions
+
+```typescript
+// Input field value
+await expect($('[data-test="firstName"]')).toHaveValue('Hammad')
+
+// HTML attribute
+await expect($('[data-test="social-twitter"]')).toHaveAttr('target', '_blank')
+
+// Attribute existence (no second argument = just check it's there)
+await expect($('[data-test="login-button"]')).toHaveAttr('disabled')
+
+// href on anchor tags
+await expect($('.footer_copy a')).toHaveHref('https://saucelabs.com')
+```
+
+## Count Assertions
+
+`$$` returns an array. Wrap it in `expect()` and use `toHaveLength()`:
+
+```typescript
+const items = await $$('.inventory_item')
+await expect(items).toHaveLength(6)
+
+const cartItems = await $$('.cart_item')
+await expect(cartItems).toHaveLength(2)
+```
+
+If the count isn't stable (items load asynchronously), `toHaveLength()` retries too. It won't just snapshot the array at the moment of the call.
+
+## URL and Title Assertions
+
+```typescript
+// Exact URL match
+await expect(browser).toHaveUrl('https://www.saucedemo.com/inventory.html')
+
+// Partial URL match
+await expect(browser).toHaveUrl(expect.stringContaining('/checkout-complete'))
+
+// Exact page title
+await expect(browser).toHaveTitle('Swag Labs')
+
+// Partial title (useful for dynamic pages)
+await expect(browser).toHaveTitle(expect.stringContaining('Swag'))
+```
+
+## Negative Assertions
+
+Prefix any matcher with `.not` to invert it:
+
+```typescript
+// Error banner should not be showing after successful login
+await expect($('[data-test="error"]')).not.toBeDisplayed()
+
+// Menu overlay should not exist after closing
+await expect($('.bm-menu-wrap')).not.toExist()
+
+// Button should not be clickable while loading
+await expect($('[data-test="checkout"]')).not.toBeClickable()
+
+// Cart badge should not be visible when cart is empty
+await expect($('[data-test="shopping-cart-badge"]')).not.toBeDisplayed()
+```
+
+## Custom Failure Messages
+
+When an assertion fails, WDIO's default messages are decent but sometimes vague. Pass a `message` option as the second argument:
+
+```typescript
+await expect($('.complete-header')).toHaveText(
+  'Thank you for your order!',
+  { message: 'Order confirmation page did not show success message after checkout' }
+)
+
+await expect(browser).toHaveUrl(
+  expect.stringContaining('/inventory'),
+  { message: 'Login did not redirect to inventory page — check credentials or URL routing' }
+)
+
+await expect($$('.cart_item')).toHaveLength(
+  1,
+  { message: 'Expected exactly 1 item in cart after adding Sauce Labs Backpack' }
+)
+```
+
+Custom messages make CI logs readable without having to dig into screenshots.
+
+## Soft Assertions
+
+A soft assertion logs the failure but continues test execution. WDIO doesn't have built-in soft assertions, but you can implement them cleanly with a wrapper:
+
+```typescript
+// test/helpers/softAssert.ts
+const softFailures: string[] = []
+
+export async function softExpect<T>(
+  assertion: () => Promise<T>,
+  message: string
+): Promise<void> {
+  try {
+    await assertion()
+  } catch (e) {
+    softFailures.push(`SOFT FAIL — ${message}: ${(e as Error).message}`)
+  }
+}
+
+export function flushSoftAssertions(): void {
+  if (softFailures.length > 0) {
+    const errors = softFailures.splice(0)
+    throw new Error(`Soft assertion failures:\n${errors.join('\n')}`)
+  }
+}
+```
+
+```typescript
+// Usage in a test
+import { softExpect, flushSoftAssertions } from '../helpers/softAssert'
+
+it('should verify all product details on the page', async () => {
+  await browser.url('/inventory.html')
+
+  await softExpect(
+    () => expect($$('.inventory_item')).toHaveLength(6),
+    'Inventory should have 6 products'
+  )
+  await softExpect(
+    () => expect($('.inventory_item_name')).toBeDisplayed(),
+    'First product name should be visible'
+  )
+  await softExpect(
+    () => expect($('.inventory_item_price')).toBeDisplayed(),
+    'First product price should be visible'
+  )
+
+  flushSoftAssertions()  // throws if any soft assertions failed
+})
+```
+
+Soft assertions are useful for UI audit tests where you want to catalogue all issues in one run, not stop at the first failure.
+
+## A Complete Assertion Test
+
+```typescript
+describe('Assertions: Login and Inventory', () => {
+  it('should assert on every aspect of the inventory page', async () => {
+    // Navigate and log in
+    await browser.url('/')
+    await expect(browser).toHaveTitle('Swag Labs')
+    await expect(browser).toHaveUrl('https://www.saucedemo.com/')
+
+    await expect($('#user-name')).toBeDisplayed()
+    await expect($('#user-name')).toBeEnabled()
+    await expect($('#password')).toBeDisplayed()
+    await expect($('[data-test="login-button"]')).toBeClickable()
+
+    await $('#user-name').setValue('standard_user')
+    await expect($('#user-name')).toHaveValue('standard_user')
+
+    await $('#password').setValue('secret_sauce')
+    await $('#login-button').click()
+
+    // Post-login state
+    await expect(browser).toHaveUrl(
+      expect.stringContaining('/inventory'),
+      { message: 'Should have redirected to inventory after login' }
+    )
+    await expect($('[data-test="error"]')).not.toExist()
+    await expect($('.inventory_list')).toBeDisplayed()
+
+    // Product count
+    const products = await $$('.inventory_item')
+    await expect(products).toHaveLength(6)
+
+    // First product details
+    const firstProduct = products[0]
+    await expect(firstProduct.$('.inventory_item_name')).toHaveText('Sauce Labs Backpack')
+    await expect(firstProduct.$('.inventory_item_price')).toHaveText('$29.99')
+    await expect(firstProduct.$('[data-test^="add-to-cart"]')).toBeClickable()
+
+    // Cart starts empty
+    await expect($('[data-test="shopping-cart-badge"]')).not.toBeDisplayed()
+
+    // Add to cart and assert badge appears
+    await firstProduct.$('[data-test^="add-to-cart"]').click()
+    await expect($('[data-test="shopping-cart-badge"]')).toHaveText('1')
+
+    // Button changes to Remove
+    await expect(firstProduct.$('[data-test^="remove"]')).toBeDisplayed()
+    await expect(firstProduct.$('[data-test^="add-to-cart"]')).not.toExist()
+  })
+
+  it('should assert on error state for locked out user', async () => {
+    await browser.url('/')
+    await $('#user-name').setValue('locked_out_user')
+    await $('#password').setValue('secret_sauce')
+    await $('#login-button').click()
+
+    const error = $('[data-test="error"]')
+    await expect(error).toBeDisplayed()
+    await expect(error).toHaveText(
+      expect.stringContaining('Sorry, this user has been locked out'),
+      { message: 'Locked out user should see specific error message' }
+    )
+    await expect(browser).not.toHaveUrl(expect.stringContaining('/inventory'))
+  })
+})
+```
+
+Next chapter: Page Object Model — structure your tests so selectors live in one place and refactoring doesn't mean hunting through a hundred test files.

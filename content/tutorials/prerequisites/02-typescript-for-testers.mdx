@@ -1,0 +1,388 @@
+---
+title: "TypeScript for Testers"
+description: "The 20% of TypeScript you actually need to write automation tests — async/await, types, classes, and imports"
+order: 2
+framework: "prerequisites"
+chapter: "typescript-for-testers"
+---
+
+You don't need to be a TypeScript expert to write automation tests. You need about 20% of the language — the parts that show up in every test file. This chapter covers exactly that.
+
+If you already know TypeScript or JavaScript, skim this or skip it entirely.
+
+## TypeScript vs JavaScript — What's the Difference?
+
+JavaScript is the language browsers and Node.js understand. TypeScript is JavaScript with types added on top.
+
+```javascript
+// JavaScript — no types, no safety net
+function login(username, password) {
+  // Is username a string? A number? Who knows.
+}
+```
+
+```typescript
+// TypeScript — types make the contract explicit
+function login(username: string, password: string): void {
+  // IDE will warn you if you pass a number here
+}
+```
+
+Why does this matter for tests? Two reasons:
+
+1. **IDE autocomplete** — your editor knows what methods and properties are available on every object. You type `page.` and see a list of everything you can call.
+2. **Catch errors early** — misspell a method name or pass the wrong type, and TypeScript tells you before you run the test.
+
+TypeScript files end in `.ts`. They get compiled to JavaScript before running. Modern test frameworks handle this automatically — you never run `tsc` manually.
+
+## Variables — const and let
+
+```typescript
+// const — value never reassigned
+const username = 'standard_user';
+const timeout = 5000;
+
+// let — value can change
+let retryCount = 0;
+retryCount = retryCount + 1;
+
+// Never use var — it has unexpected scoping behavior
+// var is function-scoped, not block-scoped, which causes subtle bugs
+```
+
+In test files you'll use `const` for almost everything. Use `let` only when you genuinely need to reassign the variable — usually a counter or accumulator.
+
+## Types You'll Encounter
+
+```typescript
+// String
+const username: string = 'standard_user';
+
+// Number
+const retries: number = 3;
+
+// Boolean
+const isLoggedIn: boolean = true;
+
+// Array
+const productNames: string[] = ['Backpack', 'Bike Light', 'Onesie'];
+const prices: number[] = [29.99, 9.99, 7.99];
+
+// Union type — can be one of several specific values
+type Status = 'pass' | 'fail' | 'skipped';
+const result: Status = 'pass';
+
+// Optional — value might not exist
+const errorMessage: string | undefined = undefined;
+```
+
+TypeScript infers types automatically, so you rarely need to write them explicitly:
+
+```typescript
+const username = 'standard_user'; // TypeScript knows: this is a string
+const count = 0;                  // TypeScript knows: this is a number
+```
+
+Write the type annotation when it makes the code clearer or when TypeScript can't figure it out on its own.
+
+## async and await — The Most Important Concept
+
+This is the concept that trips up most beginners. Understand this, and everything else becomes easier.
+
+**The problem:** interacting with a browser takes time. Navigating to a URL, clicking a button, waiting for an element to appear — none of these happen instantly. JavaScript normally doesn't wait for slow operations. It fires them off and immediately moves to the next line.
+
+```javascript
+// Without await — this is broken
+browser.click('#submit');         // starts clicking, moves on immediately
+browser.fill('#name', 'Ahmad');   // might run before the click finishes
+```
+
+`async` and `await` tell JavaScript: stop here and wait for this operation to complete before moving on.
+
+```typescript
+// With await — correct
+await page.click('#submit');        // waits for click to complete
+await page.fill('#name', 'Ahmad');  // then fills the input
+```
+
+`await` can only be used inside a function marked `async`. Test frameworks mark test functions as `async` for you:
+
+```typescript
+test('user can log in', async ({ page }) => {
+  await page.goto('https://example.com/login');
+  await page.fill('#username', 'standard_user');
+  await page.fill('#password', 'secret_sauce');
+  await page.click('#login-button');
+  // Now assert the result
+});
+```
+
+**The most common beginner mistake is forgetting `await`:**
+
+```typescript
+// WRONG — assertion runs immediately before the page has loaded
+expect(page.getByText('Welcome')).toBeVisible();
+
+// CORRECT — waits for the assertion to be true
+await expect(page.getByText('Welcome')).toBeVisible();
+```
+
+Forgetting `await` causes tests that look like they should fail to pass, and tests that should pass to fail at random. When a test behaves inconsistently, the first thing to check is missing `await`.
+
+**What does `async` return?**
+
+An `async` function always returns a `Promise`. A `Promise` is JavaScript's way of representing a value that will be available in the future. When you `await` a Promise, you wait for that future value.
+
+```typescript
+// This function returns Promise<string>
+async function getPageTitle(): Promise<string> {
+  const title = await page.title(); // waits, then gives you the string
+  return title;
+}
+
+// To use it, you also await it
+const title = await getPageTitle();
+```
+
+You'll see `Promise<void>` in many function signatures — it means the function is async but doesn't return a meaningful value.
+
+## Interfaces — Describing Test Data Shape
+
+An interface defines what properties an object must have. Use them for test data so your IDE can catch typos:
+
+```typescript
+interface User {
+  username: string;
+  password: string;
+  role?: 'admin' | 'standard'; // ? means optional
+}
+
+interface Product {
+  name: string;
+  price: number;
+  inStock: boolean;
+}
+
+// Using the interface
+const testUser: User = {
+  username: 'standard_user',
+  password: 'secret_sauce',
+};
+
+// TypeScript will error if you misspell a property
+const broken: User = {
+  usrname: 'standard_user', // ERROR: 'usrname' doesn't exist on User
+  password: 'secret_sauce',
+};
+```
+
+A common pattern is to define all your test users and test data in one file with interfaces:
+
+```typescript
+// test-data/users.ts
+export interface UserCredentials {
+  username: string;
+  password: string;
+}
+
+export const USERS: Record<string, UserCredentials> = {
+  standard: { username: 'standard_user', password: 'secret_sauce' },
+  admin: { username: 'admin_user', password: 'admin_pass' },
+  locked: { username: 'locked_out_user', password: 'secret_sauce' },
+};
+```
+
+## Classes — How Page Objects Work
+
+A class is a blueprint for creating objects. You'll use classes for the Page Object Model — a pattern for organizing your test code.
+
+```typescript
+class LoginPage {
+  // Properties — data stored on the object
+  private page: Page;
+  private usernameInput: Locator;
+  private passwordInput: Locator;
+  private loginButton: Locator;
+
+  // Constructor — runs when you create a new LoginPage
+  constructor(page: Page) {
+    this.page = page;
+    this.usernameInput = page.locator('#username');
+    this.passwordInput = page.locator('#password');
+    this.loginButton = page.locator('#login-button');
+  }
+
+  // Methods — actions you can perform
+  async goto() {
+    await this.page.goto('/login');
+  }
+
+  async login(username: string, password: string) {
+    await this.usernameInput.fill(username);
+    await this.passwordInput.fill(password);
+    await this.loginButton.click();
+  }
+}
+```
+
+To use the class:
+
+```typescript
+const loginPage = new LoginPage(page); // creates an instance
+await loginPage.goto();
+await loginPage.login('standard_user', 'secret_sauce');
+```
+
+`this` refers to the current instance of the class. `this.page` means "the `page` property stored on this particular `LoginPage` instance." Each `new LoginPage(page)` call creates an independent object with its own `this.page`.
+
+## Imports and Exports
+
+Test code gets split across multiple files. `import` and `export` let files share code.
+
+```typescript
+// utils/test-data.ts — exporting
+export const BASE_URL = 'https://www.saucedemo.com';
+
+export interface UserCredentials {
+  username: string;
+  password: string;
+}
+
+export const USERS = {
+  standard: { username: 'standard_user', password: 'secret_sauce' },
+  locked: { username: 'locked_out_user', password: 'secret_sauce' },
+};
+```
+
+```typescript
+// tests/login.test.ts — importing
+import { BASE_URL, USERS } from '../utils/test-data';
+import type { UserCredentials } from '../utils/test-data';
+
+// use them
+test('login with standard user', async ({ page }) => {
+  await page.goto(BASE_URL);
+  await page.fill('#username', USERS.standard.username);
+});
+```
+
+The path `'../utils/test-data'` means: go up one folder (`..`), then into `utils`, then `test-data.ts`. You omit the `.ts` extension.
+
+Use `import type` for importing only type information (interfaces, type aliases). It's stripped out entirely at compile time and keeps your runtime bundle clean.
+
+## Destructuring — A Shortcut You'll See Constantly
+
+Instead of accessing object properties one by one:
+
+```typescript
+const username = USERS.standard.username;
+const password = USERS.standard.password;
+```
+
+Destructure them in one line:
+
+```typescript
+const { username, password } = USERS.standard;
+```
+
+Array destructuring:
+
+```typescript
+const [firstItem, secondItem] = productList;
+const [first, ...rest] = productList; // first item and all remaining
+```
+
+Test frameworks use destructuring for their fixtures:
+
+```typescript
+// { page } is destructuring — page comes from the test context
+test('example', async ({ page }) => {
+  // page is now available in scope
+});
+```
+
+## Template Literals — String Formatting
+
+Use backticks instead of string concatenation:
+
+```typescript
+// Old way — messy
+const url = 'https://example.com/' + path + '?user=' + userId;
+
+// Template literal — clean
+const url = `https://example.com/${path}?user=${userId}`;
+
+// Multi-line
+const message = `
+  Test failed:
+  Expected: ${expected}
+  Received: ${received}
+`;
+```
+
+Anything inside `${}` is evaluated as JavaScript. Useful for building URLs, error messages, and assertion descriptions.
+
+## Quick Reference Cheat Sheet
+
+```typescript
+// ── Variables ─────────────────────────────────────────
+const name: string = 'Ahmad';
+let count: number = 0;
+
+// ── Types ─────────────────────────────────────────────
+type Status = 'pass' | 'fail' | 'skipped';
+const x: string | undefined = undefined;
+const items: string[] = ['a', 'b'];
+
+// ── Async function ────────────────────────────────────
+async function doSomething(input: string): Promise<void> {
+  await someSlowOperation(input);
+}
+
+// Arrow function (same thing)
+const doSomething = async (input: string): Promise<void> => {
+  await someSlowOperation(input);
+};
+
+// ── Interface ─────────────────────────────────────────
+interface Config {
+  baseUrl: string;
+  timeout: number;
+  retries?: number; // optional
+}
+
+// ── Class ─────────────────────────────────────────────
+class MyPage {
+  private page: Page;
+
+  constructor(page: Page) {
+    this.page = page;
+  }
+
+  async goto(path: string) {
+    await this.page.goto(path);
+  }
+}
+
+// ── Import / Export ───────────────────────────────────
+export const BASE_URL = 'https://example.com';
+export interface User { username: string; password: string; }
+
+import { BASE_URL } from './config';
+import type { User } from './types';
+
+// ── Destructuring ─────────────────────────────────────
+const { username, password } = user;
+const [first, ...rest] = array;
+
+// ── Template literal ──────────────────────────────────
+const msg = `Hello ${name}, you have ${count} items`;
+
+// ── await (inside async function only) ────────────────
+const title = await page.title();
+await expect(locator).toBeVisible();
+```
+
+That's all the TypeScript you need. Pick the framework you want to learn — Playwright, Cypress, or WebdriverIO.
+
+Next chapter: how to use browser DevTools to find reliable selectors before you write a single line of test code.

@@ -1,0 +1,265 @@
+---
+title: "Assertions & Matchers"
+description: "Every way to assert in Cypress — from DOM state to network responses"
+order: 4
+framework: "cypress"
+chapter: "assertions"
+---
+
+Assertions are what separate a test from a script. Without them, Cypress just clicks through your app and calls it a pass. This chapter covers every assertion pattern you'll need.
+
+## How Cypress Assertions Work
+
+Cypress uses Chai under the hood. Unlike Jest where you write `expect(value).toBe(x)` as a standalone statement, Cypress assertions are chained directly onto commands using `.should()`:
+
+```typescript
+cy.get('[data-test="username"]').should('be.visible')
+cy.url().should('include', '/inventory')
+```
+
+The key difference: `.should()` is retried automatically. If the assertion fails, Cypress waits and retries for up to 4 seconds (the `defaultCommandTimeout`). This is what makes assertions so reliable — they're not a snapshot check, they're a condition that Cypress polls until it passes or times out.
+
+## Implicit Assertions
+
+Before Cypress even runs your `.should()`, it asserts internally that the element exists. If `cy.get()` can't find the element within the timeout, the test fails — you don't need to write `.should('exist')` explicitly for this.
+
+```typescript
+// Cypress already asserts the element exists before clicking
+cy.get('[data-test="login-button"]').click()
+```
+
+This means a test that has no explicit assertions but uses `cy.get()` is already making existence assertions. Don't rely on this for real test coverage though — always assert the outcome.
+
+## DOM State Assertions
+
+These are the most common:
+
+```typescript
+// Existence
+cy.get('[data-test="error"]').should('exist')
+cy.get('[data-test="shopping-cart-badge"]').should('not.exist')
+
+// Visibility
+cy.get('.inventory_list').should('be.visible')
+cy.get('[data-test="menu"]').should('not.be.visible')
+
+// Text content
+cy.get('[data-test="title"]').should('have.text', 'Products')
+cy.get('[data-test="error"]').should('contain.text', 'Username and password do not match')
+
+// Form values
+cy.get('[data-test="username"]').should('have.value', 'standard_user')
+
+// Element count
+cy.get('.inventory_item').should('have.length', 6)
+
+// CSS class
+cy.get('[data-test="login-button"]').should('have.class', 'btn_action')
+
+// Attribute
+cy.get('a.nav-link').should('have.attr', 'href', '/inventory')
+
+// Input state
+cy.get('[data-test="submit"]').should('be.disabled')
+cy.get('[data-test="submit"]').should('not.be.disabled')
+
+// Checkbox state
+cy.get('[type="checkbox"]').should('be.checked')
+cy.get('[type="checkbox"]').should('not.be.checked')
+```
+
+## URL and Title Assertions
+
+```typescript
+// Partial URL match — use this when query params or trailing slashes might vary
+cy.url().should('include', '/inventory')
+
+// Exact URL match — use this sparingly
+cy.url().should('eq', 'https://www.saucedemo.com/inventory.html')
+
+// Page title
+cy.title().should('eq', 'Swag Labs')
+cy.title().should('include', 'Swag')
+```
+
+## Chaining Multiple Assertions
+
+You can chain multiple `.should()` calls on the same subject, or use `.and()` (which is identical to `.should()`, just reads better):
+
+```typescript
+cy.get('[data-test="error"]')
+  .should('be.visible')
+  .and('have.class', 'error-message-container')
+  .and('contain.text', 'Username and password do not match')
+
+cy.get('[data-test="username"]')
+  .should('be.visible')
+  .and('not.be.disabled')
+  .and('have.attr', 'placeholder', 'Username')
+```
+
+## The expect() API Inside .then()
+
+For assertions on non-element values, or when you need to do more complex logic, use `.then()` to get the value and `expect()` to assert on it:
+
+```typescript
+cy.get('.inventory_item_price')
+  .first()
+  .invoke('text')
+  .then((priceText) => {
+    const price = parseFloat(priceText.replace('$', ''))
+    expect(price).to.be.greaterThan(0)
+    expect(price).to.be.lessThan(100)
+  })
+
+cy.get('.inventory_item').then(($items) => {
+  expect($items).to.have.length(6)
+  expect($items.first().text()).to.include('Sauce Labs')
+})
+```
+
+This gives you access to Chai's full API — `greaterThan`, `lessThan`, `include`, `match` (regex), `deep.equal`, and so on.
+
+## cy.wrap() for Non-DOM Values
+
+When you have a plain JavaScript value that you want to assert on using the `.should()` API instead of `expect()`, use `cy.wrap()`:
+
+```typescript
+const cartCount = 3
+cy.wrap(cartCount).should('equal', 3)
+
+// More practical: wrapping a computed value
+cy.get('.inventory_item_price').invoke('text').then((text) => {
+  cy.wrap(text).should('match', /^\$\d+\.\d{2}$/)
+})
+```
+
+## Asserting on API Responses with cy.intercept()
+
+You can intercept and assert on network requests — useful for verifying your app sent the right data:
+
+```typescript
+cy.intercept('POST', '/api/login').as('loginRequest')
+
+cy.get('[data-test="username"]').type('standard_user')
+cy.get('[data-test="password"]').type('secret_sauce')
+cy.get('[data-test="login-button"]').click()
+
+cy.wait('@loginRequest').then((interception) => {
+  expect(interception.response?.statusCode).to.equal(200)
+  expect(interception.request.body).to.include({ username: 'standard_user' })
+})
+```
+
+SauceDemo doesn't have a real API, but this pattern is standard for any app that makes XHR or fetch calls.
+
+## Negative Assertions
+
+Negative assertions are assertions that something is absent or false. Use them deliberately — they pass immediately if the element is already gone, but also pass if the element never existed:
+
+```typescript
+// After removing from cart, badge disappears
+cy.get('[data-test="remove-sauce-labs-backpack"]').click()
+cy.get('[data-test="shopping-cart-badge"]').should('not.exist')
+
+// After logging out, inventory is not accessible
+cy.get('#logout_sidebar_link').click()
+cy.get('.inventory_list').should('not.be.visible')
+```
+
+One common mistake with negative assertions: don't use `.should('not.exist')` to check something that briefly exists and then disappears. Cypress might catch it in the brief window it exists. Use `.should('not.be.visible')` if it's hidden, `.should('not.exist')` only when it's genuinely removed from the DOM.
+
+## Custom Assertion Messages
+
+When an assertion fails, Cypress shows the assertion in the command log. You can make this more descriptive using the `message` argument:
+
+```typescript
+cy.get('.inventory_item', { timeout: 8000 })
+  .should('have.length', 6)
+
+// Or wrap with a custom log
+cy.log('Asserting all 6 products are loaded')
+cy.get('.inventory_item').should('have.length', 6)
+```
+
+For `.then()` + `expect()`, Chai's second argument is the message:
+
+```typescript
+cy.get('.inventory_item').then(($items) => {
+  expect($items.length, 'product count should be 6').to.equal(6)
+})
+```
+
+## Complete Example
+
+A full test covering the login flow with every assertion type:
+
+```typescript
+describe('Login Assertions', () => {
+  beforeEach(() => {
+    cy.visit('/')
+  })
+
+  it('verifies the login page structure', () => {
+    // Title assertion
+    cy.title().should('eq', 'Swag Labs')
+
+    // URL is at root
+    cy.url().should('include', 'saucedemo.com')
+
+    // Form elements exist and are enabled
+    cy.get('[data-test="username"]')
+      .should('exist')
+      .and('be.visible')
+      .and('not.be.disabled')
+      .and('have.attr', 'placeholder', 'Username')
+
+    cy.get('[data-test="password"]')
+      .should('be.visible')
+      .and('have.attr', 'type', 'password')
+
+    cy.get('[data-test="login-button"]')
+      .should('be.visible')
+      .and('have.value', 'Login')
+  })
+
+  it('shows correct error for wrong credentials', () => {
+    cy.get('[data-test="username"]').type('wrong_user')
+    cy.get('[data-test="password"]').type('wrong_pass')
+    cy.get('[data-test="login-button"]').click()
+
+    // URL should NOT have changed
+    cy.url().should('not.include', '/inventory')
+
+    // Error message visible and correct
+    cy.get('[data-test="error"]')
+      .should('be.visible')
+      .and('contain.text', 'Username and password do not match')
+  })
+
+  it('successfully logs in and lands on inventory', () => {
+    cy.get('[data-test="username"]').type('standard_user')
+    cy.get('[data-test="password"]').type('secret_sauce')
+    cy.get('[data-test="login-button"]').click()
+
+    // URL changed
+    cy.url().should('include', '/inventory')
+
+    // Page title updated
+    cy.title().should('eq', 'Swag Labs')
+
+    // Products loaded
+    cy.get('.inventory_item').should('have.length', 6)
+
+    // Cart is empty
+    cy.get('[data-test="shopping-cart-badge"]').should('not.exist')
+
+    // Prices are formatted correctly
+    cy.get('.inventory_item_price').first().invoke('text').then((price) => {
+      cy.wrap(price).should('match', /^\$\d+\.\d{2}$/)
+    })
+  })
+})
+```
+
+Next chapter: Page Object Model — how to structure your tests so they don't become a mess to maintain.
