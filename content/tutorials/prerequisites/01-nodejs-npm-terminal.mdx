@@ -1,0 +1,216 @@
+---
+title: "Node.js, npm & the Terminal"
+description: "Install Node.js, understand npm, and get comfortable with the terminal commands every tester needs"
+order: 1
+framework: "prerequisites"
+chapter: "nodejs-npm-terminal"
+---
+
+Every automation framework — Playwright, Cypress, WebdriverIO — runs on Node.js. Before you install any of them, you need Node.js, npm, and a working knowledge of the terminal. This chapter gets all of that set up.
+
+## Installing Node.js
+
+The recommended way to install Node.js is through **nvm** (Node Version Manager). It lets you install multiple Node versions and switch between them — essential when different projects need different versions.
+
+**Mac / Linux:**
+
+```bash
+# Install nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# Restart your terminal, then install Node 20 (current LTS)
+nvm install 20
+nvm use 20
+nvm alias default 20
+```
+
+**Windows:** Use [nvm-windows](https://github.com/coreybutler/nvm-windows) — download and run the installer, then:
+
+```bash
+nvm install 20
+nvm use 20
+```
+
+**Verify the installation:**
+
+```bash
+node --version   # should print v20.x.x or higher
+npm --version    # should print 10.x.x or higher
+```
+
+If `node --version` returns "command not found", your shell hasn't picked up nvm yet. Close and reopen your terminal, or run `source ~/.bashrc` (Linux) / `source ~/.zshrc` (Mac).
+
+You need Node 18 or higher for modern test frameworks. Node 20 LTS is the safe choice.
+
+## What npm Is
+
+npm stands for Node Package Manager. It does two things:
+
+1. **Downloads packages** — libraries like Playwright, Cypress, or any utility you need
+2. **Runs scripts** — commands you define in `package.json`
+
+When you install a package, npm creates a `node_modules` folder in your project and downloads everything there. You never edit `node_modules` directly, and you never commit it to git.
+
+## package.json — The Project Manifest
+
+Every Node.js project has a `package.json` file at its root. It's the source of truth for your project: its name, version, dependencies, and the scripts you can run.
+
+Create one with:
+
+```bash
+npm init -y
+```
+
+The `-y` flag accepts all defaults so you don't have to answer prompts. Here's what a real `package.json` looks like for a test project:
+
+```json
+{
+  "name": "my-automation-suite",
+  "version": "1.0.0",
+  "description": "E2E tests for the main application",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "typescript": "^5.4.5"
+  }
+}
+```
+
+The `scripts` section is where you define commands. The `devDependencies` section lists packages needed for development but not production.
+
+## dependencies vs devDependencies
+
+Test frameworks are always `devDependencies` — they're not needed in a production deployment, only during development and CI.
+
+```bash
+# Installs to dependencies (for production code, like a web server)
+npm install express
+
+# Installs to devDependencies (for tooling, tests, linters)
+npm install --save-dev @playwright/test
+npm install --save-dev typescript
+```
+
+When someone clones your repo, they run `npm install` and get both. The distinction matters for deployment pipelines — many CI systems only install `dependencies` when building a production artifact, skipping `devDependencies` to keep the build lean.
+
+## The Key npm Commands
+
+```bash
+# Create a new package.json
+npm init -y
+
+# Install all dependencies listed in package.json
+npm install
+
+# Install a specific package as a devDependency
+npm install --save-dev <package-name>
+
+# Run a script defined in package.json
+npm run test
+npm run test:headed
+
+# The shorthand for "npm run test" is just:
+npm test
+```
+
+## What npx Does
+
+`npx` runs a package without installing it globally. This is how you use framework CLI tools:
+
+```bash
+# Without npx, you'd have to install playwright globally first:
+npm install -g playwright  # don't do this
+
+# With npx, you run the local version directly:
+npx playwright test
+npx playwright install
+```
+
+When you run `npx playwright test`, Node looks for `playwright` in your local `node_modules/.bin` first. This means every project uses the exact version it installed — no global version conflicts.
+
+You'll also see `npx` used to scaffold new projects:
+
+```bash
+# Creates a new Playwright project from scratch
+npm init playwright@latest
+```
+
+## Terminal Basics
+
+If you're not used to the terminal, here are the commands you'll need daily:
+
+```bash
+# Print the current directory (where am I?)
+pwd
+
+# List files in the current directory
+ls          # Mac/Linux
+dir         # Windows (Command Prompt)
+ls          # Windows (PowerShell — same as Mac)
+
+# List files including hidden files
+ls -la      # Mac/Linux (shows .gitignore, .env, etc.)
+
+# Change directory
+cd my-project
+cd ..           # go up one level
+cd ../other     # go up one, then into 'other'
+cd ~            # go to home directory
+
+# Create a directory
+mkdir tests
+mkdir -p tests/e2e/pages  # creates the full path, not just 'tests'
+
+# Clear the terminal screen
+clear    # Mac/Linux
+cls      # Windows
+
+# Stop a running process
+Ctrl + C
+```
+
+Practical workflow when starting a project:
+
+```bash
+mkdir my-test-project
+cd my-test-project
+npm init -y
+npm install --save-dev @playwright/test
+npx playwright install
+```
+
+## Running Scripts
+
+Once you have scripts in `package.json`, you run them with `npm run`:
+
+```bash
+npm run test          # runs "playwright test"
+npm run test:headed   # runs "playwright test --headed"
+npm run test:debug    # runs "playwright test --debug"
+```
+
+Tab completion works in most terminals — type `npm run t` and press Tab to autocomplete to `npm run test`.
+
+## Common Errors
+
+**`node: command not found`**
+Node isn't installed or your shell can't find it. Try reopening the terminal. If using nvm, run `nvm use 20`.
+
+**`npm ERR! code EACCES` (permission denied)**
+You're trying to install globally with `sudo` or the directory permissions are wrong. Never use `sudo npm install`. The fix is to always install locally (`npm install --save-dev`) or fix nvm so it owns the Node directory.
+
+**`npm ERR! Cannot find module`**
+You cloned a repo but didn't run `npm install`. Fix: run `npm install` in the project root.
+
+**`npx: command not found`**
+Your Node installation is old (pre-5.2). Update Node: `nvm install 20 && nvm use 20`.
+
+**`ENOENT: no such file or directory, open 'package.json'`**
+You're running an npm command outside a Node project directory. Run `pwd` to check where you are, then `cd` into the right folder.
+
+Next chapter: the TypeScript syntax you'll actually use in test files — async/await, types, classes, and imports.

@@ -11,6 +11,8 @@ export const metadata: Metadata = {
 
 export default function TutorialsPage() {
   const frameworks = getAllFrameworks();
+  const prerequisites = frameworks.find((fw) => fw.slug === 'prerequisites');
+  const frameworkTutorials = frameworks.filter((fw) => fw.slug !== 'prerequisites');
 
   return (
     <div className="min-h-screen py-12">
@@ -39,10 +41,61 @@ export default function TutorialsPage() {
             </p>
           </div>
 
-          {/* Framework cards */}
+          {/* Prerequisites — Start Here */}
+          {prerequisites && (
+            <div className="mb-10">
+              <div className="rounded-2xl border-2 border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 p-6">
+                <div className="flex items-start justify-between gap-4 mb-1">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">{prerequisites.icon}</span>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-xl font-heading font-bold text-gray-900 dark:text-white">
+                          {prerequisites.title}
+                        </h2>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-600 text-white">
+                          Start Here
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                        {prerequisites.description}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/tutorial/${prerequisites.slug}`}
+                    className="shrink-0 inline-flex items-center gap-1.5 text-sm font-medium text-purple-600 dark:text-purple-400 hover:underline"
+                  >
+                    Begin <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
+                <div className="flex flex-col gap-1 mt-4">
+                  {prerequisites.chapters.map((ch, i) => (
+                    <Link
+                      key={ch.chapter}
+                      href={`/tutorial/${prerequisites.slug}/${ch.chapter}`}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/5 transition-colors group"
+                    >
+                      <span className="text-xs font-mono text-gray-400 w-5 text-right">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                        {ch.title}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Framework tutorials */}
+          <p className="text-xs font-mono text-gray-400 tracking-widest uppercase mb-4">
+            Choose a Framework
+          </p>
           <div className="flex flex-col gap-6">
-            {frameworks.map((fw) => {
-              const isInProgress = fw.chapters.length > 0 && fw.chapters.length < 5;
+            {frameworkTutorials.map((fw) => {
+              const isInProgress = fw.chapters.length > 0 && fw.chapters.length < 8;
               return (
                 <div key={fw.slug} className={`rounded-2xl border p-6 ${fw.color}`}>
                   <div className="flex items-start justify-between gap-4 mb-4">

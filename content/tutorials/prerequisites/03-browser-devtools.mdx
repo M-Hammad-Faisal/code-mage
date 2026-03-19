@@ -1,0 +1,220 @@
+---
+title: "Browser DevTools for Automation"
+description: "Use Chrome DevTools to find reliable selectors, understand the DOM, and debug failing tests"
+order: 3
+framework: "prerequisites"
+chapter: "browser-devtools"
+---
+
+Before you write a test, you need to know what you're selecting. Browser DevTools is your primary tool for inspecting pages, finding element selectors, and understanding why a test might be failing. You'll have it open constantly.
+
+## Opening DevTools
+
+Three ways to open DevTools in Chrome (or any Chromium-based browser):
+
+- Press `F12`
+- Press `Ctrl+Shift+I` (Windows/Linux) or `Cmd+Option+I` (Mac)
+- Right-click any element on the page → **Inspect**
+
+Right-clicking and selecting Inspect is the most useful because DevTools opens with that element already highlighted in the Elements panel.
+
+## The Elements Panel
+
+The Elements panel shows the DOM — the live HTML structure of the page as the browser currently sees it. This is different from the raw HTML source — JavaScript may have added, removed, or modified elements after the page loaded.
+
+**Inspecting a specific element:**
+
+Click the cursor icon in the top-left of DevTools (or press `Ctrl+Shift+C` / `Cmd+Shift+C`), then click any element on the page. DevTools will jump to that element in the DOM tree and highlight it.
+
+**Reading the DOM tree:**
+
+```
+▼ <div class="inventory_item">
+    <div class="inventory_item_name">Sauce Labs Backpack</div>
+    ▼ <div class="pricebar">
+        <div class="inventory_item_price">$29.99</div>
+        <button class="btn_primary" data-test="add-to-cart-sauce-labs-backpack">
+          Add to cart
+        </button>
+      </div>
+  </div>
+```
+
+The indentation shows nesting. A `▼` triangle means the element has children you can expand. Click the triangle to expand or collapse.
+
+## Finding CSS Selectors
+
+A CSS selector identifies one or more elements on the page. Here are the types you'll use:
+
+```css
+/* By class */
+.inventory_item_name
+
+/* By ID */
+#login-button
+
+/* By attribute */
+[data-test="add-to-cart-sauce-labs-backpack"]
+[type="submit"]
+[placeholder="Username"]
+
+/* By tag */
+button
+input
+h1
+
+/* Combining them */
+button[data-test="checkout-button"]
+.inventory_item .btn_primary
+```
+
+In the Elements panel, click an element and look at its attributes in the HTML. That's where you find what's available to select on.
+
+## Why data-test Attributes Are the Best Selectors
+
+When you inspect a real app, you'll see class names like `.btn_primary`, `.sc-kDDrLX`, `.css-1a2b3c`. These are implementation details — they change during refactors, they get renamed by CSS-in-JS tools, they carry no semantic meaning. Selecting on them makes your tests brittle.
+
+`data-test` attributes (also written as `data-testid`, `data-cy`, `data-qa`) are purpose-built for automation:
+
+```html
+<!-- Unstable — class names can change at any time -->
+<button class="btn btn-primary submit-btn">Log In</button>
+
+<!-- Stable — data-test exists specifically for tests -->
+<button data-test="login-button">Log In</button>
+```
+
+When you're writing tests against your own app, ask developers to add `data-test` attributes to every interactive element. It's a 5-minute change that saves hours of debugging.
+
+When working against apps you don't control (like demo sites), use whatever stable attribute exists — often an `id`, a `name` attribute, or a meaningful class name that's unlikely to change.
+
+## Testing Selectors in the Console
+
+Before putting a selector in your test code, verify it works using `document.querySelector()` in the Console tab.
+
+Open the Console tab in DevTools and type:
+
+```javascript
+// Find the first matching element
+document.querySelector('[data-test="login-button"]')
+
+// Find ALL matching elements (returns a NodeList)
+document.querySelectorAll('.inventory_item')
+
+// Check how many results you got
+document.querySelectorAll('.inventory_item').length
+```
+
+If `querySelector` returns `null`, the selector doesn't match anything. If it returns an element, click the returned element in the console — the browser will highlight it on the page so you can confirm it's the right one.
+
+Testing selectors in the console catches errors before they become failing tests. It takes 10 seconds and it's worth doing every time.
+
+```javascript
+// Testing a more specific selector
+document.querySelector('.inventory_item_name')
+// → <div class="inventory_item_name">Sauce Labs Backpack</div>
+
+// Too many results?
+document.querySelectorAll('button').length
+// → 8 — need a more specific selector
+
+// More specific:
+document.querySelector('[data-test="add-to-cart-sauce-labs-backpack"]')
+// → <button ...>Add to cart</button>  ✓
+```
+
+## Copying Selectors from DevTools (and Why You Shouldn't Trust Them)
+
+DevTools has a built-in "Copy selector" feature: right-click an element in the Elements panel → Copy → Copy selector.
+
+It gives you something like:
+
+```css
+#root > div > div.inventory_container > div > div:nth-child(1) > div.pricebar > button
+```
+
+This is terrible. It's fragile, it describes the DOM path rather than the element's identity, and it will break the moment the DOM structure changes at all. Use it only as a last resort, and even then, simplify it.
+
+A better approach: look at the element's attributes yourself and write a meaningful selector.
+
+## The Network Tab
+
+The Network tab shows every HTTP request the page makes — HTML, CSS, JavaScript, API calls, images. For test automation, it's useful for:
+
+**Watching API calls to understand what your app does:**
+
+1. Open Network tab
+2. Perform an action on the page (click a button, submit a form)
+3. Look at the XHR/Fetch requests that appear
+
+This tells you what endpoints the app hits, what the request payload looks like, and what the response contains. Useful when you want to assert on API responses in your tests.
+
+**Filtering by type:**
+
+Click "Fetch/XHR" to see only API calls, hiding all the static assets. Click a request to see its details:
+
+- **Headers tab:** request URL, method (GET/POST), status code
+- **Payload tab:** request body (for POST/PUT requests)
+- **Response tab:** what the server returned
+
+**Checking status codes:**
+
+A red row in the Network tab means a 4xx or 5xx response. If a test is failing because the app isn't loading data, check the Network tab for failed requests.
+
+## The Console Tab
+
+The Console tab shows JavaScript errors and warnings from the page. This matters for automation because:
+
+- A JavaScript error might prevent an element from rendering, causing your test to fail with "element not found"
+- A failed API call logged in the console can explain why data isn't showing up
+- You can run arbitrary JavaScript here to test selectors (as shown above)
+
+When a test fails for no obvious reason, open the Console tab and reproduce the failing action manually. JavaScript errors are often the hidden cause.
+
+## Practical Exercise — Finding Selectors on a Real Site
+
+Open [saucedemo.com](https://www.saucedemo.com) in Chrome and find selectors for these elements. Use both the Elements panel and Console verification.
+
+1. The username input field
+2. The password input field
+3. The login button
+4. The first product name on the inventory page (after logging in)
+5. The "Add to cart" button for the Sauce Labs Backpack specifically
+
+For each one:
+- Inspect the element
+- Find an attribute that makes a good stable selector
+- Verify it with `document.querySelector()` in the Console
+
+You should find that SauceDemo uses `data-test` attributes extensively — `data-test="username"`, `data-test="password"`, `data-test="login-button"`. This makes it an excellent practice site.
+
+## Inspecting Elements with Dynamic States
+
+Some elements only appear when you hover over them (tooltips, dropdown menus). Inspecting them is tricky because moving your mouse to DevTools makes the element disappear.
+
+**The setTimeout trick:**
+
+1. Open the Console tab
+2. Type `setTimeout(() => { debugger; }, 3000)` and press Enter
+3. Quickly trigger the hover state on the page
+4. In 3 seconds, the browser pauses at the debugger statement — the page is frozen
+5. Now switch to the Elements tab and inspect the element while it's still visible
+
+```javascript
+// In the Console — gives you 3 seconds to trigger the hover state
+setTimeout(() => { debugger; }, 3000)
+```
+
+This freezes the entire page with the DOM exactly as it was. Take your time inspecting.
+
+## DevTools Shortcuts Reference
+
+| Action | Windows/Linux | Mac |
+|---|---|---|
+| Open DevTools | `F12` or `Ctrl+Shift+I` | `Cmd+Option+I` |
+| Toggle element picker | `Ctrl+Shift+C` | `Cmd+Shift+C` |
+| Switch to Console | `Ctrl+Shift+J` | `Cmd+Option+J` |
+| Search in Elements | `Ctrl+F` | `Cmd+F` |
+| Clear console | `Ctrl+L` | `Cmd+K` |
+
+Next chapter: testing fundamentals — what E2E tests actually are, how to structure them, and the patterns that prevent flaky tests before they start.

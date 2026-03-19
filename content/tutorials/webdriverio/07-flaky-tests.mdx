@@ -1,0 +1,316 @@
+---
+title: "Flaky Tests & Retry Strategies"
+description: "Diagnose intermittent failures, fix race conditions, and build a reliable WDIO test suite"
+order: 7
+framework: "webdriverio"
+chapter: "flaky-tests"
+---
+
+A flaky test is a test that produces different results on the same code without any code changes. It passes on your machine, fails in CI, passes when you re-run it, fails again on Tuesday. Flakiness is not a minor inconvenience — it erodes trust in the entire test suite. Teams stop acting on red builds because "it's probably just a flaky test."
+
+This chapter is about eliminating that noise.
+
+## Why Tests Go Flaky
+
+Almost all flakiness comes from one of these causes:
+
+1. **Timing** — acting on an element before it's ready
+2. **Shared state** — one test leaves data that breaks the next
+3. **Environment differences** — CI is slower, has different screen dimensions, or has network latency
+4. **Animation** — clicking a button that's still animating into position
+5. **Third-party dependencies** — ads, analytics, or external APIs timing out
+
+## WDIO's Automatic Waiting
+
+WDIO waits automatically before interacting with elements. The `waitforTimeout` config key (in `wdio.conf.ts`) sets how long it waits:
+
+```typescript
+// wdio.conf.ts
+export const config = {
+  waitforTimeout: 5000,  // 5 seconds — the global default
+}
+```
+
+This means `await $('[data-test="login-button"]').click()` doesn't fail the moment the element isn't there. WDIO retries for up to 5 seconds. For slow environments, bump this:
+
+```typescript
+waitforTimeout: 10000,  // 10 seconds for CI or slow apps
+```
+
+## Never Use browser.pause()
+
+`browser.pause()` is a sleep. It waits a fixed number of milliseconds regardless of what the application is doing:
+
+```typescript
+// BAD — waits 2 seconds even if the element is ready in 100ms,
+//        fails if the app is slow and needs 2500ms
+await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+await browser.pause(2000)
+await expect($('[data-test="shopping-cart-badge"]')).toHaveText('1')
+```
+
+Replace every `pause()` with a condition-based wait:
+
+```typescript
+// GOOD — waits exactly as long as needed
+await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+await expect($('[data-test="shopping-cart-badge"]')).toHaveText('1')
+// expect-webdriverio retries this assertion automatically — no explicit wait needed
+```
+
+The only acceptable use of `browser.pause()` is in `browser.debug()` sessions during development, when you want to manually inspect the browser state.
+
+## waitFor* Methods
+
+Use these when automatic waiting isn't enough — for example, when the element exists but shows a loading state before becoming useful:
+
+```typescript
+// Wait for element to exist in the DOM (not necessarily visible)
+await $('[data-test="cart-badge"]').waitForExist({ timeout: 8000 })
+
+// Wait for element to be visible on screen
+await $('[data-test="success-message"]').waitForDisplayed({ timeout: 10000 })
+
+// Wait for element to be clickable (visible + enabled + not obscured)
+await $('[data-test="checkout"]').waitForClickable({ timeout: 6000 })
+
+// Wait for element to become enabled (e.g., submit button after form validation)
+await $('[data-test="finish"]').waitForEnabled({ timeout: 5000 })
+
+// Wait for element to DISAPPEAR — reverse: true inverts the condition
+await $('[data-test="loading-spinner"]').waitForDisplayed({
+  timeout: 15000,
+  reverse: true,
+  timeoutMsg: 'Loading spinner never disappeared — API may be hanging'
+})
+```
+
+Always set `timeoutMsg` on waits that guard important state transitions. The default error messages are generic; custom messages tell you exactly what was being waited for.
+
+## browser.waitUntil() for Custom Conditions
+
+When none of the `waitFor*` methods fit, `waitUntil()` takes any async function:
+
+```typescript
+// Wait for cart to show a specific count
+await browser.waitUntil(
+  async () => {
+    const badge = $('[data-test="shopping-cart-badge"]')
+    if (!(await badge.isDisplayed())) return false
+    return (await badge.getText()) === '3'
+  },
+  {
+    timeout: 8000,
+    timeoutMsg: 'Cart badge never showed 3 items after adding 3 products',
+    interval: 300  // check every 300ms (default: 500ms)
+  }
+)
+
+// Wait for network to settle (using JS to check pending requests)
+await browser.waitUntil(
+  async () => {
+    return await browser.execute(() => {
+      // If your app tracks XHR count, use that — this is illustrative
+      return document.readyState === 'complete'
+    })
+  },
+  { timeout: 10000, timeoutMsg: 'Page did not reach ready state' }
+)
+
+// Wait for URL to change after a redirect
+await browser.waitUntil(
+  async () => (await browser.getUrl()).includes('/inventory'),
+  { timeout: 5000, timeoutMsg: 'Did not redirect to inventory after login' }
+)
+```
+
+## Race Conditions
+
+The most common race condition: clicking an element immediately after navigating to a page, before the JS has bound event listeners.
+
+```typescript
+// FLAKY — click happens before JS is ready
+await browser.url('/inventory.html')
+await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()  // might not respond
+
+// RELIABLE — assert a stable landmark before acting
+await browser.url('/inventory.html')
+await expect($('.inventory_list')).toBeDisplayed()  // waits until inventory loads
+await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+```
+
+Another common pattern: clicking a button that triggers navigation and then immediately asserting on the new page:
+
+```typescript
+// FLAKY — might assert before navigation completes
+await $('[data-test="checkout"]').click()
+await expect($('[data-test="firstName"]')).toBeDisplayed()
+
+// RELIABLE — let the URL assertion gate the next action
+await $('[data-test="checkout"]').click()
+await expect(browser).toHaveUrl(expect.stringContaining('/checkout-step-one'))
+await expect($('[data-test="firstName"]')).toBeDisplayed()
+```
+
+## Stale Element References
+
+Selenium's stale element exception is a classic flakiness source — you find an element, the page re-renders, and now your reference is dead. WDIO handles this better than plain WebDriver: its element proxies re-query automatically on retry. But you can still get stale references if you evaluate elements eagerly:
+
+```typescript
+// RISKY — elements are evaluated at this moment
+const items = await $$('.inventory_item')
+
+// ... some action causes the DOM to re-render ...
+
+// This might throw if the DOM was rebuilt
+const firstName = await items[0].$('.inventory_item_name').getText()
+```
+
+```typescript
+// SAFER — evaluate elements closer to usage
+await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+// Re-query after any DOM mutation
+const badge = $('[data-test="shopping-cart-badge"]')
+await badge.waitForDisplayed()
+const count = await badge.getText()
+```
+
+## bail Config
+
+`bail` in `wdio.conf.ts` controls whether WDIO stops after N failures:
+
+```typescript
+bail: 0,  // run all tests regardless of failures (default)
+bail: 1,  // stop the entire suite after the first failure
+bail: 5,  // stop after 5 failures
+```
+
+In CI on a PR build, `bail: 1` is reasonable — a broken build is a broken build, and you don't need to run 200 more tests to confirm it. During development, `bail: 0` lets you see all failures in one run.
+
+## Retrying Tests
+
+Use test-level retries as a last resort — not as a substitute for fixing the underlying timing issue.
+
+In `wdio.conf.ts` with Mocha:
+
+```typescript
+mochaOpts: {
+  timeout: 60000,
+  retries: 2,  // retry each failing test up to 2 times
+}
+```
+
+To retry only specific tests, use the `wdio-retry-service` package or add `this.retries(2)` inline:
+
+```typescript
+it('should complete checkout (flaky in CI)', async function() {
+  this.retries(2)  // Mocha-specific — retry this test up to 2 times
+
+  await browser.url('/')
+  // ...
+})
+```
+
+The right amount of retries for a well-maintained suite is zero. If you're relying on retries, you have undiagnosed timing issues.
+
+## Debugging Flaky Tests in CI
+
+The most effective CI debugging tool is a screenshot taken on failure. Add this to `wdio.conf.ts`:
+
+```typescript
+afterEach: async function() {
+  if (this.currentTest?.state === 'failed') {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const name = this.currentTest.title
+      .replace(/\s+/g, '-')
+      .replace(/[^a-zA-Z0-9-]/g, '')
+      .toLowerCase()
+
+    await browser.saveScreenshot(`./test-results/screenshots/fail-${name}-${timestamp}.png`)
+  }
+}
+```
+
+Upload the screenshots as CI artifacts (covered in the next chapter).
+
+For video recording, add `wdio-video-reporter`:
+
+```bash
+npm install --save-dev wdio-video-reporter
+```
+
+```typescript
+// wdio.conf.ts
+reporters: [
+  'spec',
+  ['video', {
+    saveAllVideos: false,      // only save for failed tests
+    videoSlowdownMultiplier: 3 // slow down playback for easier review
+  }]
+]
+```
+
+## browser.debug() for Development
+
+`browser.debug()` pauses test execution and opens a REPL in your terminal. You can type WDIO commands interactively:
+
+```typescript
+it('should debug flaky interaction', async () => {
+  await browser.url('/inventory.html')
+  await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+
+  await browser.debug()  // execution pauses here
+
+  // In the terminal REPL, try:
+  // > await $('[data-test="shopping-cart-badge"]').getText()
+  // > await browser.getUrl()
+})
+```
+
+Press Ctrl+C in the REPL to resume test execution. Remove `browser.debug()` calls before committing — they'll hang your CI pipeline indefinitely.
+
+## Network Throttling
+
+For testing slow network conditions:
+
+```typescript
+// Via Chrome DevTools Protocol (Chrome/Edge only)
+await browser.cdp('Network', 'enable', {})
+await browser.cdp('Network', 'emulateNetworkConditions', {
+  offline: false,
+  downloadThroughput: 50 * 1024 / 8,  // 50 KB/s
+  uploadThroughput: 20 * 1024 / 8,    // 20 KB/s
+  latency: 500  // 500ms RTT
+})
+
+// Run your test...
+await browser.url('/inventory.html')
+
+// Reset to normal
+await browser.cdp('Network', 'emulateNetworkConditions', {
+  offline: false,
+  downloadThroughput: -1,
+  uploadThroughput: -1,
+  latency: 0
+})
+```
+
+This is how you reproduce "works locally, fails in CI" — the CI environment often has slower I/O and network.
+
+## Practical Flakiness Checklist
+
+When a test fails intermittently, work through this list:
+
+- [ ] Is there a `browser.pause()` that should be a `waitFor*` call?
+- [ ] Is the test acting on an element before asserting the page it lives on has loaded?
+- [ ] Does the test depend on state left by a previous test? (Each test should set up its own state.)
+- [ ] Is there an animation in progress when the click happens?
+- [ ] Is `waitforTimeout` too low for the CI environment?
+- [ ] Is the element inside an iframe the test hasn't switched into?
+- [ ] Does the test create data that isn't cleaned up, poisoning the next run?
+- [ ] Is a third-party script (analytics, ads) interfering with element positions or events?
+- [ ] Does the assertion use `expect-webdriverio` (auto-retrying) rather than a one-shot comparison?
+
+Fixing the root cause is always better than adding a retry. A retry hides the problem; fixing it removes it.
+
+Next chapter: CI/CD integration — GitHub Actions, Allure reports, and running tests in parallel across browsers.

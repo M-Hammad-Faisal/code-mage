@@ -1,0 +1,346 @@
+---
+title: "Network Requests & Advanced Interactions"
+description: "Intercept and stub API calls, handle file uploads, iframes, and other tricky scenarios in Cypress"
+order: 6
+framework: "cypress"
+chapter: "network-and-advanced"
+---
+
+`cy.intercept()` is the most powerful feature in Cypress. Once you can control the network, you control the test environment completely.
+
+## cy.intercept() Basics
+
+`cy.intercept()` hooks into the browser's network layer before any request leaves. You can spy on requests without changing them, modify responses on the fly, or replace them entirely with fixture data.
+
+```typescript
+// Spy on a request — don't modify it, just watch
+cy.intercept('GET', '/api/products').as('getProducts')
+
+// Stub with inline data
+cy.intercept('GET', '/api/products', {
+  statusCode: 200,
+  body: [{ id: 1, name: 'Fake Product', price: 9.99 }],
+})
+
+// Stub with a fixture file
+cy.intercept('GET', '/api/products', { fixture: 'products.json' }).as('getProducts')
+```
+
+The `.as()` call gives the intercept an alias so you can reference it later.
+
+## Waiting for Requests
+
+The most common use: wait for an API call to complete before asserting on the result. This eliminates the race condition where you assert before data has loaded.
+
+```typescript
+it('loads the product list from the API', () => {
+  cy.intercept('GET', '/api/inventory').as('getInventory')
+
+  cy.visit('/')
+  loginPage.login('standard_user', 'secret_sauce')
+
+  // Wait for the network request to complete — then assert
+  cy.wait('@getInventory')
+  cy.get('.inventory_item').should('have.length', 6)
+})
+```
+
+Without `cy.wait('@getInventory')`, you're asserting on the DOM immediately after login — before the API response has come back and rendered. That's a flaky test waiting to happen.
+
+## Asserting on the Request and Response
+
+`cy.wait()` yields the interception object, which contains the full request and response:
+
+```typescript
+cy.intercept('POST', '/api/checkout').as('checkout')
+
+// ... trigger checkout in the UI ...
+
+cy.wait('@checkout').then((interception) => {
+  // Assert on the request
+  expect(interception.request.headers['content-type']).to.include('application/json')
+  expect(interception.request.body).to.deep.include({ userId: 'standard_user' })
+
+  // Assert on the response
+  expect(interception.response?.statusCode).to.equal(200)
+  expect(interception.response?.body).to.have.property('orderId')
+})
+```
+
+## Stubbing Error States
+
+One of the best uses of `cy.intercept()` is testing how your app handles API errors — something you can't easily do manually:
+
+```typescript
+it('shows an error message when the API fails', () => {
+  cy.intercept('GET', '/api/inventory', {
+    statusCode: 500,
+    body: { error: 'Internal Server Error' },
+  }).as('getInventory')
+
+  cy.visit('/inventory')
+  cy.wait('@getInventory')
+
+  cy.get('[data-test="error-banner"]')
+    .should('be.visible')
+    .and('contain.text', 'Something went wrong')
+})
+```
+
+## Fixtures
+
+Fixtures are static JSON files in `cypress/fixtures/` that you use as stubbed API responses.
+
+```json
+// cypress/fixtures/inventory.json
+[
+  {
+    "id": 1,
+    "name": "Sauce Labs Backpack",
+    "price": 29.99,
+    "description": "carry.allTheThings() with the sleek, streamlined Sly Pack"
+  },
+  {
+    "id": 2,
+    "name": "Sauce Labs Bike Light",
+    "price": 9.99,
+    "description": "A red light isn't the desired state in testing but it sure helps in the real world"
+  }
+]
+```
+
+Use it in an intercept:
+
+```typescript
+cy.intercept('GET', '/api/inventory', { fixture: 'inventory.json' }).as('getInventory')
+```
+
+Or load it directly with `cy.fixture()`:
+
+```typescript
+cy.fixture('inventory.json').then((products) => {
+  expect(products).to.have.length(2)
+  expect(products[0].name).to.equal('Sauce Labs Backpack')
+})
+```
+
+## Custom Commands
+
+Repeating `cy.get('[data-test="username"]').type('standard_user')` across every test is the kind of noise that custom commands eliminate. Custom commands extend Cypress's `cy` object.
+
+Add commands to `cypress/support/commands.ts`:
+
+```typescript
+// cypress/support/commands.ts
+
+Cypress.Commands.add('login', (username: string, password: string) => {
+  cy.visit('/')
+  cy.get('[data-test="username"]').type(username)
+  cy.get('[data-test="password"]').type(password)
+  cy.get('[data-test="login-button"]').click()
+  cy.url().should('include', '/inventory')
+})
+
+Cypress.Commands.add('addToCart', (productSlug: string) => {
+  cy.get(`[data-test="add-to-cart-${productSlug}"]`).click()
+})
+```
+
+### TypeScript Declarations for Custom Commands
+
+Without type declarations, TypeScript won't know `cy.login()` exists. Add them to a declaration file:
+
+```typescript
+// cypress/support/index.d.ts
+
+declare namespace Cypress {
+  interface Chainable {
+    login(username: string, password: string): Chainable<void>
+    addToCart(productSlug: string): Chainable<void>
+  }
+}
+```
+
+Make sure `cypress/support/e2e.ts` imports your commands file:
+
+```typescript
+// cypress/support/e2e.ts
+import './commands'
+```
+
+Now in your tests:
+
+```typescript
+it('adds a product to the cart', () => {
+  cy.login('standard_user', 'secret_sauce')
+  cy.addToCart('sauce-labs-backpack')
+  cy.get('[data-test="shopping-cart-badge"]').should('have.text', '1')
+})
+```
+
+## cy.session() — Cache Login State
+
+`cy.session()` is a big performance win. Instead of running the full login flow before every test, it caches the browser session (cookies, localStorage) and restores it in subsequent tests.
+
+```typescript
+// cypress/support/commands.ts
+
+Cypress.Commands.add('loginWithSession', (username: string, password: string) => {
+  cy.session([username, password], () => {
+    cy.visit('/')
+    cy.get('[data-test="username"]').type(username)
+    cy.get('[data-test="password"]').type(password)
+    cy.get('[data-test="login-button"]').click()
+    cy.url().should('include', '/inventory')
+  })
+})
+```
+
+```typescript
+beforeEach(() => {
+  cy.loginWithSession('standard_user', 'secret_sauce')
+  cy.visit('/inventory')
+})
+```
+
+The first test in a run performs the login. Every subsequent test restores the cached session — no extra network roundtrips.
+
+## Handling Alerts and Confirms
+
+Browser `alert()`, `confirm()`, and `prompt()` dialogs are handled with `cy.on()`:
+
+```typescript
+// Accept an alert
+cy.on('window:alert', (text) => {
+  expect(text).to.equal('Your order has been placed!')
+})
+
+// Accept a confirm dialog (return true to confirm, false to cancel)
+cy.on('window:confirm', () => true)
+
+// Cancel a confirm dialog
+cy.on('window:confirm', () => false)
+```
+
+Cypress auto-accepts alerts by default. You only need `cy.on('window:alert')` if you want to assert on the alert text.
+
+## Cookies and Local Storage
+
+```typescript
+// Get a cookie
+cy.getCookie('session_id').should('exist')
+
+// Set a cookie (useful for pre-authenticated state)
+cy.setCookie('session_id', 'abc123')
+
+// Clear all cookies (usually in afterEach or beforeEach)
+cy.clearCookies()
+
+// Local storage
+cy.clearLocalStorage()
+
+cy.window().then((win) => {
+  win.localStorage.setItem('user', JSON.stringify({ id: 1 }))
+})
+```
+
+## File Uploads
+
+Cypress doesn't support file uploads natively. Use the `cypress-file-upload` plugin:
+
+```bash
+npm install --save-dev cypress-file-upload
+```
+
+```typescript
+// cypress/support/commands.ts
+import 'cypress-file-upload'
+```
+
+```typescript
+// In your test
+cy.get('[data-test="file-input"]').attachFile('test-document.pdf')
+cy.get('[data-test="upload-button"]').click()
+cy.get('[data-test="upload-success"]').should('be.visible')
+```
+
+Put test files in `cypress/fixtures/`.
+
+## Iframes
+
+Iframes are a known pain point in Cypress. The built-in commands don't cross iframe boundaries. The workaround is to use `.its()` and `.then()` to get the iframe's document:
+
+```typescript
+// Get content inside an iframe
+cy.get('[data-test="payment-iframe"]')
+  .its('0.contentDocument.body')
+  .should('not.be.empty')
+  .then(cy.wrap)
+  .find('[name="card-number"]')
+  .type('4242424242424242')
+```
+
+This is brittle and breaks with cross-origin iframes. For serious iframe testing, consider the `cypress-iframe` plugin, which adds a `cy.frameLoaded()` and `cy.iframe()` command.
+
+## Environment Variables
+
+Store environment-specific values (base URLs, credentials, API keys) in `cypress.env.json`:
+
+```json
+{
+  "username": "standard_user",
+  "password": "secret_sauce",
+  "apiKey": "test-api-key-123"
+}
+```
+
+Access them in tests:
+
+```typescript
+cy.login(Cypress.env('username'), Cypress.env('password'))
+```
+
+Never commit `cypress.env.json` to version control. Add it to `.gitignore`. Pass secrets in CI as environment variables instead — Cypress picks up any variable prefixed with `CYPRESS_`:
+
+```bash
+CYPRESS_password=secret_sauce npx cypress run
+```
+
+## Complete Example: Mocking an API Response
+
+```typescript
+describe('Inventory with mocked API', () => {
+  beforeEach(() => {
+    // Stub the inventory API before visiting the page
+    cy.intercept('GET', '**/inventory*', {
+      fixture: 'inventory.json',
+    }).as('getInventory')
+
+    cy.loginWithSession('standard_user', 'secret_sauce')
+    cy.visit('/inventory')
+    cy.wait('@getInventory')
+  })
+
+  it('renders products from the fixture data', () => {
+    cy.fixture('inventory.json').then((products) => {
+      cy.get('.inventory_item').should('have.length', products.length)
+      cy.get('.inventory_item_name').first().should('have.text', products[0].name)
+    })
+  })
+
+  it('handles empty inventory gracefully', () => {
+    cy.intercept('GET', '**/inventory*', {
+      statusCode: 200,
+      body: [],
+    }).as('emptyInventory')
+
+    cy.visit('/inventory')
+    cy.wait('@emptyInventory')
+
+    cy.get('.inventory_item').should('not.exist')
+    cy.get('[data-test="empty-state"]').should('be.visible')
+  })
+})
+```
+
+Next chapter: flaky tests — why they happen and how to eliminate them.

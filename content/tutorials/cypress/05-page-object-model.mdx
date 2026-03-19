@@ -1,0 +1,326 @@
+---
+title: "Page Object Model"
+description: "Organize your Cypress tests with Page Objects so they scale without becoming a maintenance nightmare"
+order: 5
+framework: "cypress"
+chapter: "page-object-model"
+---
+
+Without structure, tests get messy fast. Selectors are copy-pasted across files, one UI change breaks twenty tests, and nobody wants to touch the test suite. Page Object Model (POM) solves this.
+
+## The Problem Without POM
+
+Look at this test file after a few weeks of growth:
+
+```typescript
+// login.cy.ts
+cy.get('[data-test="username"]').type('standard_user')
+cy.get('[data-test="password"]').type('secret_sauce')
+cy.get('[data-test="login-button"]').click()
+
+// cart.cy.ts
+cy.get('[data-test="username"]').type('standard_user')
+cy.get('[data-test="password"]').type('secret_sauce')
+cy.get('[data-test="login-button"]').click()
+// ... repeated in every single test file
+
+// checkout.cy.ts
+cy.get('[data-test="username"]').type('standard_user')
+cy.get('[data-test="password"]').type('secret_sauce')
+cy.get('[data-test="login-button"]').click()
+```
+
+SauceDemo changes `[data-test="login-button"]` to `[data-test="login-btn"]`. Now you're doing a find-and-replace across every test file. POM puts selectors in one place.
+
+## POM in Cypress: Plain ES6 Classes
+
+Cypress has no built-in POM API. You just write TypeScript classes. That's it.
+
+Create a `cypress/pages/` directory and put your page classes there:
+
+```
+cypress/
+  pages/
+    LoginPage.ts
+    InventoryPage.ts
+    CartPage.ts
+  e2e/
+    login.cy.ts
+    cart.cy.ts
+```
+
+## LoginPage
+
+```typescript
+// cypress/pages/LoginPage.ts
+
+class LoginPage {
+  // Selectors as getters — they call cy.get() fresh each time
+  get usernameInput() {
+    return cy.get('[data-test="username"]')
+  }
+
+  get passwordInput() {
+    return cy.get('[data-test="password"]')
+  }
+
+  get loginButton() {
+    return cy.get('[data-test="login-button"]')
+  }
+
+  get errorMessage() {
+    return cy.get('[data-test="error"]')
+  }
+
+  // Action methods — what a user does on this page
+  visit() {
+    cy.visit('/')
+    return this
+  }
+
+  login(username: string, password: string) {
+    this.usernameInput.type(username)
+    this.passwordInput.type(password)
+    this.loginButton.click()
+    return this
+  }
+}
+
+export const loginPage = new LoginPage()
+```
+
+## InventoryPage
+
+```typescript
+// cypress/pages/InventoryPage.ts
+
+class InventoryPage {
+  get pageTitle() {
+    return cy.get('[data-test="title"]')
+  }
+
+  get inventoryItems() {
+    return cy.get('.inventory_item')
+  }
+
+  get cartBadge() {
+    return cy.get('[data-test="shopping-cart-badge"]')
+  }
+
+  get cartLink() {
+    return cy.get('[data-test="shopping-cart-link"]')
+  }
+
+  get sortDropdown() {
+    return cy.get('[data-test="product_sort_container"]')
+  }
+
+  addToCartByName(productName: string) {
+    // Convert product name to the data-test format SauceDemo uses
+    const slug = productName.toLowerCase().replace(/\s+/g, '-')
+    cy.get(`[data-test="add-to-cart-${slug}"]`).click()
+    return this
+  }
+
+  sortBy(option: 'az' | 'za' | 'lohi' | 'hilo') {
+    this.sortDropdown.select(option)
+    return this
+  }
+
+  goToCart() {
+    this.cartLink.click()
+    return this
+  }
+}
+
+export const inventoryPage = new InventoryPage()
+```
+
+## CartPage
+
+```typescript
+// cypress/pages/CartPage.ts
+
+class CartPage {
+  get cartItems() {
+    return cy.get('.cart_item')
+  }
+
+  get checkoutButton() {
+    return cy.get('[data-test="checkout"]')
+  }
+
+  get continueShoppingButton() {
+    return cy.get('[data-test="continue-shopping"]')
+  }
+
+  removeItem(productName: string) {
+    const slug = productName.toLowerCase().replace(/\s+/g, '-')
+    cy.get(`[data-test="remove-${slug}"]`).click()
+    return this
+  }
+
+  proceedToCheckout() {
+    this.checkoutButton.click()
+    return this
+  }
+
+  getItemNames() {
+    return cy.get('.inventory_item_name')
+  }
+}
+
+export const cartPage = new CartPage()
+```
+
+## Using Pages in Tests
+
+Now your test files become readable:
+
+```typescript
+// cypress/e2e/login.cy.ts
+import { loginPage } from '../pages/LoginPage'
+
+describe('Login', () => {
+  beforeEach(() => {
+    loginPage.visit()
+  })
+
+  it('logs in with valid credentials', () => {
+    loginPage.login('standard_user', 'secret_sauce')
+    cy.url().should('include', '/inventory')
+  })
+
+  it('shows error for invalid credentials', () => {
+    loginPage.login('wrong_user', 'wrong_pass')
+    loginPage.errorMessage
+      .should('be.visible')
+      .and('contain.text', 'Username and password do not match')
+  })
+})
+```
+
+```typescript
+// cypress/e2e/cart.cy.ts
+import { loginPage } from '../pages/LoginPage'
+import { inventoryPage } from '../pages/InventoryPage'
+import { cartPage } from '../pages/CartPage'
+
+describe('Shopping Cart', () => {
+  beforeEach(() => {
+    loginPage.visit()
+    loginPage.login('standard_user', 'secret_sauce')
+    cy.url().should('include', '/inventory')
+  })
+
+  it('adds a product and verifies it in the cart', () => {
+    inventoryPage.addToCartByName('sauce-labs-backpack')
+    inventoryPage.cartBadge.should('have.text', '1')
+    inventoryPage.goToCart()
+
+    cartPage.cartItems.should('have.length', 1)
+    cartPage.getItemNames().should('contain.text', 'Sauce Labs Backpack')
+  })
+
+  it('removes a product from the cart', () => {
+    inventoryPage.addToCartByName('sauce-labs-backpack')
+    inventoryPage.goToCart()
+
+    cartPage.removeItem('sauce-labs-backpack')
+    cartPage.cartItems.should('not.exist')
+  })
+})
+```
+
+The tests read like a description of user behaviour. No raw selectors in sight.
+
+## Critical Mistake: Don't Store Elements in Variables
+
+This is the most common POM mistake in Cypress:
+
+```typescript
+// WRONG — never do this
+class LoginPage {
+  usernameInput = cy.get('[data-test="username"]') // runs cy.get() at class definition time
+}
+
+// Also WRONG — variables go stale between commands
+it('bad example', () => {
+  const input = cy.get('[data-test="username"]')
+  // ... do something else that changes the DOM ...
+  input.type('text') // this may be working with a detached element
+})
+```
+
+Cypress elements are not live references. They're command chains that query the DOM when executed. Always use getters (functions that return a `cy.get()` call), never store the result:
+
+```typescript
+// CORRECT — getter calls cy.get() fresh every time it's accessed
+get usernameInput() {
+  return cy.get('[data-test="username"]')
+}
+```
+
+## Returning `this` for Chaining
+
+If you return `this` from action methods, you can chain them:
+
+```typescript
+loginPage
+  .visit()
+  .login('standard_user', 'secret_sauce')
+```
+
+This is optional but makes the test reading flow nicely. Don't overdo it — sometimes a method legitimately shouldn't return `this` (e.g., `goToCart()` navigates away, so returning `this` for the login page would be misleading).
+
+## Before and After: A Real Refactor
+
+Here's the messy test from chapter 3 rewritten with POM:
+
+**Before:**
+
+```typescript
+it('completes the full purchase flow', () => {
+  cy.visit('/')
+  cy.get('[data-test="username"]').type('standard_user')
+  cy.get('[data-test="password"]').type('secret_sauce')
+  cy.get('[data-test="login-button"]').click()
+  cy.url().should('include', '/inventory')
+  cy.get('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+  cy.get('[data-test="shopping-cart-badge"]').should('have.text', '1')
+  cy.get('[data-test="shopping-cart-link"]').click()
+  cy.url().should('include', '/cart')
+  cy.get('.cart_item').should('have.length', 1)
+  cy.get('[data-test="checkout"]').click()
+})
+```
+
+**After:**
+
+```typescript
+it('completes the full purchase flow', () => {
+  loginPage.visit().login('standard_user', 'secret_sauce')
+  cy.url().should('include', '/inventory')
+
+  inventoryPage.addToCartByName('sauce-labs-backpack')
+  inventoryPage.cartBadge.should('have.text', '1')
+  inventoryPage.goToCart()
+
+  cy.url().should('include', '/cart')
+  cartPage.cartItems.should('have.length', 1)
+  cartPage.proceedToCheckout()
+})
+```
+
+Same behaviour, much easier to read and maintain.
+
+## Where to Put Page Files
+
+Two common conventions:
+
+- `cypress/pages/` — simple and clean, works for most projects
+- `cypress/support/pages/` — if you want page objects next to custom commands and support files
+
+Either works. Pick one and be consistent. The important thing is that page files are not in `cypress/e2e/` — they're support code, not test files.
+
+Next chapter: network interception, custom commands, and handling advanced browser scenarios.
