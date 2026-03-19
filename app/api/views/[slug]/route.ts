@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 // GET — fetch view count + reactions for a slug
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -20,6 +21,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 
 // POST — increment view or reaction
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const ip = getClientIp(req);
+  const { allowed } = checkRateLimit(ip, 30, 60_000); // 30 req/min per IP
+  if (!allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   const { slug } = await params;
   const supabase = createServiceClient();
 
