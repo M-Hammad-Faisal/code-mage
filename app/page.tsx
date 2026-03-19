@@ -72,7 +72,10 @@ export default function HomePage() {
               {[
                 { label: 'Blog Posts', value: `${getAllPosts().length}+` },
                 { label: 'Topics Covered', value: `${categories.length}+` },
-                { label: 'Years Experience', value: '2+' },
+                {
+                  label: 'Years Experience',
+                  value: `${new Date().getFullYear() - SITE.author.careerStartYear}+`,
+                },
               ].map((s) => (
                 <div key={s.label}>
                   <p className="text-2xl font-heading font-bold text-gray-900 dark:text-white">

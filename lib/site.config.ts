@@ -17,6 +17,7 @@ export const SITE = {
     shortBio:
       'Test Automation Engineer at Arbisoft. I build QA frameworks, ship side projects, and write about code on the internet.',
     avatar: '/brand/hammad-profile.jpg',
+    careerStartYear: 2022,
   },
 
   socials: {

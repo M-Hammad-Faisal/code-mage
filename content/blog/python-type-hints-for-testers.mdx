@@ -1,0 +1,201 @@
+---
+title: 'Python Type Hints: A Practical Guide for Test Engineers'
+date: '2026-02-03'
+category: 'Python Deep Dive'
+tags: ['python', 'type-hints', 'testing', 'best-practices']
+excerpt: 'Type hints are not just for application code. Used well, they make your test helpers, fixtures, and page objects dramatically easier to maintain.'
+featured: true
+---
+
+Type hints in Python are optional — the interpreter ignores them at runtime. That is why so many test codebases skip them entirely. Big mistake.
+
+When your test suite grows to hundreds of files, the question is not "will I remember what this function returns?" It is "will the person reading this six months from now?" Type hints are documentation that the editor can verify.
+
+Here is what I use in practice.
+
+## The Basics You Actually Need
+
+You do not need to know every corner of the `typing` module. These cover 90% of test code:
+
+```python
+# Basic types
+name: str = "standard_user"
+timeout: int = 5000
+rate: float = 0.05
+is_logged_in: bool = False
+
+# Collections
+tags: list[str] = ["smoke", "login"]
+config: dict[str, str] = {"browser": "chromium"}
+
+# Optional — the value might be None
+user_id: str | None = None  # Python 3.10+
+# or the older style:
+from typing import Optional
+user_id: Optional[str] = None
+```
+
+## Annotating Functions — The Most Important Part
+
+The biggest payoff comes from annotating function signatures. Your editor can then tell you exactly what a helper returns and what it expects.
+
+```python
+def get_auth_token(username: str, password: str) -> str:
+    """Returns a bearer token for API authentication."""
+    response = requests.post("/api/login", json={
+        "username": username,
+        "password": password
+    })
+    return response.json()["token"]
+```
+
+Now when you call `get_auth_token(...)`, your IDE shows the return type and catches this bug before it runs:
+
+```python
+token = get_auth_token("admin", "secret123")
+token.split()  # Fine — str has split()
+token.keys()   # ❌ Editor warns: str has no attribute 'keys'
+```
+
+## Page Objects with Type Hints
+
+This is where it really pays off. A typed page object makes every method self-documenting:
+
+```python
+from playwright.sync_api import Page, Locator
+
+class LoginPage:
+    def __init__(self, page: Page) -> None:
+        self.page = page
+        self.username_input: Locator = page.locator("#user-name")
+        self.password_input: Locator = page.locator("#password")
+        self.login_button: Locator = page.locator("#login-button")
+        self.error_message: Locator = page.locator('[data-test="error"]')
+
+    def login(self, username: str, password: str) -> None:
+        self.username_input.fill(username)
+        self.password_input.fill(password)
+        self.login_button.click()
+
+    def get_error_text(self) -> str | None:
+        if self.error_message.is_visible():
+            return self.error_message.text_content()
+        return None
+```
+
+When someone new reads this, `get_error_text() -> str | None` immediately tells them: "this might not return anything, check for None." No comment needed.
+
+## TypedDict for Test Data
+
+Instead of plain dicts for test data, use `TypedDict`:
+
+```python
+from typing import TypedDict
+
+class UserCredentials(TypedDict):
+    username: str
+    password: str
+    role: str
+
+USERS: dict[str, UserCredentials] = {
+    "standard": {
+        "username": "standard_user",
+        "password": "secret_sauce",
+        "role": "buyer"
+    },
+    "admin": {
+        "username": "admin_user",
+        "password": "secret_sauce",
+        "role": "admin"
+    }
+}
+```
+
+Now `USERS["standard"]` gives you full autocomplete on `username`, `password`, `role`. No more typos in test data keys.
+
+## Dataclasses for Complex Test Data
+
+When `TypedDict` is not enough, use dataclasses:
+
+```python
+from dataclasses import dataclass, field
+
+@dataclass
+class ProductTestData:
+    name: str
+    price: float
+    category: str
+    in_stock: bool = True
+    tags: list[str] = field(default_factory=list)
+
+backpack = ProductTestData(
+    name="Sauce Labs Backpack",
+    price=29.99,
+    category="bags"
+)
+```
+
+Dataclasses give you `__repr__` for free (great for test failure messages), type checking, and IDE support.
+
+## Typing Fixtures in pytest
+
+pytest fixtures can also be typed:
+
+```python
+import pytest
+from playwright.sync_api import Page, Browser
+
+@pytest.fixture
+def authenticated_page(page: Page) -> Page:
+    """Returns a Page instance already logged in as standard_user."""
+    page.goto("/")
+    page.fill("#user-name", "standard_user")
+    page.fill("#password", "secret_sauce")
+    page.click("#login-button")
+    page.wait_for_url("**/inventory.html")
+    return page
+```
+
+The return type `-> Page` tells pytest and your IDE exactly what this fixture yields, enabling proper autocomplete in every test that uses it.
+
+## Running mypy in CI
+
+Having type hints without checking them is like having tests without running them. Add mypy to your pre-commit or CI:
+
+```bash
+pip install mypy
+mypy tests/ --ignore-missing-imports
+```
+
+Or add it to your `pyproject.toml`:
+
+```toml
+[tool.mypy]
+python_version = "3.12"
+strict = false
+ignore_missing_imports = true
+```
+
+Start with `strict = false` and tighten it gradually. Trying to type everything strictly on day one is a trap.
+
+## What Not to Over-Type
+
+Type hints add value when they communicate non-obvious things. Skip them when they are pure noise:
+
+```python
+# Noise — the return type is obvious
+def add(a: int, b: int) -> int:
+    return a + b
+
+# Useful — the return type is not obvious
+def parse_response(data: dict[str, object]) -> list[ProductTestData]:
+    ...
+```
+
+Also: do not type-annotate everything inside test functions. Type the *infrastructure* (fixtures, helpers, page objects) and keep the test body readable.
+
+## The Payoff
+
+On a team project, I introduced TypedDict for our test data and typed all page object methods. Three months later a new engineer joined, set up the project, and said "I can actually read this codebase." That is the metric that matters.
+
+Type hints are not about being clever. They are about writing code that survives the test of time (and new team members).
