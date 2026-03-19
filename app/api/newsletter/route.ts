@@ -1,8 +1,18 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const { allowed } = checkRateLimit(ip, 3, 10 * 60_000); // 3 req per 10 min per IP
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait a few minutes and try again.' },
+      { status: 429 }
+    );
+  }
+
   try {
     const { email, source } = await req.json();
 

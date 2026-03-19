@@ -64,6 +64,7 @@ export function NewsletterForm({ source = 'site', compact = false }: Props) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="your@email.com"
+            aria-label="Email address"
             required
             disabled={status === 'loading'}
             className={`w-full pl-9 pr-3 rounded-xl border border-gray-700 bg-gray-900 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all disabled:opacity-60 ${compact ? 'py-2' : 'py-2.5'}`}
@@ -72,6 +73,7 @@ export function NewsletterForm({ source = 'site', compact = false }: Props) {
         <motion.button
           type="submit"
           disabled={status === 'loading'}
+          aria-label={compact ? 'Subscribe to newsletter' : undefined}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
           className={`flex items-center gap-1.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium text-sm transition-all disabled:opacity-60 ${compact ? 'py-2' : 'py-2.5'}`}

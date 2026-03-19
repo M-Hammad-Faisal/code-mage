@@ -69,9 +69,9 @@ export function Footer() {
 
           {/* Quick links */}
           <div className="lg:col-span-3">
-            <h4 className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4">
+            <p className="text-xs font-mono text-gray-400 uppercase tracking-widest mb-4">
               Navigation
-            </h4>
+            </p>
             <ul className="space-y-2">
               {NAV_LINKS.map((l) => (
                 <li key={l.href}>
@@ -88,9 +88,9 @@ export function Footer() {
 
           {/* Contact */}
           <div className="lg:col-span-4">
-            <h4 className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4">
+            <p className="text-xs font-mono text-gray-400 uppercase tracking-widest mb-4">
               Contact
-            </h4>
+            </p>
             <div className="space-y-2 text-sm text-gray-400">
               <p>
                 <a
@@ -129,11 +129,11 @@ export function Footer() {
       {/* Bottom bar */}
       <div className="border-t border-gray-800 dark:border-gray-900">
         <div className="container-max py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-400">
             © {new Date().getFullYear()} {SITE.author.name}. All rights reserved.
           </p>
-          <p className="text-xs text-gray-600">
-            Made with <span className="text-red-500">❤</span> in Lahore, Pakistan
+          <p className="text-xs text-gray-400">
+            Made with <span className="text-red-400">❤</span> in Lahore, Pakistan
           </p>
         </div>
       </div>

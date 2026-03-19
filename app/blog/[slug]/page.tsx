@@ -9,6 +9,7 @@ import { getMDXComponents } from '@/lib/mdx-components';
 import { SITE, CATEGORY_COLORS } from '@/lib/site.config';
 import { ViewCounter } from '@/components/ViewCounter';
 import { ReactionBar } from '@/components/ReactionBar';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -22,11 +23,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = getPostBySlug(slug);
   if (!post) return { title: 'Post Not Found' };
+  const url = `${SITE.url}/blog/${slug}`;
   return {
     title: post.title,
     description: post.excerpt,
     authors: [{ name: SITE.author.name }],
+    alternates: { canonical: url },
     openGraph: {
+      url,
       title: post.title,
       description: post.excerpt,
       type: 'article',
@@ -65,7 +69,9 @@ export default async function BlogPostPage({ params }: Props) {
               <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${catColor}`}>
                 {post.category}
               </span>
-              <ViewCounter slug={slug} />
+              <ErrorBoundary>
+                <ViewCounter slug={slug} />
+              </ErrorBoundary>
             </div>
 
             <h1 className="text-3xl md:text-4xl font-heading font-bold text-gray-900 dark:text-white tracking-tight leading-tight mb-4">
@@ -118,7 +124,9 @@ export default async function BlogPostPage({ params }: Props) {
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Found this helpful?
             </p>
-            <ReactionBar slug={slug} />
+            <ErrorBoundary>
+              <ReactionBar slug={slug} />
+            </ErrorBoundary>
           </div>
 
           {/* Author */}

@@ -5,6 +5,7 @@ import { MDXRemote } from 'next-mdx-remote/rsc';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { FRAMEWORKS, getFrameworkChapters, getChapter } from '@/lib/tutorials';
 import { getMDXComponents } from '@/lib/mdx-components';
+import { SITE } from '@/lib/site.config';
 
 interface Props {
   params: Promise<{ framework: string; chapter: string }>;
@@ -26,9 +27,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const ch = getChapter(framework, chapter);
   if (!ch) return { title: 'Not Found' };
   const fw = FRAMEWORKS[framework];
+  const url = `${SITE.url}/tutorial/${framework}/${chapter}`;
   return {
     title: `${ch.title} — ${fw?.title} Tutorial — Code Mage`,
     description: ch.description,
+    alternates: { canonical: url },
+    openGraph: { url, title: ch.title, description: ch.description },
   };
 }
 
