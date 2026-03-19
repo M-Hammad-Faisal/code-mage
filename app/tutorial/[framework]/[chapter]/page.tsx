@@ -226,7 +226,14 @@ export default async function ChapterPage({ params }: Props) {
           </div>
         </div>
       </div>
-      <BackToTop />
+      <BackToTop
+        prev={
+          prev ? { href: `/tutorial/${framework}/${prev.chapter}`, title: prev.title } : undefined
+        }
+        next={
+          next ? { href: `/tutorial/${framework}/${next.chapter}`, title: next.title } : undefined
+        }
+      />
     </div>
   );
 }

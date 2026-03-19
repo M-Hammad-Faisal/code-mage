@@ -183,7 +183,10 @@ export default async function BlogPostPage({ params }: Props) {
           )}
         </div>
       </div>
-      <BackToTop />
+      <BackToTop
+        prev={prev ? { href: `/blog/${prev.slug}`, title: prev.title } : undefined}
+        next={next ? { href: `/blog/${next.slug}`, title: next.title } : undefined}
+      />
     </div>
   );
 }
