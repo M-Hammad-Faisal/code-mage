@@ -18,7 +18,6 @@ export default async function OGImage({ params }: { params: Promise<{ slug: stri
   const excerpt = post?.excerpt ?? SITE.seo.description;
   const readTime = post?.readTime ?? 0;
 
-  // Derive a simple accent colour from the category without Tailwind classes
   const categoryAccents: Record<string, string> = {
     'Python Deep Dive': '#3b82f6',
     'Test Automation': '#22c55e',
@@ -30,141 +29,123 @@ export default async function OGImage({ params }: { params: Promise<{ slug: stri
     Uncategorized: '#6b7280',
   };
   const accent = categoryAccents[category] ?? '#ef4444';
+  const shortExcerpt = excerpt.length > 120 ? excerpt.slice(0, 120) + '…' : excerpt;
+  const fontSize = title.length > 60 ? '38px' : '46px';
 
   return new ImageResponse(
+    // Satori requires ALL multi-child elements to have display:flex
     <div
       style={{
         width: '1200px',
         height: '630px',
         display: 'flex',
         flexDirection: 'column',
+        justifyContent: 'space-between',
         background: '#0a0a0a',
         padding: '60px',
         fontFamily: 'sans-serif',
-        position: 'relative',
-        overflow: 'hidden',
       }}
     >
-      {/* Background gradient blob */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '-100px',
-          right: '-100px',
-          width: '500px',
-          height: '500px',
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${accent}22 0%, transparent 70%)`,
-        }}
-      />
+      {/* Top section: brand + category + title + excerpt */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
+        {/* Brand row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px' }}>
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: accent,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '20px',
+            }}
+          >
+            ⚡
+          </div>
+          <span style={{ color: '#ffffff', fontSize: '20px', fontWeight: 700 }}>Code Mage</span>
+        </div>
 
-      {/* Top bar — brand */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '48px' }}>
+        {/* Category pill */}
         <div
           style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '8px',
-            background: accent,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '18px',
+            padding: '5px 14px',
+            borderRadius: '999px',
+            border: `1.5px solid ${accent}`,
+            background: `${accent}22`,
+            color: accent,
+            fontSize: '13px',
+            fontWeight: 600,
+            marginBottom: '20px',
+            width: '200px',
           }}
         >
-          ⚡
+          {category}
         </div>
-        <span
-          style={{ color: '#ffffff', fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' }}
+
+        {/* Title */}
+        <div
+          style={{
+            color: '#ffffff',
+            fontSize,
+            fontWeight: 800,
+            lineHeight: 1.15,
+            marginBottom: '16px',
+            maxWidth: '900px',
+          }}
         >
-          Code Mage
-        </span>
-      </div>
+          {title}
+        </div>
 
-      {/* Category pill */}
-      <div
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          padding: '6px 14px',
-          borderRadius: '999px',
-          border: `1px solid ${accent}55`,
-          background: `${accent}18`,
-          color: accent,
-          fontSize: '13px',
-          fontWeight: 600,
-          marginBottom: '24px',
-          width: 'fit-content',
-        }}
-      >
-        {category}
-      </div>
-
-      {/* Title */}
-      <div
-        style={{
-          color: '#ffffff',
-          fontSize: title.length > 60 ? '38px' : '46px',
-          fontWeight: 800,
-          lineHeight: 1.15,
-          letterSpacing: '-1px',
-          marginBottom: '20px',
-          maxWidth: '900px',
-        }}
-      >
-        {title}
-      </div>
-
-      {/* Excerpt */}
-      {excerpt && (
+        {/* Excerpt */}
         <div
           style={{
             color: '#9ca3af',
             fontSize: '18px',
             lineHeight: 1.5,
             maxWidth: '760px',
-            marginBottom: '40px',
           }}
         >
-          {excerpt.length > 120 ? excerpt.slice(0, 120) + '…' : excerpt}
+          {shortExcerpt}
         </div>
-      )}
+      </div>
 
-      {/* Footer — author + read time */}
-      <div
-        style={{
-          marginTop: 'auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
+      {/* Footer: author + read time */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Author */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div
             style={{
-              width: '40px',
-              height: '40px',
+              width: '44px',
+              height: '44px',
               borderRadius: '10px',
               background: '#1f2937',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '18px',
+              fontSize: '22px',
             }}
           >
             👤
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <span style={{ color: '#ffffff', fontSize: '15px', fontWeight: 600 }}>
               {SITE.author.name}
             </span>
             <span style={{ color: '#6b7280', fontSize: '13px' }}>code-mage.vercel.app</span>
           </div>
         </div>
+
+        {/* Read time badge */}
         {readTime > 0 && (
           <div
             style={{
-              color: '#6b7280',
+              display: 'flex',
+              alignItems: 'center',
+              color: '#9ca3af',
               fontSize: '14px',
               background: '#1f2937',
               padding: '8px 16px',
