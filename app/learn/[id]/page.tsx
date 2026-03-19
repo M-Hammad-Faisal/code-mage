@@ -4,6 +4,7 @@ import { MDXRemote } from 'next-mdx-remote/rsc';
 import { ArrowLeft, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { getAllLessons, getLessonById } from '@/lib/mdx';
+import { SITE } from '@/lib/site.config';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -17,7 +18,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const lesson = getLessonById(id);
   if (!lesson) return { title: 'Lesson Not Found' };
-  return { title: lesson.title, description: lesson.description };
+  const url = `${SITE.url}/learn/${id}`;
+  return {
+    title: lesson.title,
+    description: lesson.description,
+    alternates: { canonical: url },
+    openGraph: { url, title: lesson.title, description: lesson.description },
+  };
 }
 
 const LEVEL_COLORS = {

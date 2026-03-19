@@ -22,11 +22,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = getPostBySlug(slug);
   if (!post) return { title: 'Post Not Found' };
+  const url = `${SITE.url}/blog/${slug}`;
   return {
     title: post.title,
     description: post.excerpt,
     authors: [{ name: SITE.author.name }],
+    alternates: { canonical: url },
     openGraph: {
+      url,
       title: post.title,
       description: post.excerpt,
       type: 'article',
