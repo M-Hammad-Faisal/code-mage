@@ -1,17 +1,11 @@
 import js from '@eslint/js';
 import globals from 'globals';
-import { FlatCompat } from '@eslint/eslintrc';
 import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import nextPlugin from '@next/eslint-plugin-next';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({ baseDirectory: __dirname });
-
-const config = tseslint.config(
+/** @type {import('eslint').Linter.Config[]} */
+const config = [
   // Ignore patterns
   {
     ignores: [
@@ -25,15 +19,24 @@ const config = tseslint.config(
       'next.config.ts',
       'tailwind.config.ts',
       'commitlint.config.ts',
+      '.lighthouserc.cjs',
     ],
   },
 
-  // Next.js recommended rules
-  ...compat.extends('next/core-web-vitals'),
+  // Next.js core-web-vitals — native flat config (no FlatCompat needed in v16)
+  nextPlugin.configs['core-web-vitals'],
 
-  // Base JS rules
+  // react-hooks — flat config (v7: use configs.flat['recommended-latest'], not top-level)
+  reactHooks.configs.flat['recommended-latest'],
+
+  // JS recommended (all files)
+  js.configs.recommended,
+
+  // TypeScript ESLint recommended (array — spread into flat config)
+  ...tseslint.configs.recommended,
+
+  // Custom TypeScript rules + language options
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
@@ -43,12 +46,7 @@ const config = tseslint.config(
         React: 'readonly',
       },
     },
-    plugins: {
-      'react-hooks': reactHooks,
-    },
     rules: {
-      ...reactHooks.configs.recommended.rules,
-
       // TypeScript
       '@typescript-eslint/no-unused-vars': [
         'error',
@@ -73,7 +71,7 @@ const config = tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
     },
-  }
-);
+  },
+];
 
 export default config;
