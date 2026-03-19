@@ -1,0 +1,276 @@
+---
+title: "Installation & Configuration"
+description: "Install WebdriverIO using the CLI wizard and write your first passing test"
+order: 2
+framework: "webdriverio"
+chapter: "installation-setup"
+---
+
+WDIO has a setup wizard that handles most of the configuration. This chapter walks you through it and explains every choice.
+
+## Prerequisites
+
+Node.js 18 or later:
+
+```bash
+node --version  # v18.0.0 or higher
+```
+
+## Running the Setup Wizard
+
+Create a project directory and run the wizard:
+
+```bash
+mkdir wdio-saucedemo
+cd wdio-saucedemo
+npm init -y
+npm init wdio@latest .
+```
+
+The wizard asks several questions. Here are the recommended choices for this tutorial:
+
+```
+What type of testing would you like to do?
+  → E2E Testing - of Web or Mobile Applications
+
+Where is your automation backend located?
+  → On my local machine
+
+Which environment you would like to automate?
+  → Web - web applications in the browser
+
+With which browser should we start?
+  → Chrome
+
+Which framework do you want to use?
+  → Mocha
+
+Do you want to use a compiler?
+  → TypeScript (recommended)
+
+Do you want WebdriverIO to autogenerate some test files?
+  → Yes
+
+Would you like to add a service to your project?
+  → chromedriver (select this to avoid manual driver setup)
+
+What is the base url?
+  → https://www.saucedemo.com
+
+Do you want me to run npm install for you?
+  → Yes
+```
+
+## What Gets Created
+
+After setup, your project looks like:
+
+```
+wdio-saucedemo/
+  test/
+    specs/
+      example.e2e.ts   ← example test file
+  wdio.conf.ts         ← main configuration
+  tsconfig.json        ← TypeScript config
+  package.json
+```
+
+## Understanding wdio.conf.ts
+
+The config file controls everything. Key sections:
+
+```typescript
+export const config: Options.Testrunner = {
+  // Base URL — used with browser.url('/')
+  baseUrl: 'https://www.saucedemo.com',
+
+  // Test files to run
+  specs: ['./test/specs/**/*.ts'],
+
+  // How many browsers to run in parallel
+  maxInstances: 5,
+
+  // Browser capabilities
+  capabilities: [{
+    browserName: 'chrome',
+    'goog:chromeOptions': {
+      args: ['--headless']  // remove this for headed mode
+    }
+  }],
+
+  // Test framework
+  framework: 'mocha',
+  mochaOpts: {
+    timeout: 60000  // 60s timeout per test
+  },
+
+  // Automatic waiting
+  waitforTimeout: 5000,  // how long to wait for elements
+
+  // Retry failed tests
+  bail: 0,  // 0 = don't stop on failure
+
+  // Reporter
+  reporters: ['spec'],
+}
+```
+
+## Your First Test
+
+Replace the content of `test/specs/example.e2e.ts`:
+
+```typescript
+describe('SauceDemo Login', () => {
+  it('should login with valid credentials', async () => {
+    await browser.url('/')
+
+    await $('#user-name').setValue('standard_user')
+    await $('#password').setValue('secret_sauce')
+    await $('#login-button').click()
+
+    await expect(browser).toHaveUrl(expect.stringContaining('/inventory'))
+    await expect($('.inventory_list')).toBeDisplayed()
+  })
+
+  it('should show error for invalid credentials', async () => {
+    await browser.url('/')
+
+    await $('#user-name').setValue('wrong_user')
+    await $('#password').setValue('wrong_pass')
+    await $('#login-button').click()
+
+    const errorMessage = await $('[data-test="error"]')
+    await expect(errorMessage).toBeDisplayed()
+    await expect(errorMessage).toHaveText(
+      expect.stringContaining('Username and password do not match')
+    )
+  })
+})
+```
+
+Run the tests:
+
+```bash
+npx wdio run wdio.conf.ts
+```
+
+You'll see output like:
+
+```
+[chrome 120.0.0.0 / linux] Running: 2 tests
+✓ SauceDemo Login should login with valid credentials (1.2s)
+✓ SauceDemo Login should show error for invalid credentials (0.9s)
+
+2 passing (2.3s)
+```
+
+## Headed vs Headless Mode
+
+During development, run headed (with visible browser) for easier debugging. In CI, run headless.
+
+**Headed** (remove `--headless` from capabilities):
+```typescript
+capabilities: [{
+  browserName: 'chrome',
+  // no args — browser opens visibly
+}],
+```
+
+**Headless**:
+```typescript
+capabilities: [{
+  browserName: 'chrome',
+  'goog:chromeOptions': {
+    args: ['--headless', '--disable-gpu']
+  }
+}],
+```
+
+You can also pass this via CLI without changing the config:
+```bash
+npx wdio run wdio.conf.ts --headless
+```
+
+## Running a Single Spec
+
+```bash
+npx wdio run wdio.conf.ts --spec test/specs/login.e2e.ts
+```
+
+## Setting Up Multiple Browsers
+
+To run in Chrome and Firefox simultaneously:
+
+```typescript
+capabilities: [
+  { browserName: 'chrome' },
+  { browserName: 'firefox' },
+],
+maxInstances: 2,
+```
+
+Install geckodriver: `npm install --save-dev wdio-geckodriver-service`
+
+## TypeScript Path Aliases
+
+For cleaner imports, add path aliases to `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@pages/*": ["test/pages/*"],
+      "@data/*": ["test/data/*"]
+    }
+  }
+}
+```
+
+And in `wdio.conf.ts`:
+```typescript
+import { compilerOptions } from './tsconfig.json'
+import { pathsToModuleNameMapper } from 'ts-jest'
+
+// Add to config:
+mochaOpts: {
+  require: ['ts-node/register'],
+},
+```
+
+## Debugging Tests
+
+Add `browser.debug()` to pause execution and open a REPL:
+
+```typescript
+it('should debug', async () => {
+  await browser.url('/')
+  await browser.debug()  // pauses here, opens interactive REPL
+  // type browser commands in the terminal
+})
+```
+
+Or use VS Code's debugger by adding a `.vscode/launch.json`:
+
+```json
+{
+  "type": "node",
+  "request": "launch",
+  "name": "WDIO Debug",
+  "program": "${workspaceFolder}/node_modules/.bin/wdio",
+  "args": ["run", "wdio.conf.ts"],
+  "console": "integratedTerminal"
+}
+```
+
+## Common Setup Issues
+
+**`chromedriver not found`**: Install explicitly: `npm install --save-dev chromedriver`
+
+**`Cannot find module 'ts-node'`**: `npm install --save-dev ts-node`
+
+**Tests timeout immediately**: Check `waitforTimeout` in `wdio.conf.ts`. Increase to `10000` for slow connections.
+
+**`browser is not defined`**: You're running the file directly with `node` instead of `npx wdio run`. Always use the WDIO runner.
+
+Next chapter: selectors, commands, and writing real test scenarios.
