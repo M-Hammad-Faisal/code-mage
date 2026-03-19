@@ -5,6 +5,7 @@ import { ArrowLeft, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { getAllLessons, getLessonById } from '@/lib/mdx';
 import { SITE } from '@/lib/site.config';
+import { BackToTop } from '@/components/BackToTop';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -37,6 +38,11 @@ export default async function LessonPage({ params }: Props) {
   const { id } = await params;
   const lesson = getLessonById(id);
   if (!lesson) notFound();
+
+  const allLessons = getAllLessons();
+  const idx = allLessons.findIndex((l) => l.id === id);
+  const prevLesson = allLessons[idx - 1] ?? null;
+  const nextLesson = allLessons[idx + 1] ?? null;
 
   return (
     <div className="min-h-screen py-12">
@@ -85,6 +91,10 @@ export default async function LessonPage({ params }: Props) {
           </div>
         </div>
       </div>
+      <BackToTop
+        prev={prevLesson ? { href: `/learn/${prevLesson.id}`, title: prevLesson.title } : undefined}
+        next={nextLesson ? { href: `/learn/${nextLesson.id}`, title: nextLesson.title } : undefined}
+      />
     </div>
   );
 }
