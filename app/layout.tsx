@@ -39,6 +39,11 @@ export const metadata: Metadata = {
     images: [SITE.ogImage],
   },
   robots: { index: true, follow: true },
+  alternates: {
+    types: {
+      'application/rss+xml': `${SITE.url}/feed.xml`,
+    },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
