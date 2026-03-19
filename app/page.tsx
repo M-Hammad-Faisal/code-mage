@@ -41,7 +41,8 @@ export default function HomePage() {
             </p>
 
             <p className="font-mono text-sm text-red-500 dark:text-red-400 mb-8">
-              &gt; <span className="opacity-70">python</span> learn_to_code.py --level=pro
+              &gt; <span className="text-red-700 dark:text-red-500">python</span> learn_to_code.py
+              --level=pro
             </p>
 
             <div className="flex flex-wrap gap-3 mb-12">
@@ -72,7 +73,10 @@ export default function HomePage() {
               {[
                 { label: 'Blog Posts', value: `${getAllPosts().length}+` },
                 { label: 'Topics Covered', value: `${categories.length}+` },
-                { label: 'Years Experience', value: '2+' },
+                {
+                  label: 'Years Experience',
+                  value: `${new Date().getFullYear() - SITE.author.careerStartYear}+`,
+                },
               ].map((s) => (
                 <div key={s.label}>
                   <p className="text-2xl font-heading font-bold text-gray-900 dark:text-white">
