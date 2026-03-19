@@ -1,0 +1,233 @@
+---
+title: "Selectors & Commands"
+description: "How to find elements reliably and interact with them using Cypress commands"
+order: 3
+framework: "cypress"
+chapter: "selectors-and-commands"
+---
+
+Knowing which selector to use and which command to reach for is most of what you need to write Cypress tests. This chapter covers both thoroughly.
+
+## Selector Priority
+
+Use selectors in this order of preference:
+
+| Priority | Selector | Example |
+|---|---|---|
+| 1 | `data-test` / `data-cy` attributes | `[data-test="submit"]` |
+| 2 | `data-testid` attribute | `[data-testid="login-btn"]` |
+| 3 | ARIA roles and labels | `cy.get('button[aria-label="Close"]')` |
+| 4 | Text content (via `cy.contains`) | `cy.contains('Add to Cart')` |
+| 5 | CSS class (last resort) | `.product-title` |
+
+Never use `id` for selectors in tests — they're often dynamically generated. Avoid XPath — Cypress doesn't support it natively and it's brittle.
+
+## Core Commands
+
+### Visiting Pages
+
+```javascript
+cy.visit('/')                    // uses baseUrl
+cy.visit('/inventory')           // specific path
+cy.visit('https://external.com') // absolute URL
+```
+
+### Finding Elements
+
+```javascript
+cy.get('[data-test="product-name"]')    // by attribute
+cy.get('#username')                      // by id
+cy.get('.inventory_item')                // by class
+cy.get('button')                         // by tag
+cy.contains('Add to cart')               // by text content
+cy.contains('[data-test="btn"]', 'Add')  // tag + text
+```
+
+### Finding Within a Parent
+
+```javascript
+cy.get('.inventory_item').first().within(() => {
+  cy.get('.inventory_item_name').should('be.visible')
+  cy.get('[data-test^="add-to-cart"]').click()
+})
+```
+
+`within()` scopes all `cy.get()` calls inside it to the parent element. Essential when the same selector appears multiple times on the page.
+
+### Traversal
+
+```javascript
+cy.get('ul.cart_list').children()           // direct children
+cy.get('.inventory_item').first()           // first match
+cy.get('.inventory_item').last()            // last match
+cy.get('.inventory_item').eq(2)             // by index (0-based)
+cy.get('[data-test="remove"]').parent()     // parent element
+cy.get('label').siblings('input')           // siblings
+cy.get('.inventory_item').find('img')       // descendent
+```
+
+## Typing and Clicking
+
+```javascript
+// Type text
+cy.get('[data-test="username"]').type('standard_user')
+
+// Type with special keys
+cy.get('[data-test="search"]').type('backpack{enter}')
+cy.get('[data-test="input"]').type('{selectAll}{backspace}new text')
+
+// Clear then type
+cy.get('input').clear().type('new value')
+
+// Click
+cy.get('[data-test="login-button"]').click()
+cy.get('.menu-item').click({ force: true })  // force past any overlay
+
+// Double click
+cy.get('.item').dblclick()
+
+// Right click
+cy.get('.item').rightclick()
+```
+
+### Useful Key Codes
+
+```javascript
+'{enter}'       // press Enter
+'{tab}'         // press Tab
+'{esc}'         // press Escape
+'{backspace}'   // delete backwards
+'{del}'         // delete forwards
+'{selectAll}'   // Ctrl+A / Cmd+A
+'{moveToEnd}'   // move cursor to end
+```
+
+## Selecting and Checkboxes
+
+```javascript
+// Dropdown (select element)
+cy.get('[data-test="product_sort_container"]').select('Price (low to high)')
+cy.get('select').select('lohi')  // by value attribute
+
+// Checkbox
+cy.get('[type="checkbox"]').check()
+cy.get('[type="checkbox"]').uncheck()
+cy.get('[type="checkbox"]').check(['option1', 'option2'])  // check multiple
+
+// Radio button
+cy.get('[type="radio"]').check('value')
+```
+
+## Scrolling
+
+```javascript
+cy.scrollTo('bottom')           // scroll the window to bottom
+cy.scrollTo(0, 500)             // scroll to specific position
+cy.get('.element').scrollIntoView()  // scroll element into view
+```
+
+## Aliases
+
+Aliases let you save a reference and reuse it:
+
+```javascript
+cy.get('[data-test="inventory-item"]').as('products')
+
+// Use it later with @
+cy.get('@products').should('have.length', 6)
+cy.get('@products').first().click()
+```
+
+This is better than calling `cy.get()` multiple times for the same element.
+
+## Handling Multiple Elements
+
+When `cy.get()` finds multiple elements:
+
+```javascript
+// Assert on count
+cy.get('.inventory_item').should('have.length', 6)
+
+// Iterate over all
+cy.get('.inventory_item_name').each(($el) => {
+  cy.wrap($el).should('not.be.empty')
+})
+
+// Filter
+cy.get('.inventory_item')
+  .filter(':contains("Backpack")')
+  .should('have.length', 1)
+```
+
+## Conditional Logic (The Right Way)
+
+Cypress discourages traditional `if/else` based on element existence because commands are async. Instead, use:
+
+```javascript
+// Check if something exists before acting on it
+cy.get('body').then(($body) => {
+  if ($body.find('[data-test="shopping_cart_badge"]').length > 0) {
+    cy.get('[data-test="shopping_cart_badge"]').click()
+  }
+})
+```
+
+## Real Example: Adding to Cart
+
+```javascript
+describe('Shopping Cart', () => {
+  beforeEach(() => {
+    // Log in before each test
+    cy.visit('/')
+    cy.get('[data-test="username"]').type('standard_user')
+    cy.get('[data-test="password"]').type('secret_sauce')
+    cy.get('[data-test="login-button"]').click()
+    cy.url().should('include', '/inventory')
+  })
+
+  it('adds a product to the cart', () => {
+    // Add the first product
+    cy.get('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+
+    // Cart badge shows 1
+    cy.get('[data-test="shopping-cart-badge"]').should('have.text', '1')
+
+    // Navigate to cart
+    cy.get('[data-test="shopping-cart-link"]').click()
+    cy.url().should('include', '/cart')
+
+    // Product is in the cart
+    cy.get('.cart_item').should('have.length', 1)
+    cy.get('.inventory_item_name').should('contain', 'Sauce Labs Backpack')
+  })
+
+  it('removes a product from the cart', () => {
+    cy.get('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+    cy.get('[data-test="shopping-cart-link"]').click()
+
+    cy.get('[data-test="remove-sauce-labs-backpack"]').click()
+
+    cy.get('.cart_item').should('not.exist')
+    cy.get('[data-test="shopping-cart-badge"]').should('not.exist')
+  })
+})
+```
+
+## The cy.contains() Command
+
+`cy.contains()` is powerful for finding elements by their visible text:
+
+```javascript
+// Find any element containing this text
+cy.contains('Products')
+
+// Find a specific element type containing this text
+cy.contains('h3', 'Sauce Labs Backpack')
+
+// Find within a parent
+cy.get('.inventory_item').contains('Add to cart').click()
+```
+
+It's especially useful when you don't have `data-test` attributes and can't modify the source code.
+
+Next chapter: assertions — how to make your tests actually verify what matters.
