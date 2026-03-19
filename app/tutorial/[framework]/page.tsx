@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { FRAMEWORKS, getFrameworkChapters } from '@/lib/tutorials';
+import { SITE } from '@/lib/site.config';
 
 interface Props {
   params: Promise<{ framework: string }>;
@@ -16,9 +17,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { framework } = await params;
   const fw = FRAMEWORKS[framework];
   if (!fw) return { title: 'Not Found' };
+  const url = `${SITE.url}/tutorial/${framework}`;
   return {
     title: `${fw.title} Tutorial — Code Mage`,
     description: fw.description,
+    alternates: { canonical: url },
+    openGraph: { url, title: `${fw.title} Tutorial`, description: fw.description },
   };
 }
 
