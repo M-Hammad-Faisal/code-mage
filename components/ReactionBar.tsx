@@ -23,6 +23,7 @@ export function ReactionBar({ slug }: { slug: string }) {
       .catch(() => null);
 
     const saved = localStorage.getItem(`reactions-${slug}`);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- slug-dependent localStorage init requires effect
     if (saved) setReacted(new Set(JSON.parse(saved)));
   }, [slug]);
 
