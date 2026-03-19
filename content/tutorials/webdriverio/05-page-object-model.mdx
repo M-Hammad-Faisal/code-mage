@@ -1,0 +1,406 @@
+---
+title: "Page Object Model"
+description: "Structure WDIO tests with Page Objects — the pattern that makes enterprise test suites maintainable"
+order: 5
+framework: "webdriverio"
+chapter: "page-object-model"
+---
+
+Without Page Objects, every test file that touches the login page needs to know the selector for the username field. When that selector changes, you find every occurrence across the codebase and update them all. Page Object Model (POM) is the solution: selectors live in one class, tests only call methods.
+
+## The Core Problem
+
+Here's what unstructured tests look like after six months:
+
+```typescript
+// test/specs/checkout.e2e.ts
+await $('#user-name').setValue('standard_user')
+await $('#password').setValue('secret_sauce')
+await $('#login-button').click()
+
+// test/specs/cart.e2e.ts
+await $('#user-name').setValue('standard_user')  // duplicated
+await $('#password').setValue('secret_sauce')    // duplicated
+await $('#login-button').click()                 // duplicated
+
+// test/specs/orders.e2e.ts
+await $('#user-name').setValue('standard_user')  // again
+// ...
+```
+
+If `#user-name` becomes `[data-test="username"]`, you update it in twelve places and still miss two.
+
+## WDIO's POM Recommendation
+
+WDIO recommends classes where locators are getters. Getters are lazy — they create the element query only when accessed, which is exactly what you want since the DOM isn't ready at class instantiation time.
+
+## Base Page Class
+
+Every page shares common behaviour. Put it in a base class:
+
+```typescript
+// test/pages/base.page.ts
+export default class BasePage {
+  /**
+   * Navigate to a path relative to baseUrl.
+   * Use '/' for root or '/inventory.html' for sub-paths.
+   */
+  async open(path: string = '/'): Promise<void> {
+    await browser.url(path)
+  }
+
+  /**
+   * Wait until the browser stops navigating.
+   * Useful after click() triggers a page transition.
+   */
+  async waitForPageLoad(): Promise<void> {
+    await browser.waitUntil(
+      async () => {
+        const state = await browser.execute(() => document.readyState)
+        return state === 'complete'
+      },
+      { timeout: 10000, timeoutMsg: 'Page did not finish loading within 10s' }
+    )
+  }
+}
+```
+
+## LoginPage
+
+```typescript
+// test/pages/login.page.ts
+import BasePage from './base.page'
+
+class LoginPage extends BasePage {
+  // Locators as getters — evaluated fresh each time
+  get usernameInput() { return $('[data-test="username"]') }
+  get passwordInput() { return $('[data-test="password"]') }
+  get loginButton()   { return $('[data-test="login-button"]') }
+  get errorMessage()  { return $('[data-test="error"]') }
+  get errorClose()    { return $('[data-test="error-button"]') }
+
+  async open(): Promise<void> {
+    await super.open('/')
+  }
+
+  async login(username: string, password: string): Promise<void> {
+    await this.usernameInput.setValue(username)
+    await this.passwordInput.setValue(password)
+    await this.loginButton.click()
+  }
+
+  async getErrorText(): Promise<string> {
+    await this.errorMessage.waitForDisplayed()
+    return this.errorMessage.getText()
+  }
+
+  async dismissError(): Promise<void> {
+    await this.errorClose.click()
+    await this.errorMessage.waitForDisplayed({ reverse: true })
+  }
+}
+
+// Export a singleton — no need to instantiate in every test
+export default new LoginPage()
+```
+
+## InventoryPage
+
+```typescript
+// test/pages/inventory.page.ts
+import BasePage from './base.page'
+
+class InventoryPage extends BasePage {
+  get inventoryList()    { return $('.inventory_list') }
+  get sortDropdown()     { return $('[data-test="product_sort_container"]') }
+  get cartBadge()        { return $('[data-test="shopping-cart-badge"]') }
+  get cartLink()         { return $('[data-test="shopping-cart-link"]') }
+  get burgerMenu()       { return $('[id="react-burger-menu-btn"]') }
+
+  get allProducts()      { return $$('.inventory_item') }
+  get allProductNames()  { return $$('.inventory_item_name') }
+  get allProductPrices() { return $$('.inventory_item_price') }
+
+  async open(): Promise<void> {
+    await super.open('/inventory.html')
+  }
+
+  async sortBy(option: 'az' | 'za' | 'lohi' | 'hilo'): Promise<void> {
+    await this.sortDropdown.selectByAttribute('value', option)
+  }
+
+  async addToCart(productName: string): Promise<void> {
+    // Find the product card that contains this name, then click its Add button
+    const products = await this.allProducts
+    for (const product of products) {
+      const name = await product.$('.inventory_item_name').getText()
+      if (name === productName) {
+        const addBtn = await product.$('[data-test^="add-to-cart"]')
+        await addBtn.click()
+        return
+      }
+    }
+    throw new Error(`Product not found: "${productName}"`)
+  }
+
+  async getProductNames(): Promise<string[]> {
+    const nameEls = await this.allProductNames
+    return Promise.all(nameEls.map(el => el.getText()))
+  }
+
+  async getProductPrices(): Promise<number[]> {
+    const priceEls = await this.allProductPrices
+    const texts = await Promise.all(priceEls.map(el => el.getText()))
+    return texts.map(t => parseFloat(t.replace('$', '')))
+  }
+
+  async goToCart(): Promise<void> {
+    await this.cartLink.click()
+  }
+
+  async getCartCount(): Promise<number> {
+    const badge = this.cartBadge
+    if (!(await badge.isDisplayed())) return 0
+    return parseInt(await badge.getText(), 10)
+  }
+}
+
+export default new InventoryPage()
+```
+
+## CartPage
+
+```typescript
+// test/pages/cart.page.ts
+import BasePage from './base.page'
+
+class CartPage extends BasePage {
+  get cartItems()       { return $$('.cart_item') }
+  get checkoutButton()  { return $('[data-test="checkout"]') }
+  get continueShoppingButton() { return $('[data-test="continue-shopping"]') }
+
+  async open(): Promise<void> {
+    await super.open('/cart.html')
+  }
+
+  async getCartItemNames(): Promise<string[]> {
+    const items = await this.cartItems
+    return Promise.all(
+      items.map(item => item.$('.inventory_item_name').getText())
+    )
+  }
+
+  async removeItem(productName: string): Promise<void> {
+    const items = await this.cartItems
+    for (const item of items) {
+      const name = await item.$('.inventory_item_name').getText()
+      if (name === productName) {
+        await item.$('[data-test^="remove"]').click()
+        return
+      }
+    }
+    throw new Error(`Item not found in cart: "${productName}"`)
+  }
+
+  async proceedToCheckout(): Promise<void> {
+    await this.checkoutButton.click()
+  }
+}
+
+export default new CartPage()
+```
+
+## CheckoutPage
+
+```typescript
+// test/pages/checkout.page.ts
+import BasePage from './base.page'
+
+class CheckoutPage extends BasePage {
+  // Step one
+  get firstNameInput()  { return $('[data-test="firstName"]') }
+  get lastNameInput()   { return $('[data-test="lastName"]') }
+  get postalCodeInput() { return $('[data-test="postalCode"]') }
+  get continueButton()  { return $('[data-test="continue"]') }
+  get errorMessage()    { return $('[data-test="error"]') }
+
+  // Step two
+  get summaryTotal()    { return $('.summary_total_label') }
+  get finishButton()    { return $('[data-test="finish"]') }
+
+  // Confirmation
+  get confirmationHeader() { return $('.complete-header') }
+  get confirmationText()   { return $('.complete-text') }
+  get backHomeButton()     { return $('[data-test="back-to-products"]') }
+
+  async fillShippingInfo(
+    firstName: string,
+    lastName: string,
+    postalCode: string
+  ): Promise<void> {
+    await this.firstNameInput.setValue(firstName)
+    await this.lastNameInput.setValue(lastName)
+    await this.postalCodeInput.setValue(postalCode)
+    await this.continueButton.click()
+  }
+
+  async getSummaryTotal(): Promise<number> {
+    const text = await this.summaryTotal.getText()
+    // Text is like "Total: $32.39"
+    const match = text.match(/\$(\d+\.\d{2})/)
+    if (!match) throw new Error(`Could not parse total from: "${text}"`)
+    return parseFloat(match[1])
+  }
+
+  async finish(): Promise<void> {
+    await this.finishButton.click()
+  }
+
+  async getConfirmationMessage(): Promise<string> {
+    await this.confirmationHeader.waitForDisplayed()
+    return this.confirmationHeader.getText()
+  }
+}
+
+export default new CheckoutPage()
+```
+
+## TypeScript Makes This Better
+
+With TypeScript, your IDE knows the shape of every page object. You get autocomplete on methods, type errors when you pass the wrong argument type, and refactoring that actually works. If you rename `login()` to `signIn()`, your editor flags every call site.
+
+Add strict types to your shipping info if you want extra safety:
+
+```typescript
+interface ShippingInfo {
+  firstName: string
+  lastName: string
+  postalCode: string
+}
+
+async fillShippingInfo(info: ShippingInfo): Promise<void> {
+  await this.firstNameInput.setValue(info.firstName)
+  await this.lastNameInput.setValue(info.lastName)
+  await this.postalCodeInput.setValue(info.postalCode)
+  await this.continueButton.click()
+}
+```
+
+## Test Data Files
+
+Keep test data out of your test files and page objects:
+
+```typescript
+// test/data/users.ts
+export const Users = {
+  standard: { username: 'standard_user', password: 'secret_sauce' },
+  lockedOut: { username: 'locked_out_user', password: 'secret_sauce' },
+  glitch:    { username: 'performance_glitch_user', password: 'secret_sauce' },
+} as const
+
+// test/data/shipping.ts
+export const ShippingAddresses = {
+  valid: { firstName: 'Hammad', lastName: 'Faisal', postalCode: '54000' },
+  missingZip: { firstName: 'Jane', lastName: 'Doe', postalCode: '' },
+} as const
+```
+
+## Project Structure
+
+```
+test/
+  pages/
+    base.page.ts
+    login.page.ts
+    inventory.page.ts
+    cart.page.ts
+    checkout.page.ts
+  specs/
+    login.e2e.ts
+    checkout.e2e.ts
+    inventory.e2e.ts
+  data/
+    users.ts
+    shipping.ts
+wdio.conf.ts
+tsconfig.json
+```
+
+## The Checkout Flow, Refactored
+
+The full purchase test from chapter 3, rewritten with page objects:
+
+```typescript
+// test/specs/checkout.e2e.ts
+import LoginPage     from '../pages/login.page'
+import InventoryPage from '../pages/inventory.page'
+import CartPage      from '../pages/cart.page'
+import CheckoutPage  from '../pages/checkout.page'
+import { Users }     from '../data/users'
+import { ShippingAddresses } from '../data/shipping'
+
+describe('Checkout Flow', () => {
+  before(async () => {
+    await LoginPage.open()
+    await LoginPage.login(Users.standard.username, Users.standard.password)
+    await expect(browser).toHaveUrl(expect.stringContaining('/inventory'))
+  })
+
+  beforeEach(async () => {
+    await InventoryPage.open()
+  })
+
+  it('should complete a full purchase', async () => {
+    // Add product to cart
+    await InventoryPage.addToCart('Sauce Labs Backpack')
+    expect(await InventoryPage.getCartCount()).toBe(1)
+
+    // Review cart
+    await InventoryPage.goToCart()
+    const cartItems = await CartPage.getCartItemNames()
+    expect(cartItems).toContain('Sauce Labs Backpack')
+
+    // Checkout
+    await CartPage.proceedToCheckout()
+    await CheckoutPage.fillShippingInfo(
+      ShippingAddresses.valid.firstName,
+      ShippingAddresses.valid.lastName,
+      ShippingAddresses.valid.postalCode
+    )
+
+    // Verify order total is present before finishing
+    await expect(CheckoutPage.summaryTotal).toBeDisplayed()
+
+    await CheckoutPage.finish()
+    const confirmation = await CheckoutPage.getConfirmationMessage()
+    expect(confirmation).toBe('Thank you for your order!')
+  })
+
+  it('should show error when shipping info is missing zip', async () => {
+    await InventoryPage.addToCart('Sauce Labs Bike Light')
+    await InventoryPage.goToCart()
+    await CartPage.proceedToCheckout()
+
+    await CheckoutPage.fillShippingInfo(
+      ShippingAddresses.missingZip.firstName,
+      ShippingAddresses.missingZip.lastName,
+      ShippingAddresses.missingZip.postalCode
+    )
+
+    await expect(CheckoutPage.errorMessage).toBeDisplayed()
+    await expect(CheckoutPage.errorMessage).toHaveText(
+      expect.stringContaining('Postal Code is required')
+    )
+  })
+})
+```
+
+Compare this to the raw test in chapter 3. The intent is crystal clear, there's no selector noise, and adding a new test for the same flow takes ten minutes instead of thirty.
+
+## Two Rules to Keep Page Objects Healthy
+
+**One file per page.** When a page object grows past ~150 lines, that's a sign the page has too many responsibilities — or you've mixed concern. Split by logical section if needed (e.g., `checkout-step-one.page.ts` and `checkout-step-two.page.ts`).
+
+**Page objects describe what users can do, not how the DOM is built.** `addToCart(name)` is a user action. `$('.inventory_item:nth-child(1) .btn_inventory')` is a DOM detail. The former belongs in a page object; the latter belongs nowhere in your test code.
+
+Next chapter: advanced interactions — dropdowns, iframes, multi-tab, file upload, and JavaScript execution.

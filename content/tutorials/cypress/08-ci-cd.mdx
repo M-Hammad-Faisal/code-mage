@@ -1,0 +1,367 @@
+---
+title: "CI/CD Integration"
+description: "Run Cypress tests in GitHub Actions, generate reports, and set up parallelization"
+order: 8
+framework: "cypress"
+chapter: "ci-cd"
+---
+
+Running tests locally is a start. Running them automatically on every pull request is what catches regressions before they reach production.
+
+## Why CI Matters for E2E Tests
+
+Unit tests are fast and cheap to run on every commit. E2E tests are slower but catch a different class of bug — the ones that only appear when the full stack is wired together. The goal is to run them on every PR so a broken login or checkout flow doesn't make it to `main`.
+
+## Running Headless
+
+Cypress runs headlessly by default when you use `cypress run` (as opposed to `cypress open`). In headless mode there's no visible browser window — Cypress uses Electron by default, or you can specify Chrome:
+
+```bash
+npx cypress run                          # headless Electron
+npx cypress run --browser chrome         # headless Chrome
+npx cypress run --browser firefox        # headless Firefox
+```
+
+Chrome and Firefox require `--headless` only if they're desktop browser installs without a display. In a CI container, Cypress handles this automatically.
+
+## The start-server-and-test Pattern
+
+If you're testing a locally-served app (not a remote URL like SauceDemo), you need to start the dev server before Cypress runs. The `start-server-and-test` package handles this cleanly:
+
+```bash
+npm install --save-dev start-server-and-test
+```
+
+```json
+// package.json
+{
+  "scripts": {
+    "dev": "next dev",
+    "cy:run": "cypress run",
+    "test:e2e": "start-server-and-test dev http://localhost:3000 cy:run"
+  }
+}
+```
+
+`start-server-and-test` starts the `dev` script, polls `localhost:3000` until it responds, runs `cy:run`, then kills the server. `wait-on` is the polling library it uses internally.
+
+## GitHub Actions Workflow
+
+Here's a complete, production-ready workflow file:
+
+```yaml
+# .github/workflows/cypress.yml
+name: Cypress E2E Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        with:
+          browser: chrome
+          # If you need to start a local server first:
+          # start: npm run dev
+          # wait-on: 'http://localhost:3000'
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          retention-days: 7
+
+      - name: Upload videos
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cypress-videos
+          path: cypress/videos
+          retention-days: 7
+```
+
+Key decisions in this workflow:
+
+- `npm ci` instead of `npm install` — it's faster and uses the lockfile exactly, no resolution surprises
+- `cypress-io/github-action@v6` — the official action handles caching Cypress binaries automatically
+- Screenshots upload only `if: failure()` — no point storing them on passing runs
+- Videos upload `if: always()` — useful for debugging even when tests pass but something looks off
+
+## If You're Testing SauceDemo (External URL)
+
+Since SauceDemo is already running on the internet, there's no server to start. Your `cypress.config.ts` already has `baseUrl: 'https://www.saucedemo.com'`, so the workflow above works without the `start` and `wait-on` options.
+
+## HTML Reports with cypress-mochawesome-reporter
+
+The default terminal output is functional but not shareable. `cypress-mochawesome-reporter` generates an HTML report you can host or attach as an artifact.
+
+```bash
+npm install --save-dev cypress-mochawesome-reporter
+```
+
+Configure it in `cypress.config.ts`:
+
+```typescript
+import { defineConfig } from 'cypress'
+
+export default defineConfig({
+  reporter: 'cypress-mochawesome-reporter',
+  reporterOptions: {
+    charts: true,
+    reportPageTitle: 'Cypress Test Report',
+    embeddedScreenshots: true,
+    inlineAssets: true,
+    saveAllAttempts: false,
+  },
+  e2e: {
+    baseUrl: 'https://www.saucedemo.com',
+    setupNodeEvents(on, config) {
+      require('cypress-mochawesome-reporter/plugin')(on)
+    },
+  },
+})
+```
+
+Add it to your support file:
+
+```typescript
+// cypress/support/e2e.ts
+import 'cypress-mochawesome-reporter/register'
+import './commands'
+```
+
+The report is generated in `cypress/reports/`. Add an upload step to your workflow:
+
+```yaml
+- name: Upload HTML report
+  uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: cypress-report
+    path: cypress/reports
+    retention-days: 14
+```
+
+## Running a Subset of Tests
+
+For large suites, run only the tests relevant to what changed:
+
+```bash
+# Run a single spec
+npx cypress run --spec cypress/e2e/login.cy.ts
+
+# Run multiple specs with a glob
+npx cypress run --spec 'cypress/e2e/auth/**'
+
+# Run specs matching a pattern
+npx cypress run --spec 'cypress/e2e/login.cy.ts,cypress/e2e/cart.cy.ts'
+```
+
+In GitHub Actions, you can pass this as a matrix or as an input to a workflow dispatch.
+
+## Environment-Specific Configuration
+
+Different environments (staging, production) have different base URLs. Handle this in `cypress.config.ts`:
+
+```typescript
+import { defineConfig } from 'cypress'
+
+export default defineConfig({
+  e2e: {
+    baseUrl: process.env.CYPRESS_BASE_URL || 'https://www.saucedemo.com',
+    env: {
+      username: process.env.CYPRESS_USERNAME || 'standard_user',
+      password: process.env.CYPRESS_PASSWORD || 'secret_sauce',
+    },
+  },
+})
+```
+
+In GitHub Actions, set environment variables in the workflow:
+
+```yaml
+- name: Run Cypress tests
+  uses: cypress-io/github-action@v6
+  with:
+    browser: chrome
+  env:
+    CYPRESS_BASE_URL: ${{ vars.STAGING_URL }}
+    CYPRESS_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+```
+
+Store secrets in GitHub → Settings → Secrets and variables → Actions. Never hardcode credentials in workflow files.
+
+## Cypress Cloud (Dashboard) and Parallelization
+
+Cypress Cloud (formerly the Cypress Dashboard) is a paid service that records test runs, stores videos and screenshots, and enables parallelization across multiple machines.
+
+To use it, get a `projectId` and `recordKey` from cloud.cypress.io, then add the project ID to `cypress.config.ts`:
+
+```typescript
+export default defineConfig({
+  projectId: 'your-project-id',
+  e2e: {
+    baseUrl: 'https://www.saucedemo.com',
+  },
+})
+```
+
+Record runs in CI:
+
+```yaml
+- name: Run Cypress tests with recording
+  uses: cypress-io/github-action@v6
+  with:
+    browser: chrome
+    record: true
+    parallel: true
+    group: 'E2E Tests'
+  env:
+    CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+```
+
+With `parallel: true`, Cypress Cloud distributes test files across as many machines as you configure. A suite that takes 20 minutes on one machine can run in 4 minutes across 5 machines. Each machine runs the same workflow job — GitHub Actions matrix handles the multiple runners.
+
+For the parallel matrix setup:
+
+```yaml
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        containers: [1, 2, 3, 4, 5] # 5 parallel runners
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - uses: cypress-io/github-action@v6
+        with:
+          browser: chrome
+          record: true
+          parallel: true
+          group: 'E2E Tests'
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+```
+
+## Caching Cypress Binaries
+
+Cypress downloads its browser binary (~300MB) on first install. Cache it to avoid re-downloading on every CI run:
+
+```yaml
+- name: Setup Node.js with caching
+  uses: actions/setup-node@v4
+  with:
+    node-version: '20'
+    cache: 'npm'
+
+# The cypress-io/github-action handles Cypress binary caching automatically.
+# If you're running Cypress directly without the action, cache manually:
+- name: Cache Cypress binary
+  uses: actions/cache@v4
+  with:
+    path: ~/.cache/Cypress
+    key: cypress-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+```
+
+The official `cypress-io/github-action` does this automatically, so you only need the manual cache step if you're calling `npx cypress run` directly.
+
+## Complete Production-Ready Workflow
+
+Here's the full workflow putting everything together:
+
+```yaml
+# .github/workflows/cypress.yml
+name: Cypress E2E Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        containers: [1, 2, 3]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Cypress E2E tests
+        uses: cypress-io/github-action@v6
+        with:
+          browser: chrome
+          record: true
+          parallel: true
+          group: 'E2E - Chrome'
+          # Uncomment if testing a local server:
+          # start: npm run dev
+          # wait-on: 'http://localhost:3000'
+          # wait-on-timeout: 60
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          CYPRESS_BASE_URL: ${{ vars.BASE_URL || 'https://www.saucedemo.com' }}
+          CYPRESS_USERNAME: ${{ secrets.CYPRESS_USERNAME }}
+          CYPRESS_PASSWORD: ${{ secrets.CYPRESS_PASSWORD }}
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots-${{ matrix.containers }}
+          path: cypress/screenshots
+          retention-days: 7
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cypress-report-${{ matrix.containers }}
+          path: cypress/reports
+          retention-days: 14
+```
+
+This workflow runs tests in parallel across 3 containers, records to Cypress Cloud, uploads screenshots on failure, and publishes the HTML report as an artifact — everything you need for a production test pipeline.
+
+That's the full Cypress tutorial. You've got selectors, assertions, page objects, network interception, stability patterns, and CI integration. Build on these foundations and you'll have a test suite that actually catches bugs instead of creating noise.

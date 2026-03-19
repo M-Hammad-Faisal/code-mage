@@ -21,6 +21,15 @@ export interface TutorialFramework {
 }
 
 export const FRAMEWORKS: Record<string, Omit<TutorialFramework, 'chapters'>> = {
+  prerequisites: {
+    slug: 'prerequisites',
+    title: 'Prerequisites',
+    description:
+      'Start here. Node.js, TypeScript, Browser DevTools, and testing fundamentals — everything you need before picking a framework.',
+    icon: '📚',
+    color:
+      'text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20',
+  },
   playwright: {
     slug: 'playwright',
     title: 'Playwright',
