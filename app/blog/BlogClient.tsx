@@ -99,7 +99,7 @@ function BlogInner({ posts, categories }: { posts: BlogPost[]; categories: strin
                         : baseColor + ' ring-2 ring-offset-1 ring-red-400'
                       : cat === 'All'
                         ? 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-red-300'
-                        : baseColor + ' opacity-60 hover:opacity-100'
+                        : baseColor + ' hover:ring-2 hover:ring-offset-1 hover:ring-red-300'
                   }`}
                 >
                   {cat}
@@ -110,7 +110,7 @@ function BlogInner({ posts, categories }: { posts: BlogPost[]; categories: strin
         </div>
 
         {/* Results count */}
-        <p className="text-xs text-gray-400 dark:text-gray-500 mb-6">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
           {filtered.length} post{filtered.length !== 1 ? 's' : ''}
           {activeCategory !== 'All' && ` in "${activeCategory}"`}
           {query && ` matching "${query}"`}

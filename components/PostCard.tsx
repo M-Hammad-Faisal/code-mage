@@ -41,7 +41,7 @@ export function PostCard({ post, featured = false }: Props) {
         )}
 
         <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+          <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
               {new Date(post.date).toLocaleDateString('en-US', {

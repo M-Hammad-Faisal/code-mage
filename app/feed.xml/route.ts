@@ -24,13 +24,13 @@ export async function GET() {
       const url = `${safeBase}/blog/${safeSlug}`;
       return `
     <item>
-      <title><![CDATA[${post.title}]]></title>
+      <title>${escapeXml(post.title)}</title>
       <link>${url}</link>
       <guid isPermaLink="true">${url}</guid>
-      <description><![CDATA[${post.excerpt}]]></description>
+      <description>${escapeXml(post.excerpt)}</description>
       <pubDate>${escapeXml(new Date(post.date).toUTCString())}</pubDate>
-      <category><![CDATA[${post.category}]]></category>
-      ${post.tags.map((t) => `<category><![CDATA[${t}]]></category>`).join('\n      ')}
+      <category>${escapeXml(post.category)}</category>
+      ${post.tags.map((t) => `<category>${escapeXml(t)}</category>`).join('\n      ')}
       <author>${safeEmail} (${safeName})</author>
     </item>`;
     })
@@ -39,9 +39,9 @@ export async function GET() {
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title><![CDATA[${SITE.brand}]]></title>
+    <title>${escapeXml(SITE.brand)}</title>
     <link>${safeBase}</link>
-    <description><![CDATA[${SITE.seo.description}]]></description>
+    <description>${escapeXml(SITE.seo.description)}</description>
     <language>en-US</language>
     <managingEditor>${safeEmail} (${safeName})</managingEditor>
     <webMaster>${safeEmail} (${safeName})</webMaster>
@@ -49,7 +49,7 @@ export async function GET() {
     <atom:link href="${safeBase}/feed.xml" rel="self" type="application/rss+xml"/>
     <image>
       <url>${safeBase}/brand/Code%20Mage%20Logo-96.png</url>
-      <title><![CDATA[${SITE.brand}]]></title>
+      <title>${escapeXml(SITE.brand)}</title>
       <link>${safeBase}</link>
     </image>
     ${items}
