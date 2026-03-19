@@ -10,6 +10,7 @@ import { SITE, CATEGORY_COLORS } from '@/lib/site.config';
 import { ViewCounter } from '@/components/ViewCounter';
 import { ReactionBar } from '@/components/ReactionBar';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { BackToTop } from '@/components/BackToTop';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -182,6 +183,7 @@ export default async function BlogPostPage({ params }: Props) {
           )}
         </div>
       </div>
+      <BackToTop />
     </div>
   );
 }

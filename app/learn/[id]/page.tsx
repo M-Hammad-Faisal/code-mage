@@ -5,6 +5,7 @@ import { ArrowLeft, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { getAllLessons, getLessonById } from '@/lib/mdx';
 import { SITE } from '@/lib/site.config';
+import { BackToTop } from '@/components/BackToTop';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -85,6 +86,7 @@ export default async function LessonPage({ params }: Props) {
           </div>
         </div>
       </div>
+      <BackToTop />
     </div>
   );
 }
