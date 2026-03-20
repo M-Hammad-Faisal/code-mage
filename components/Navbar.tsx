@@ -1,7 +1,8 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, Moon, Sun, X, Zap } from 'lucide-react';
+import { Menu, Moon, Sun, X } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -34,9 +35,13 @@ export function Navbar() {
       <div className="container-max h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-            <Zap className="w-4 h-4 text-white" />
-          </div>
+          <Image
+            src="/brand/Code Mage Logo-96.png"
+            alt="Code Mage Logo"
+            width={32}
+            height={32}
+            className="rounded-lg group-hover:scale-105 transition-transform"
+          />
           <span className="font-heading font-bold text-gray-900 dark:text-white text-lg tracking-tight">
             {SITE.brand}
           </span>
