@@ -34,7 +34,7 @@ const SOCIALS = [
 export function Footer() {
   return (
     <footer className="bg-gray-950 dark:bg-black border-t border-gray-800 dark:border-gray-900">
-      <div className="container-max py-10 lg:py-14">
+      <div className="container-max py-12 lg:py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-x-12 lg:gap-y-0">
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-5">
@@ -131,12 +131,12 @@ export function Footer() {
 
       {/* Bottom bar */}
       <div className="border-t border-gray-800 dark:border-gray-900">
-        <div className="container-max py-5 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-xs text-gray-500">
+        <div className="container-max py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-sm text-gray-400">
             © {new Date().getFullYear()} {SITE.author.name}. All rights reserved.
           </p>
-          <p className="text-xs text-gray-500">
-            Made with <span className="text-red-400">❤</span> in Lahore, Pakistan
+          <p className="text-sm text-gray-400 flex items-center gap-1.5">
+            Made with <Heart className="w-4 h-4 text-red-500 fill-red-500" /> in Lahore, Pakistan
           </p>
         </div>
       </div>
