@@ -15,15 +15,15 @@ export default function TutorialsPage() {
   const frameworkTutorials = frameworks.filter((fw) => fw.slug !== 'prerequisites');
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-16">
       <div className="container-max">
-        <div className="max-w-3xl mx-auto">
+        <div>
           {/* Header */}
           <div className="mb-12">
-            <p className="text-xs font-mono text-red-500 tracking-widest uppercase mb-3">
-              Tutorials
+            <p className="text-xs font-mono text-red-500 dark:text-red-400 tracking-widest uppercase mb-3">
+              — Tutorials
             </p>
-            <h1 className="text-4xl font-heading font-bold text-gray-900 dark:text-white tracking-tight mb-4">
+            <h1 className="text-4xl md:text-5xl font-heading font-bold text-gray-900 dark:text-white tracking-tight mb-4">
               Test Automation Guides
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-base leading-relaxed">
