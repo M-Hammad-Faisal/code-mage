@@ -14,6 +14,10 @@ export function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- mount guard to prevent hydration flash
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 10);
@@ -63,7 +67,7 @@ export function Navbar() {
                 }`}
               >
                 {link.label}
-                {active && (
+                {active && mounted && (
                   <motion.div
                     layoutId="nav-indicator"
                     className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-500"
