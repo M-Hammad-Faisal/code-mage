@@ -63,7 +63,8 @@ pre,
 .container-max {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
 }
 
 /* Prose overrides for MDX */
