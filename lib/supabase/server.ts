@@ -43,3 +43,20 @@ export function createServiceClient() {
     }
   );
 }
+
+// Anon client — uses the publishable key, respects RLS.
+// Use in server-side API routes where the table's RLS policy already allows the operation
+// (e.g. public INSERT on contact_messages / newsletter_subscribers).
+// This avoids a dependency on SUPABASE_SECRET_KEY being set in the environment.
+export function createAnonClient() {
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
+}
