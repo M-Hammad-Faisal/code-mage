@@ -67,7 +67,7 @@ export function NewsletterForm({ source = 'site', compact = false }: Props) {
             aria-label="Email address"
             required
             disabled={status === 'loading'}
-            className={`w-full pl-9 pr-3 rounded-xl border border-gray-700 bg-gray-900 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all disabled:opacity-60 ${compact ? 'py-2' : 'py-2.5'}`}
+            className={`w-full pl-9 pr-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all disabled:opacity-60 ${compact ? 'py-2' : 'py-2.5'}`}
           />
         </div>
         <motion.button
