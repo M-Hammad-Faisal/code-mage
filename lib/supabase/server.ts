@@ -32,12 +32,16 @@ export async function createClient() {
 
 // Service client — bypasses RLS via secret key, use only in trusted API routes
 export function createServiceClient() {
-  return createSupabaseClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  return createSupabaseClient<Database>(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
 }
 
 // Publishable client — uses the publishable key, respects RLS.
