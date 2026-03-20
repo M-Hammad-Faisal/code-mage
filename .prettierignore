@@ -3,6 +3,9 @@
 out/
 build/
 
+# Claude worktrees
+.claude/
+
 # Dependencies
 node_modules/
 
