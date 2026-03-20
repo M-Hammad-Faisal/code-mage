@@ -17,8 +17,7 @@ interface Props {
 const btnBase =
   'h-10 rounded-full shadow-lg flex items-center justify-center gap-1.5 transition-all hover:scale-105 active:scale-95 px-3';
 const btnNav = 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs font-medium';
-const btnTop =
-  'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 w-10 px-0';
+const btnTop = 'bg-red-600 hover:bg-red-700 text-white w-10 px-0';
 
 export function BackToTop({ prev, next }: Props) {
   const [visible, setVisible] = useState(false);
