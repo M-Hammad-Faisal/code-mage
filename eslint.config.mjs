@@ -10,6 +10,7 @@ const config = [
   {
     ignores: [
       '.next/',
+      '.claude/',
       'out/',
       'node_modules/',
       '*.min.js',
