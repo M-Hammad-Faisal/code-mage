@@ -34,8 +34,8 @@ const SOCIALS = [
 export function Footer() {
   return (
     <footer className="bg-gray-950 dark:bg-black border-t border-gray-800 dark:border-gray-900">
-      <div className="container-max py-12 lg:py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-x-10 lg:gap-y-0">
+      <div className="container-max py-10 lg:py-14">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-x-12 lg:gap-y-0">
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-5">
             <Link href="/" className="inline-flex items-center gap-2.5 mb-5 group">
@@ -73,7 +73,7 @@ export function Footer() {
           </div>
 
           {/* Quick links */}
-          <div className="lg:col-span-3 lg:pl-6">
+          <div className="lg:col-span-3">
             <p className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4">
               Navigation
             </p>
