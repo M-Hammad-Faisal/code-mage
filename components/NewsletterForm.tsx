@@ -56,7 +56,7 @@ export function NewsletterForm({ source = 'site', compact = false }: Props) {
 
   return (
     <div>
-      <form onSubmit={handleSubmit} className={`flex gap-2 ${compact ? '' : 'max-w-sm'}`}>
+      <form onSubmit={handleSubmit} className={`flex gap-2 ${compact ? 'max-w-xs' : 'max-w-sm'}`}>
         <div className="relative flex-1">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
           <input
