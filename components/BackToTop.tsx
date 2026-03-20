@@ -32,42 +32,45 @@ export function BackToTop({ prev, next }: Props) {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
-      {/* Back to top */}
-      <button
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        className={`${btnBase} ${btnTop}`}
-        aria-label="Back to top"
-        title="Back to top"
-      >
-        <ArrowUp className="w-4 h-4" />
-      </button>
-
-      {/* Prev */}
+    <>
+      {/* Prev — bottom-left */}
       {prev && (
         <Link
           href={prev.href}
           title={prev.title}
-          className={`${btnBase} ${btnNav}`}
+          className={`fixed bottom-6 left-6 z-50 ${btnBase} ${btnNav}`}
           aria-label={`Previous: ${prev.title}`}
         >
           <ChevronLeft className="w-4 h-4 flex-shrink-0" />
-          <span className="max-w-[100px] truncate">{prev.title}</span>
+          <span className="max-w-[120px] truncate">{prev.title}</span>
         </Link>
       )}
 
-      {/* Next */}
-      {next && (
-        <Link
-          href={next.href}
-          title={next.title}
-          className={`${btnBase} ${btnNav}`}
-          aria-label={`Next: ${next.title}`}
+      {/* Back to top + Next — stacked on bottom-right */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+        {/* Back to top arrow sits above Next */}
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className={`${btnBase} ${btnTop}`}
+          aria-label="Back to top"
+          title="Back to top"
         >
-          <span className="max-w-[100px] truncate">{next.title}</span>
-          <ChevronRight className="w-4 h-4 flex-shrink-0" />
-        </Link>
-      )}
-    </div>
+          <ArrowUp className="w-4 h-4" />
+        </button>
+
+        {/* Next */}
+        {next && (
+          <Link
+            href={next.href}
+            title={next.title}
+            className={`${btnBase} ${btnNav}`}
+            aria-label={`Next: ${next.title}`}
+          >
+            <span className="max-w-[120px] truncate">{next.title}</span>
+            <ChevronRight className="w-4 h-4 flex-shrink-0" />
+          </Link>
+        )}
+      </div>
+    </>
   );
 }
