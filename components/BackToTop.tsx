@@ -15,8 +15,10 @@ interface Props {
 }
 
 const btnBase =
-  'w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95';
-const btnDark = 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900';
+  'h-10 rounded-full shadow-lg flex items-center justify-center gap-1.5 transition-all hover:scale-105 active:scale-95 px-3';
+const btnNav = 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs font-medium';
+const btnTop =
+  'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 w-10 px-0';
 
 export function BackToTop({ prev, next }: Props) {
   const [visible, setVisible] = useState(false);
@@ -30,39 +32,42 @@ export function BackToTop({ prev, next }: Props) {
   if (!visible) return null;
 
   return (
-    <>
-      {/* Prev — bottom left */}
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
+      {/* Back to top */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        className={`${btnBase} ${btnTop}`}
+        aria-label="Back to top"
+        title="Back to top"
+      >
+        <ArrowUp className="w-4 h-4" />
+      </button>
+
+      {/* Prev */}
       {prev && (
         <Link
           href={prev.href}
           title={prev.title}
-          className={`fixed bottom-6 left-6 z-50 ${btnBase} ${btnDark}`}
+          className={`${btnBase} ${btnNav}`}
           aria-label={`Previous: ${prev.title}`}
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-4 h-4 flex-shrink-0" />
+          <span className="max-w-[100px] truncate">{prev.title}</span>
         </Link>
       )}
 
-      {/* Right column — next + back to top */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 items-center">
-        {next && (
-          <Link
-            href={next.href}
-            title={next.title}
-            className={`${btnBase} ${btnDark}`}
-            aria-label={`Next: ${next.title}`}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Link>
-        )}
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className={`${btnBase} bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700`}
-          aria-label="Back to top"
+      {/* Next */}
+      {next && (
+        <Link
+          href={next.href}
+          title={next.title}
+          className={`${btnBase} ${btnNav}`}
+          aria-label={`Next: ${next.title}`}
         >
-          <ArrowUp className="w-4 h-4" />
-        </button>
-      </div>
-    </>
+          <span className="max-w-[100px] truncate">{next.title}</span>
+          <ChevronRight className="w-4 h-4 flex-shrink-0" />
+        </Link>
+      )}
+    </div>
   );
 }

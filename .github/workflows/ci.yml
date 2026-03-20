@@ -47,8 +47,8 @@ jobs:
     env:
       # Dummy Supabase env vars — keeps build from failing in CI
       # Real values live in Vercel environment variables
-      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
+      SUPABASE_URL: https://placeholder.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
       SUPABASE_SECRET_KEY: sb_secret_placeholder
       NEXT_PUBLIC_SITE_URL: https://code-mage.vercel.app
 
