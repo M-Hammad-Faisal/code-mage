@@ -41,8 +41,8 @@ export default function HomePage() {
             </p>
 
             <p className="font-mono text-sm text-red-500 dark:text-red-400 mb-8">
-              &gt; <span className="text-red-700 dark:text-red-500">python</span> learn_to_code.py
-              --level=pro
+              &gt; <span className="text-red-700 dark:text-red-500">npx playwright</span> test
+              login.spec.ts --headed
             </p>
 
             <div className="flex flex-wrap gap-3 mb-12">
@@ -56,7 +56,7 @@ export default function HomePage() {
                 href="/tutorial"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600 font-medium text-sm transition-all"
               >
-                <BookOpen className="w-4 h-4" /> Start Learning
+                <BookOpen className="w-4 h-4" /> Start the Tutorial
               </Link>
               <a
                 href={SITE.socials.youtube}
