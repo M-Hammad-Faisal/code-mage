@@ -116,19 +116,9 @@ const WRITINGS = [
     sub: 'Deep dives, gotchas, real frameworks',
   },
   {
-    color: 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800',
-    label: 'Self Improvement',
-    sub: 'Discipline, habits, and daily growth',
-  },
-  {
-    color: 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800',
-    label: 'Finance & Real Estate',
-    sub: 'Islamic-principles-aligned investing',
-  },
-  {
-    color: 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800',
-    label: 'Communication',
-    sub: 'Building the top 1% communicator habit',
+    color: 'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800',
+    label: 'AI in Test Automation',
+    sub: 'How AI tools are changing QA — and how to use them',
   },
   {
     color: 'bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800',
@@ -136,8 +126,8 @@ const WRITINGS = [
     sub: 'How I built TimeCapsula & others',
   },
   {
-    color: 'bg-pink-50 dark:bg-pink-950/30 border-pink-200 dark:border-pink-800',
-    label: 'Career & Freelancing',
+    color: 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800',
+    label: 'Career in QA & Freelancing',
     sub: 'Upwork, remote work, leveling up',
   },
 ];
@@ -185,16 +175,16 @@ export default function AboutPage() {
               <p className="text-base text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
                 I&apos;m a{' '}
                 <strong className="text-gray-900 dark:text-white">Test Automation Engineer</strong>{' '}
-                specializing in WebdriverIO, Playwright, and Puppeteer frameworks. At{' '}
-                <strong className="text-gray-900 dark:text-white">Arbisoft</strong> since 2023 —
-                building automation for web, mobile (Android/iOS), and cloud-deployed scraping
-                pipelines.
+                at <strong className="text-gray-900 dark:text-white">Arbisoft</strong> with hands-on
+                experience across Playwright, WebdriverIO, Cypress, Selenium, Appium, and Puppeteer.
+                I&apos;ve built automation frameworks for web, mobile (Android/iOS), and
+                cloud-deployed scraping pipelines.
               </p>
               <p className="text-base text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                Outside work I ship side projects (TimeCapsula being the latest), write on{' '}
-                <strong className="text-gray-900 dark:text-white">Code Mage</strong>, and share dev
-                content on YouTube. Studied Software Engineering at{' '}
-                <strong className="text-gray-900 dark:text-white">UET Lahore</strong>.
+                <strong className="text-gray-900 dark:text-white">Code Mage</strong> is where I
+                teach manual QA testers how to break into test automation — with real code, real
+                projects, and no fluff. If you&apos;re a manual tester wondering where to start,
+                you&apos;re in the right place.
               </p>
 
               <div className="flex flex-wrap gap-2">
