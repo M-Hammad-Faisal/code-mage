@@ -55,7 +55,7 @@ const CONTACTS = [
     href: '',
     icon: MapPin,
     label: 'Location',
-    sub: 'Pakistan Standard Time (UTC +5)',
+    sub: 'Pakistan Standard Time (UTC + 5)',
     value: SITE.author.location,
   },
 ];
