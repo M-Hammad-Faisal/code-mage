@@ -1,63 +1,32 @@
-# Code Mage v2 — Next.js + Supabase 🪄
+# Code Mage
 
-> Personal brand site for **Muhammad Hammad Faisal** — rebuilt from React+Vite to **Next.js 15 + Supabase** with realtime features.
+Personal brand site for **Muhammad Hammad Faisal** — Test Automation Engineer at Arbisoft.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://code-mage.vercel.app)
-[![Next.js 15](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
-[![Supabase](https://img.shields.io/badge/Supabase-3.x-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript)](https://typescriptlang.org)
+Live site: [code-mage.dev](https://code-mage.dev)
+
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://code-mage.dev)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript)](https://typescriptlang.org)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=flat-square&logo=tailwindcss)](https://tailwindcss.com)
 
 ---
 
-## 👤 Author
+## Tech Stack
 
-**Muhammad Hammad Faisal**
-
-- 💼 Software Engineer @ [Arbisoft](https://arbisoft.com)
-- 📍 Lahore, Punjab, Pakistan
-- 🌐 [m-hammad-faisal.github.io](https://m-hammad-faisal.github.io)
-- 💌 [hammadfaisal178@gmail.com](mailto:hammadfaisal178@gmail.com)
-- 🐙 [@M-Hammad-Faisal](https://github.com/M-Hammad-Faisal)
-- 💼 [linkedin.com/in/m-hammad-faisal](https://linkedin.com/in/m-hammad-faisal)
-- 🎥 [@code_your_magic](https://www.youtube.com/@code_your_magic)
-- ❤️ [Patreon](https://www.patreon.com/cw/code_your_magic)
-
----
-
-## ✨ What's New in v2
-
-| Feature      | v1 (React+Vite)  | v2 (Next.js+Supabase) |
-| ------------ | ---------------- | --------------------- |
-| Rendering    | CSR only         | SSG + ISR + SSR       |
-| Blog SEO     | Basic            | Full OG + metadata    |
-| Newsletter   | UI only          | Supabase persistence  |
-| Contact form | mailto fallback  | Supabase persistence  |
-| View counts  | None             | Realtime (Supabase)   |
-| Reactions    | None             | Realtime (Supabase)   |
-| API security | None             | Server-side routes    |
-| Routing      | React Router DOM | Next.js App Router    |
+| Layer      | Tech                               |
+| ---------- | ---------------------------------- |
+| Framework  | Next.js 16 (App Router, Turbopack) |
+| Language   | TypeScript 5.9                     |
+| Styling    | Tailwind CSS v4                    |
+| Animations | Framer Motion 12                   |
+| Database   | Supabase (PostgreSQL)              |
+| Content    | MDX via next-mdx-remote            |
+| Icons      | Lucide React                       |
+| Deployment | Vercel                             |
 
 ---
 
-## 🛠️ Tech Stack
-
-| Layer      | Tech                           |
-| ---------- | ------------------------------ |
-| Framework  | Next.js 15 (App Router)        |
-| Language   | TypeScript 5.8                 |
-| Styling    | Tailwind CSS v4                |
-| Animations | Framer Motion 11               |
-| Database   | Supabase (PostgreSQL)          |
-| Auth       | Supabase (future)              |
-| Content    | MDX via next-mdx-remote        |
-| Icons      | Lucide React                   |
-| Fonts      | Syne + Outfit + JetBrains Mono |
-| Deployment | Vercel                         |
-
----
-
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Clone & install
 
@@ -67,28 +36,22 @@ cd code-mage
 npm install
 ```
 
-### 2. Set up Supabase
-
-1. Create a project at [supabase.com](https://supabase.com)
-2. Go to SQL Editor and run `lib/supabase/migrations.sql`
-3. Copy your project URL and anon key
-
-### 3. Environment variables
+### 2. Environment variables
 
 ```bash
 cp .env.example .env.local
 ```
 
-Fill in your `.env.local`:
+Fill in `.env.local`:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxxxxxxxxx
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxxxxxxxxx
 SUPABASE_SECRET_KEY=sb_secret_xxxxxxxxxxxx
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-### 4. Run dev server
+### 3. Run dev server
 
 ```bash
 npm run dev
@@ -98,55 +61,58 @@ Visit [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 code-mage/
 ├── app/
-│   ├── layout.tsx              # Root layout
-│   ├── page.tsx                # Home
+│   ├── layout.tsx              # Root layout with Navbar + Footer
+│   ├── page.tsx                # Homepage
+│   ├── about/page.tsx          # About page
 │   ├── blog/
 │   │   ├── page.tsx            # Blog listing (SSG)
-│   │   ├── BlogClient.tsx      # Search/filter (client)
+│   │   ├── BlogClient.tsx      # Search + filter (client)
 │   │   └── [slug]/page.tsx     # Post detail + view tracking
-│   ├── learn/
-│   │   ├── page.tsx            # Lessons listing
-│   │   └── [id]/page.tsx       # Lesson detail
-│   ├── about/page.tsx          # About (static)
+│   ├── tutorial/
+│   │   └── [framework]/        # Framework tutorial pages
+│   ├── learn/                  # Lessons (hidden from nav)
 │   ├── contact/
-│   │   ├── page.tsx            # Contact (server)
-│   │   └── ContactClient.tsx   # Form (client → Supabase)
-│   └── api/
-│       ├── newsletter/route.ts # POST → Supabase
-│       ├── contact/route.ts    # POST → Supabase
-│       └── views/[slug]/route.ts # GET/POST views+reactions
+│   │   ├── page.tsx
+│   │   └── ContactClient.tsx   # Contact form → Supabase
+│   ├── api/
+│   │   ├── contact/route.ts
+│   │   ├── newsletter/route.ts
+│   │   └── views/[slug]/route.ts
+│   ├── sitemap.ts              # Auto-generated sitemap
+│   └── robots.ts               # robots.txt
 ├── components/
 │   ├── Navbar.tsx
 │   ├── Footer.tsx
-│   ├── ThemeProvider.tsx
-│   ├── NewsletterForm.tsx      # Client component
-│   ├── ViewCounter.tsx         # Client component
-│   ├── ReactionBar.tsx         # Client component
-│   ├── PostCard.tsx
-│   └── HeroAnimation.tsx
-├── lib/
-│   ├── supabase/
-│   │   ├── client.ts           # Browser Supabase client
-│   │   ├── server.ts           # Server + service role client
-│   │   ├── types.ts            # TypeScript DB types
-│   │   └── migrations.sql      # Run in Supabase SQL Editor
-│   ├── mdx.ts                  # Content loader (gray-matter)
-│   └── site.config.ts          # Site-wide config & author info
+│   ├── BackToTop.tsx
+│   ├── NewsletterForm.tsx
+│   ├── ReactionBar.tsx
+│   └── ViewCounter.tsx
 ├── content/
-│   ├── blog/                   # .mdx files
-│   └── lessons/                # .md files
+│   ├── blog/                   # .mdx blog posts
+│   ├── lessons/                # .md lesson files (6 lessons)
+│   └── tutorials/              # .mdx tutorial chapters
+│       ├── prerequisites/      # 4 chapters
+│       ├── playwright/         # 8 chapters
+│       ├── webdriverio/        # 8 chapters
+│       └── cypress/            # 8 chapters
+├── lib/
+│   ├── site.config.ts          # Site-wide config, nav links, author info
+│   ├── mdx.ts                  # Blog content loader
+│   ├── tutorials.ts            # Tutorial content loader
+│   └── supabase/               # Supabase clients + types
 └── public/
-    └── brand/                  # Logos, banners, profile photo
+    ├── brand/                  # Logos, favicons, profile photo
+    └── downloads/              # Downloadable spec files for tutorials
 ```
 
 ---
 
-## 🗃️ Supabase Tables
+## Supabase Tables
 
 | Table                    | Purpose                               |
 | ------------------------ | ------------------------------------- |
@@ -157,16 +123,16 @@ code-mage/
 
 ---
 
-## 📝 Writing Content
+## Adding Blog Content
 
 Add `.mdx` files to `content/blog/`:
 
 ```mdx
 ---
 title: 'Your Post Title'
-date: '2025-01-15'
-category: 'Python Deep Dive'
-tags: ['python', 'tutorial']
+date: '2026-01-15'
+category: 'Test Automation'
+tags: ['playwright', 'tutorial']
 excerpt: 'Short description shown in cards'
 featured: true
 ---
@@ -174,20 +140,23 @@ featured: true
 # Your content here...
 ```
 
-Valid categories: `Python Deep Dive`, `Test Automation`, `Project Breakdown`, `Self Improvement`, `Finance`, `Communication`, `Career`
+Valid categories: `Python Deep Dive`, `Test Automation`, `Project Breakdown`, `AI in QA`, `Career`
 
 ---
 
-## 🔮 Roadmap
+## Scripts
 
-- [ ] Supabase Auth for admin dashboard (view subscribers, messages)
-- [ ] RSS feed (`/feed.xml`)
-- [ ] Sitemap auto-generation
-- [ ] Comment system (Supabase)
-- [ ] Search across all content
+```bash
+npm run dev          # Start dev server (Turbopack)
+npm run build        # Production build
+npm run lint         # ESLint
+npm run lint:fix     # ESLint with auto-fix
+npm run format       # Prettier
+npm run type-check   # TypeScript type check
+```
 
 ---
 
-## 📄 License
+## License
 
-MIT © 2025 [Muhammad Hammad Faisal](https://github.com/M-Hammad-Faisal)
+MIT © 2026 [Muhammad Hammad Faisal](https://github.com/M-Hammad-Faisal)

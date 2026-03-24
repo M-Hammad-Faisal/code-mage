@@ -21,7 +21,7 @@ export default function HomePage() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs font-medium mb-6">
               <Zap className="w-3 h-3" />
-              Test Automation · Python · Full Stack
+              Test Automation · Playwright · AI + QA
             </div>
 
             <h1 className="font-heading text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white tracking-tight leading-[1.1] mb-6">
@@ -36,8 +36,8 @@ export default function HomePage() {
               <strong className="text-gray-900 dark:text-white font-semibold">
                 Muhammad Hammad Faisal
               </strong>{' '}
-              — Software Engineer at Arbisoft. I write about Python, test automation, and real
-              projects.
+              — Test Automation Engineer at Arbisoft. I help manual testers break into automation
+              with Playwright, real projects, and zero fluff.
             </p>
 
             <p className="font-mono text-sm text-red-500 dark:text-red-400 mb-8">
@@ -53,7 +53,7 @@ export default function HomePage() {
                 Read the Blog <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                href="/learn"
+                href="/tutorial"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600 font-medium text-sm transition-all"
               >
                 <BookOpen className="w-4 h-4" /> Start Learning
@@ -149,17 +149,17 @@ export default function HomePage() {
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-heading font-bold text-gray-900 dark:text-white mb-1">
-                Start Learning — Free
+                Start the Tutorial — Free
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Structured lessons on Python, test automation, and web development.
+                Hands-on Playwright, WebdriverIO, and Cypress guides — from zero to production.
               </p>
             </div>
             <Link
-              href="/learn"
+              href="/tutorial"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium text-sm transition-all flex-shrink-0"
             >
-              Browse Lessons <ArrowRight className="w-4 h-4" />
+              Browse Tutorials <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
