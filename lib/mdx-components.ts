@@ -1,5 +1,6 @@
 import type { MDXComponents } from 'mdx/types';
 import { DownloadCard } from '@/components/DownloadCard';
+import { CodeBlock } from '@/components/CodeBlock';
 
 /**
  * getMDXComponents returns the component map passed to <MDXRemote components={...} />.
@@ -21,19 +22,7 @@ export function getMDXComponents(overrides?: MDXComponents): MDXComponents {
     DownloadCard,
 
     // ── HTML element overrides ─────────────────────────────────────────────
-    // Uncomment and customise if you want to style raw markdown elements.
-    //
-    // a: ({ href, children }) => (
-    //   <a href={href} target={href?.startsWith('http') ? '_blank' : undefined} rel="noreferrer">
-    //     {children}
-    //   </a>
-    // ),
-    //
-    // pre: ({ children }) => (
-    //   <pre className="overflow-x-auto rounded-xl bg-gray-900 p-4 text-sm">
-    //     {children}
-    //   </pre>
-    // ),
+    pre: CodeBlock,
 
     // ── Spread any caller overrides last so they win ───────────────────────
     ...overrides,

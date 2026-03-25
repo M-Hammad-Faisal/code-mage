@@ -7,6 +7,8 @@ import { FRAMEWORKS, getFrameworkChapters, getChapter } from '@/lib/tutorials';
 import { getMDXComponents } from '@/lib/mdx-components';
 import { SITE } from '@/lib/site.config';
 import { BackToTop } from '@/components/BackToTop';
+import { ReadingProgress } from '@/components/ReadingProgress';
+import { NewsletterCTA } from '@/components/NewsletterCTA';
 
 interface Props {
   params: Promise<{ framework: string; chapter: string }>;
@@ -82,6 +84,7 @@ export default async function ChapterPage({ params }: Props) {
 
   return (
     <div className="min-h-screen py-12">
+      <ReadingProgress />
       <div className="container-max">
         <div className="max-w-3xl mx-auto">
           {/* Breadcrumb */}
@@ -180,6 +183,9 @@ export default async function ChapterPage({ params }: Props) {
               </div>
             </div>
           )}
+
+          {/* Newsletter CTA */}
+          <NewsletterCTA source={`tutorial-${framework}-${chapter}`} />
 
           {/* Prev / Next navigation */}
           <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 grid grid-cols-2 gap-4">

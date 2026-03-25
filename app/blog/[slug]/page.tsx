@@ -11,6 +11,8 @@ import { ViewCounter } from '@/components/ViewCounter';
 import { ReactionBar } from '@/components/ReactionBar';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { BackToTop } from '@/components/BackToTop';
+import { ReadingProgress } from '@/components/ReadingProgress';
+import { NewsletterCTA } from '@/components/NewsletterCTA';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -54,6 +56,7 @@ export default async function BlogPostPage({ params }: Props) {
 
   return (
     <div className="min-h-screen py-12">
+      <ReadingProgress />
       <div className="container-max">
         <div className="max-w-2xl mx-auto">
           {/* Back */}
@@ -120,8 +123,11 @@ export default async function BlogPostPage({ params }: Props) {
             <MDXRemote source={post.content} components={getMDXComponents()} />
           </article>
 
+          {/* Newsletter CTA */}
+          <NewsletterCTA source={`blog-${slug}`} />
+
           {/* Reactions */}
-          <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
+          <div className="mt-10 pt-8 border-t border-gray-200 dark:border-gray-800">
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Found this helpful?
             </p>
