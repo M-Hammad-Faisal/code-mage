@@ -55,7 +55,7 @@ export function PostCard({ post, featured = false }: Props) {
               {post.readTime} min
             </span>
           </div>
-          <span className="text-xs text-red-500 dark:text-red-400 group-hover:gap-1.5 flex items-center gap-1 transition-all">
+          <span className="text-xs text-red-600 dark:text-red-400 group-hover:gap-1.5 flex items-center gap-1 transition-all">
             Read <ArrowRight className="w-3 h-3" />
           </span>
         </div>

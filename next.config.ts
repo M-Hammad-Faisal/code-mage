@@ -45,6 +45,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      { source: '/learn', destination: '/tutorial', permanent: true },
+      { source: '/learn/:path*', destination: '/tutorial', permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

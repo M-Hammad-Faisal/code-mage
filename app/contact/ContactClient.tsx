@@ -8,7 +8,6 @@ import {
   Mail,
   MapPin,
   MessageSquare,
-  Phone,
   Send,
   Youtube,
 } from 'lucide-react';
@@ -43,13 +42,6 @@ const CONTACTS = [
     label: 'YouTube',
     sub: 'Watch my tutorials',
     value: '@code_your_magic',
-  },
-  {
-    href: `tel:${SITE.author.phone}`,
-    icon: Phone,
-    label: 'Phone',
-    sub: 'WhatsApp preferred',
-    value: SITE.author.phone,
   },
   {
     href: '',
@@ -108,8 +100,8 @@ export function ContactClient() {
             Let&apos;s Talk
           </h1>
           <p className="text-base text-gray-500 dark:text-gray-400 max-w-lg leading-relaxed">
-            Have a project, want to collaborate, or just want to chat about test automation?
-            I&apos;m always open to interesting conversations.
+            Have a scraping project, need automation infrastructure, or just want to talk
+            engineering? I&apos;m always up for interesting conversations.
           </p>
         </motion.div>
 

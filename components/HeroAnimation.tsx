@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 export function HeroAnimation() {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ scale: [1, 1.2, 1], opacity: [0.07, 0.12, 0.07] }}
