@@ -109,7 +109,7 @@ export default async function ChapterPage({ params }: Props) {
           {/* Chapter header */}
           <div className="mb-8">
             <p className="text-xs font-mono text-red-500 tracking-widest uppercase mb-2">
-              {fw.icon} {fw.title} · Chapter {idx + 1} of {chapters.length}
+              {fw.icon} {fw.title} · Chapter {idx + 1} of {chapters.length} · {ch.readTime} min read
             </p>
             <h1 className="text-3xl font-heading font-bold text-gray-900 dark:text-white tracking-tight">
               {ch.title}
