@@ -309,7 +309,7 @@ export default function AboutPage() {
                         @ {item.company}
                       </span>
                     </div>
-                    <p className="text-xs font-mono text-gray-400 dark:text-gray-500 mb-2">
+                    <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mb-2">
                       {item.date}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
@@ -395,7 +395,7 @@ export default function AboutPage() {
                 <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
                   {t.label}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t.sub}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">{t.sub}</p>
               </div>
             ))}
           </div>
