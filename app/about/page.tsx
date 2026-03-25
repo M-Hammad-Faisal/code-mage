@@ -46,16 +46,10 @@ const TECH_STACK = [
 
 const TIMELINE = [
   {
-    company: 'Ginkgo Retail',
-    date: 'Aug 2022 – May 2023',
-    desc: 'Full-stack web apps with React + Django. Built a complete Learning Management System.',
-    title: 'Jr. Software Engineer',
-  },
-  {
-    company: 'Arbisoft',
-    date: 'May 2023 – Jun 2024',
-    desc: 'WebdriverIO E2E test suites for web and mobile (Android/iOS). Built Selenium Grid for parallel distributed testing with Appium.',
-    title: 'Jr. Software Engineer',
+    company: 'Code Mage',
+    date: '2024 – Present',
+    desc: 'Test automation tutorials, web scraping deep dives, and career guides for engineers.',
+    title: 'Founder & Content Creator',
   },
   {
     company: 'Arbisoft',
@@ -64,10 +58,16 @@ const TIMELINE = [
     title: 'Software Engineer',
   },
   {
-    company: 'Code Mage',
-    date: '2024 – Present',
-    desc: 'Test automation tutorials, web scraping deep dives, and career guides for engineers.',
-    title: 'Founder & Content Creator',
+    company: 'Arbisoft',
+    date: 'May 2023 – Jun 2024',
+    desc: 'WebdriverIO E2E test suites for web and mobile (Android/iOS). Built Selenium Grid for parallel distributed testing with Appium.',
+    title: 'Jr. Software Engineer',
+  },
+  {
+    company: 'Ginkgo Retail',
+    date: 'Aug 2022 – May 2023',
+    desc: 'Full-stack web apps with React + Django. Built a complete Learning Management System.',
+    title: 'Jr. Software Engineer',
   },
 ];
 
