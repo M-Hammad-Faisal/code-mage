@@ -1,16 +1,14 @@
 import { ArrowRight, BookOpen, Code2, Youtube, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { getFeaturedPosts, getAllCategories, getAllPosts } from '@/lib/mdx';
+import { getAllCategories, getAllPosts } from '@/lib/mdx';
 import { SITE, CATEGORY_COLORS } from '@/lib/site.config';
 import { NewsletterForm } from '@/components/NewsletterForm';
 import { PostCard } from '@/components/PostCard';
 import { HeroAnimation } from '@/components/HeroAnimation';
 
 export default function HomePage() {
-  const featuredPosts = getFeaturedPosts(3);
-  const recentPosts = getAllPosts().slice(0, 6);
+  const recentPosts = getAllPosts().slice(0, 3);
   const categories = getAllCategories();
-  const posts = featuredPosts.length > 0 ? featuredPosts : recentPosts.slice(0, 3);
 
   return (
     <div className="min-h-screen">
@@ -36,8 +34,8 @@ export default function HomePage() {
               <strong className="text-gray-900 dark:text-white font-semibold">
                 Muhammad Hammad Faisal
               </strong>{' '}
-              — Test Automation Engineer at Arbisoft. I help manual testers break into automation
-              with Playwright, real projects, and zero fluff.
+              — Software Engineer (Test Automation) at Arbisoft. I help engineers automate what
+              shouldn&apos;t be done manually — testing, scraping, and everything in between.
             </p>
 
             <p className="font-mono text-sm text-red-500 dark:text-red-400 mb-8">
@@ -72,11 +70,8 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-8">
               {[
                 { label: 'Blog Posts', value: `${getAllPosts().length}+` },
-                { label: 'Topics Covered', value: `${categories.length}+` },
-                {
-                  label: 'Years Experience',
-                  value: `${new Date().getFullYear() - SITE.author.careerStartYear}+`,
-                },
+                { label: 'Tutorial Chapters', value: '28+' },
+                { label: 'Frameworks Covered', value: '3' },
               ].map((s) => (
                 <div key={s.label}>
                   <p className="text-2xl font-heading font-bold text-gray-900 dark:text-white">
@@ -133,7 +128,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {posts.map((post) => (
+            {recentPosts.map((post) => (
               <PostCard key={post.slug} post={post} />
             ))}
           </div>
@@ -176,7 +171,8 @@ export default function HomePage() {
               Join the Mage Circle
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              New posts, Python tips, and project updates — straight to your inbox. No spam.
+              Test automation deep dives, scraping tricks, and career guides for engineers —
+              straight to your inbox.
             </p>
             <div className="flex justify-center">
               <NewsletterForm source="homepage" />
