@@ -47,7 +47,7 @@ function BlogInner({ posts, categories }: { posts: BlogPost[]; categories: strin
           transition={{ duration: 0.5 }}
           className="mb-12"
         >
-          <p className="text-xs font-mono text-red-500 dark:text-red-400 tracking-widest uppercase mb-3">
+          <p className="text-xs font-mono text-red-600 dark:text-red-400 tracking-widest uppercase mb-3">
             — Writing
           </p>
           <h1 className="text-4xl md:text-5xl font-heading font-bold text-gray-900 dark:text-white tracking-tight mb-4">
@@ -156,7 +156,7 @@ function BlogFallback({ posts, categories }: { posts: BlogPost[]; categories: st
     <div className="min-h-screen py-16">
       <div className="container-max">
         <div className="mb-12">
-          <p className="text-xs font-mono text-red-500 dark:text-red-400 tracking-widest uppercase mb-3">
+          <p className="text-xs font-mono text-red-600 dark:text-red-400 tracking-widest uppercase mb-3">
             — Writing
           </p>
           <h1 className="text-4xl md:text-5xl font-heading font-bold text-gray-900 dark:text-white tracking-tight mb-4">

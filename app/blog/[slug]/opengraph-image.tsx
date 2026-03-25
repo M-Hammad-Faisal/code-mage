@@ -1,12 +1,12 @@
 import { ImageResponse } from 'next/og';
-import { getPostBySlug, getAllBlogPosts } from '@/lib/mdx';
+import { getPostBySlug, getAllPosts } from '@/lib/mdx';
 import { SITE } from '@/lib/site.config';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 export async function generateStaticParams() {
-  return getAllBlogPosts().map((p) => ({ slug: p.slug }));
+  return getAllPosts().map((p) => ({ slug: p.slug }));
 }
 
 export default async function OGImage({ params }: { params: Promise<{ slug: string }> }) {
@@ -21,10 +21,9 @@ export default async function OGImage({ params }: { params: Promise<{ slug: stri
   const categoryAccents: Record<string, string> = {
     'Python Deep Dive': '#3b82f6',
     'Test Automation': '#22c55e',
+    'Web Scraping': '#06b6d4',
     'Project Breakdown': '#f97316',
-    'Self Improvement': '#a855f7',
-    Finance: '#10b981',
-    Communication: '#ec4899',
+    'AI in QA': '#a855f7',
     Career: '#eab308',
     Uncategorized: '#6b7280',
   };
@@ -135,7 +134,7 @@ export default async function OGImage({ params }: { params: Promise<{ slug: stri
             <span style={{ color: '#ffffff', fontSize: '15px', fontWeight: 600 }}>
               {SITE.author.name}
             </span>
-            <span style={{ color: '#6b7280', fontSize: '13px' }}>code-mage.vercel.app</span>
+            <span style={{ color: '#6b7280', fontSize: '13px' }}>code-mage.dev</span>
           </div>
         </div>
 

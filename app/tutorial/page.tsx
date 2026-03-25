@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getAllFrameworks } from '@/lib/tutorials';
-import { BookOpen, ChevronRight, Clock } from 'lucide-react';
+import { BookOpen, ChevronRight, Clock, Users } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Tutorials — Code Mage',
@@ -42,52 +42,67 @@ export default function TutorialsPage() {
           </div>
 
           {/* Prerequisites — Start Here */}
-          {prerequisites && (
-            <div className="mb-10">
-              <div className="rounded-2xl border-2 border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 p-6">
-                <div className="flex items-start justify-between gap-4 mb-1">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{prerequisites.icon}</span>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-xl font-heading font-bold text-gray-900 dark:text-white">
-                          {prerequisites.title}
-                        </h2>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-600 text-white">
-                          Start Here
-                        </span>
+          {prerequisites &&
+            (() => {
+              const totalTime = prerequisites.chapters.reduce((sum, ch) => sum + ch.readTime, 0);
+              return (
+                <div className="mb-10">
+                  <div className="rounded-2xl border-2 border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 p-6">
+                    <div className="flex items-start justify-between gap-4 mb-1">
+                      <div className="flex items-center gap-3">
+                        <span className="text-3xl">{prerequisites.icon}</span>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h2 className="text-xl font-heading font-bold text-gray-900 dark:text-white">
+                              {prerequisites.title}
+                            </h2>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-600 text-white">
+                              Start Here
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                            {prerequisites.description}
+                          </p>
+                          <div className="flex items-center flex-wrap gap-3 mt-1.5">
+                            {totalTime > 0 && (
+                              <span className="inline-flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400">
+                                <Clock className="w-3 h-3" /> ~{totalTime} min total
+                              </span>
+                            )}
+                            <span className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                              <Users className="w-3 h-3" /> {prerequisites.forWho}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                        {prerequisites.description}
-                      </p>
+                      <Link
+                        href={`/tutorial/${prerequisites.slug}`}
+                        className="shrink-0 inline-flex items-center gap-1.5 text-sm font-medium text-purple-600 dark:text-purple-400 hover:underline"
+                      >
+                        Begin <ChevronRight className="w-4 h-4" />
+                      </Link>
+                    </div>
+                    <div className="flex flex-col gap-1 mt-4">
+                      {prerequisites.chapters.map((ch, i) => (
+                        <Link
+                          key={ch.chapter}
+                          href={`/tutorial/${prerequisites.slug}/${ch.chapter}`}
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/5 transition-colors group"
+                        >
+                          <span className="text-xs font-mono text-gray-400 w-5 text-right">
+                            {i + 1}
+                          </span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors flex-1">
+                            {ch.title}
+                          </span>
+                          <span className="text-xs text-gray-400 shrink-0">{ch.readTime} min</span>
+                        </Link>
+                      ))}
                     </div>
                   </div>
-                  <Link
-                    href={`/tutorial/${prerequisites.slug}`}
-                    className="shrink-0 inline-flex items-center gap-1.5 text-sm font-medium text-purple-600 dark:text-purple-400 hover:underline"
-                  >
-                    Begin <ChevronRight className="w-4 h-4" />
-                  </Link>
                 </div>
-                <div className="flex flex-col gap-1 mt-4">
-                  {prerequisites.chapters.map((ch, i) => (
-                    <Link
-                      key={ch.chapter}
-                      href={`/tutorial/${prerequisites.slug}/${ch.chapter}`}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/5 transition-colors group"
-                    >
-                      <span className="text-xs font-mono text-gray-400 w-5 text-right">
-                        {i + 1}
-                      </span>
-                      <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                        {ch.title}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+              );
+            })()}
 
           {/* Framework tutorials */}
           <p className="text-xs font-mono text-gray-400 tracking-widest uppercase mb-4">
@@ -96,6 +111,7 @@ export default function TutorialsPage() {
           <div className="flex flex-col gap-6">
             {frameworkTutorials.map((fw) => {
               const isInProgress = fw.chapters.length > 0 && fw.chapters.length < 8;
+              const totalTime = fw.chapters.reduce((sum, ch) => sum + ch.readTime, 0);
               return (
                 <div key={fw.slug} className={`rounded-2xl border p-6 ${fw.color}`}>
                   <div className="flex items-start justify-between gap-4 mb-4">
@@ -115,6 +131,16 @@ export default function TutorialsPage() {
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                           {fw.description}
                         </p>
+                        <div className="flex items-center flex-wrap gap-3 mt-1.5">
+                          {totalTime > 0 && (
+                            <span className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                              <Clock className="w-3 h-3" /> ~{totalTime} min total
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                            <Users className="w-3 h-3" /> {fw.forWho}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     {fw.chapters.length > 0 && (
@@ -135,12 +161,13 @@ export default function TutorialsPage() {
                           href={`/tutorial/${fw.slug}/${ch.chapter}`}
                           className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/5 transition-colors group"
                         >
-                          <span className="text-xs font-mono text-gray-400 w-5 text-right">
+                          <span className="text-xs font-mono text-gray-400 w-5 text-right shrink-0">
                             {i + 1}
                           </span>
-                          <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                          <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors flex-1">
                             {ch.title}
                           </span>
+                          <span className="text-xs text-gray-400 shrink-0">{ch.readTime} min</span>
                         </Link>
                       ))}
                       {isInProgress && (
