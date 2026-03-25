@@ -48,3 +48,8 @@ next-env.d.ts
 .eslint/
 .coverage/
 *.pem
+.lighthouseci/
+.claude/
+.gemini/
+.antigravity/
+CLAUDE.md
