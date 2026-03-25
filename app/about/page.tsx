@@ -150,7 +150,7 @@ export default function AboutPage() {
 
             {/* Info */}
             <div className="flex-1 max-w-2xl">
-              <p className="text-xs font-mono text-red-500 dark:text-red-400 tracking-widest uppercase mb-3">
+              <p className="text-xs font-mono text-red-600 dark:text-red-400 tracking-widest uppercase mb-3">
                 — About Me
               </p>
               <h1 className="text-4xl md:text-5xl font-heading font-bold text-gray-900 dark:text-white mb-2 tracking-tight leading-tight">
@@ -262,7 +262,7 @@ export default function AboutPage() {
                 key={g.category}
                 className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5"
               >
-                <p className="text-xs font-mono text-red-500 dark:text-red-400 uppercase tracking-wider mb-3">
+                <p className="text-xs font-mono text-red-600 dark:text-red-400 uppercase tracking-wider mb-3">
                   {g.category}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -305,7 +305,7 @@ export default function AboutPage() {
                       <h3 className="text-sm font-heading font-semibold text-gray-900 dark:text-white">
                         {item.title}
                       </h3>
-                      <span className="text-xs text-red-500 dark:text-red-400 font-medium">
+                      <span className="text-xs text-red-600 dark:text-red-400 font-medium">
                         @ {item.company}
                       </span>
                     </div>

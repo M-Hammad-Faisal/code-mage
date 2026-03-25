@@ -38,7 +38,7 @@ export default function HomePage() {
               shouldn&apos;t be done manually — testing, scraping, and everything in between.
             </p>
 
-            <p className="font-mono text-sm text-red-500 dark:text-red-400 mb-8">
+            <p className="font-mono text-sm text-red-600 dark:text-red-400 mb-8">
               &gt; <span className="text-red-700 dark:text-red-500">npx playwright</span> test
               login.spec.ts --headed
             </p>
@@ -88,7 +88,7 @@ export default function HomePage() {
       {/* ── CATEGORIES ── */}
       <section className="py-14 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/50">
         <div className="container-max">
-          <p className="text-xs font-mono text-red-500 dark:text-red-400 tracking-widest uppercase mb-4">
+          <p className="text-xs font-mono text-red-600 dark:text-red-400 tracking-widest uppercase mb-4">
             — Topics
           </p>
           <div className="flex flex-wrap gap-2">
@@ -112,7 +112,7 @@ export default function HomePage() {
         <div className="container-max">
           <div className="flex items-center justify-between mb-10">
             <div>
-              <p className="text-xs font-mono text-red-500 dark:text-red-400 tracking-widest uppercase mb-2">
+              <p className="text-xs font-mono text-red-600 dark:text-red-400 tracking-widest uppercase mb-2">
                 — Latest Writing
               </p>
               <h2 className="text-2xl font-heading font-bold text-gray-900 dark:text-white">

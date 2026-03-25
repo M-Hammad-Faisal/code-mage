@@ -70,26 +70,28 @@ export function Footer() {
 
           {/* Quick links */}
           <div className="lg:col-span-3">
-            <p className="text-xs font-mono text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">
+            <p className="text-xs font-mono text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-4">
               Navigation
             </p>
-            <ul className="space-y-3">
-              {NAV_LINKS.map((l) => (
-                <li key={l.href}>
-                  <Link
-                    href={l.href}
-                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <nav aria-label="Footer navigation">
+              <ul className="space-y-3">
+                {NAV_LINKS.map((l) => (
+                  <li key={l.href}>
+                    <Link
+                      href={l.href}
+                      className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                    >
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </div>
 
           {/* Contact */}
           <div className="lg:col-span-4">
-            <p className="text-xs font-mono text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">
+            <p className="text-xs font-mono text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-4">
               Contact
             </p>
             <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
@@ -110,11 +112,12 @@ export function Footer() {
       {/* Bottom bar */}
       <div className="border-t border-gray-200 dark:border-gray-800">
         <div className="container-max py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             © {new Date().getFullYear()} {SITE.author.name}. All rights reserved.
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-            Made with <Heart className="w-4 h-4 text-red-500 fill-red-500" /> in Lahore, Pakistan
+          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+            Made with <Heart aria-hidden="true" className="w-4 h-4 text-red-500 fill-red-500" /> in
+            Lahore, Pakistan
           </p>
         </div>
       </div>
