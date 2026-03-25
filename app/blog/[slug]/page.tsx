@@ -64,7 +64,7 @@ export default async function BlogPostPage({ params }: Props) {
 
   const postUrl = `${SITE.url}/blog/${slug}`;
   const headings = extractHeadings(post.content);
-  const showToc = post.readTime >= 5 && headings.length > 0;
+  const showToc = headings.length > 0;
 
   return (
     <div className="min-h-screen py-12">
