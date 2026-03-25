@@ -7,15 +7,15 @@ excerpt: 'A production-grade GitHub Actions workflow for Playwright — parallel
 featured: false
 ---
 
-Most Playwright CI guides show you the minimum: install, run, done. That is fine to get started, but it falls apart fast. Tests timeout, reports disappear, failures are noisy, and nobody knows which test ran where.
+Most Playwright CI guides show you the bare minimum: install, run, done. That's fine to get started, but it falls apart fast in production. Tests timeout, reports disappear, failures are noisy, and nobody knows which test ran where.
 
-Here is the workflow I actually use on projects, broken down piece by piece.
+Here's the workflow I actually use on projects at work, broken down piece by piece.
 
 ## The Goal
 
 A CI pipeline for Playwright tests should:
 1. Run fast (parallel sharding across multiple machines)
-2. Cache dependencies so it does not re-download browsers every run
+2. Cache dependencies so it doesn't re-download browsers every run
 3. Store the HTML report as a downloadable artifact
 4. Fail the PR if tests fail
 5. Be readable — not a wall of YAML
@@ -128,7 +128,7 @@ strategy:
 
 This splits your test suite across 4 parallel machines. `fail-fast: false` means all shards finish even if one fails — you get the complete picture of what broke, not just the first failure.
 
-With 200 tests that each take 3 seconds, serial execution takes ~10 minutes. With 4 shards, it takes ~2.5 minutes.
+With 200 tests that each take 3 seconds, serial execution takes ~10 minutes. With 4 shards, it drops to ~2.5 minutes.
 
 ### Browser Caching
 
@@ -155,7 +155,7 @@ env:
   CI: true
 ```
 
-Store `BASE_URL` in GitHub repository variables (Settings → Variables → Actions), not hardcoded in the workflow. This lets you point staging vs production pipelines at different URLs.
+Store `BASE_URL` in GitHub repository variables (Settings → Variables → Actions), not hardcoded in the workflow. This lets you point staging vs production pipelines at different URLs effortlessly.
 
 `CI: true` tells Playwright to use CI-specific settings you configure in `playwright.config.ts`:
 
@@ -173,17 +173,17 @@ export default defineConfig({
 
 ### The Merge Reports Job
 
-Sharded reports are separate HTML files per shard. The `merge-reports` job collects them all and produces one unified report. This is the artifact you actually download and share with your team.
+Sharded reports are initially separate HTML files per shard. The `merge-reports` job collects them all and produces one unified report. This is the artifact you actually download and share with your team.
 
 ## Viewing the Report
 
 After a run, go to the GitHub Actions page → your workflow run → Artifacts → download `playwright-html-report`. Unzip and open `index.html`.
 
-You get a filterable list of every test, pass/fail status, duration, retry count, screenshots, and videos for failures. It is much more useful than reading raw CI logs.
+You get a filterable list of every test, pass/fail status, duration, retry count, screenshots, and videos for failures. It's infinitely more useful than reading raw CI logs.
 
 ## Adding a Slack Notification
 
-If you want your team pinged on failure (without spamming on every run):
+If you want your team pinged on failure (without spamming them on every run):
 
 ```yaml
   - name: Notify Slack on failure
@@ -198,21 +198,21 @@ If you want your team pinged on failure (without spamming on every run):
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 ```
 
-This only runs if the test job fails, and sends a link directly to the failed run. Much better than email notifications nobody reads.
+This *only* runs if the test job fails, and sends a link directly to the failed run. Much better than generic email notifications nobody reads.
 
 ## Common Pitfalls
 
 **Pitfall 1: Forgetting `--with-deps` on first install.**
-Playwright browsers need system-level dependencies (libglib, libgtk, etc.). On a fresh Ubuntu runner, `npx playwright install chromium` alone will fail. Use `--with-deps`.
+Playwright browsers need system-level dependencies (libglib, libgtk, etc.). On a fresh Ubuntu runner, `npx playwright install chromium` alone will fail. Always use `--with-deps`.
 
 **Pitfall 2: Using `npm install` instead of `npm ci`.**
-In CI, always use `npm ci`. It is faster, uses the lock file exactly, and fails if the lock file is out of sync with `package.json` — catching a whole class of "works on my machine" bugs.
+In CI, *always* use `npm ci`. It's faster, strictly follows the lock file, and fails if the lock file is out of sync with `package.json` — catching a whole class of "works on my machine" bugs.
 
 **Pitfall 3: Not setting `fail-fast: false`.**
-With `fail-fast: true` (the default), if shard 1 fails, GitHub cancels shards 2-4. You lose the reports for those shards and get an incomplete picture of what is broken.
+With `fail-fast: true` (the default), if shard 1 fails, GitHub cancels shards 2-4. You lose the reports for those shards and get an incomplete picture of what's broken.
 
 ## Wrapping Up
 
 This setup gets you from "tests run somewhere in CI" to "tests run fast, failures are visible, and the team stays informed." The sharding and caching together usually cut CI time by 60-70% compared to a naive single-machine setup.
 
-If you want to go further, check out [Playwright's trace viewer](https://playwright.dev/docs/trace-viewer) — it is essentially a DVR for your test run, and it integrates directly with the HTML report.
+If you want to go further, check out [Playwright's trace viewer](https://playwright.dev/docs/trace-viewer) — it's essentially a DVR for your test run, and it integrates directly with the HTML report.

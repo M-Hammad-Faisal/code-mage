@@ -7,47 +7,47 @@ excerpt: 'Patchright is a patched version of Playwright that fixes the detection
 featured: true
 ---
 
-You're running Playwright in headed mode. Real browser, real mouse movements, random delays between actions, custom user agent string. You've done everything right. The site still blocks you.
+You're running Playwright in headed mode. Real browser, real mouse movements, random delays between actions, custom user agent string. You've done everything absolutely right. The site still blocks you.
 
-I've been there. I spent weeks adding stealth plugins, injecting scripts to override `navigator.webdriver`, randomizing viewport sizes — the whole circus. Some of it helped. Most of it didn't. Then a colleague at work mentioned Patchright, and I felt stupid for not finding it sooner.
+I've been there. I spent weeks adding stealth plugins, injecting scripts to override `navigator.webdriver`, randomizing viewport sizes — the whole circus. Some of it helped. Most of it didn't. Then a colleague at work mentioned Patchright, and I felt completely stupid for not finding it sooner.
 
-Here's the thing: the problem was never my code. The problem was Playwright itself.
+Here's the thing: the problem was never the code I wrote. The problem was Playwright itself.
 
 ## Playwright Was Never Meant to Hide
 
-Playwright is a testing tool. Microsoft built it to automate browsers for testing — not to sneak past bot detection. Why would they? If you're testing your own app, you *want* the browser to know it's automated.
+Playwright is a testing tool. Microsoft built it to automate browsers for testing — not to sneak past bot detection and scrape DataDome. Why would they? If you're testing your own app, you *want* the browser to know it's automated.
 
-So Playwright doesn't even try to be invisible. And that's fine — until you need to automate against a site that doesn't want to be automated.
+So Playwright doesn't even try to be invisible. And that's fine — until you need to automate against a site that aggressively doesn't want to be automated.
 
-I learned this the hard way. I was building scraping pipelines at work, running Playwright in headed mode with random delays, human-like typing, the works. Sites with basic protection let me through. But anything running Cloudflare or DataDome? Blocked instantly. Every time.
+I learned this the hard way. I was building production scraping pipelines at work, running Playwright in headed mode with random delays, human-like typing, the works. Sites with basic protection let me through. But anything running Cloudflare or DataDome? Blocked instantly. Every single time.
 
-The frustrating part was that I couldn't *see* what was wrong. The browser looked normal. The behavior looked human. But something under the hood was giving me away.
+The most frustrating part was that I couldn't *see* what was wrong. The browser looked normal. The behavior looked human. But something underneath the hood was giving me away.
 
 ## What's Actually Leaking
 
-Once I started digging, I found that Playwright leaks in ways you can't fix from the outside:
+Once I finally started digging, I found that Playwright leaks in ways you physically can't fix from the outside:
 
-**The big one is how Playwright talks to the browser.** It calls `Runtime.enable` on the Chrome DevTools Protocol to execute JavaScript. Detection scripts can check whether `Runtime.enable` has been called — and if it has, you're flagged. There's no Playwright config option to turn this off. It's baked into how the tool works.
+**The big one is how Playwright talks to the browser.** It calls `Runtime.enable` on the Chrome DevTools Protocol to execute JavaScript. Detection scripts can easily check whether `Runtime.enable` has been called — and if it has, you're flagged. There's no magical Playwright config option to turn this off. It's baked into exactly how the tool works.
 
-**Then there's the obvious stuff.** Playwright launches Chromium with flags like `--enable-automation` which literally sets `navigator.webdriver` to `true`. Every detection script checks this first. You can try to override it with JavaScript injection, but sophisticated detectors check if it was overridden after the fact — they know that trick.
+**Then there's the obvious stuff.** Playwright launches Chromium with flags like `--enable-automation` which literally hardcodes `navigator.webdriver` to `true`. Every detection script checks this first. You can try to override it with JavaScript injection, but sophisticated detectors just check if it was overridden after the fact — they know that trick.
 
-**And the subtle stuff.** Playwright disables popup blocking, disables extensions, disables component updates, disables default apps. Each one alone isn't a red flag. But stack them together and the browser's fingerprint looks nothing like a real user's browser. It's like showing up to a party in a disguise but wearing a name tag that says "I'm in disguise."
+**And the subtle stuff.** Playwright disables popup blocking, disables extensions, disables component updates, disables default apps. Each one alone isn't an immediate red flag. But stack them all together and the browser's fingerprint looks absolutely nothing like a real user's browser. It's like showing up to a party in a disguise but wearing a literal name tag that says "I'm in disguise."
 
-I tried fixing each leak individually — custom scripts, launch args overrides, extension injection. You can patch some of them, but you can't patch `Runtime.enable` from the outside. That one requires changing Playwright's source code.
+I tried fixing each leak individually — custom scripts, launch args overrides, extension injection. You can patch some of them, but you can't patch `Runtime.enable` from the outside. That one requires fundamentally changing Playwright's source code.
 
 Which is exactly what Patchright does.
 
 ## So What is Patchright
 
-Patchright is a fork of Playwright that fixes the detection leaks at the source. Not a plugin you add on top. Not a stealth script you inject at launch. The actual Playwright codebase, patched.
+Patchright is a fork of Playwright that fixes the detection leaks directly at the source code level. Not a plugin you add on top. Not a stealth script you inject at launch. The actual, literal Playwright codebase, patched.
 
-The biggest change: instead of calling `Runtime.enable` (which is detectable), Patchright executes JavaScript through isolated ExecutionContexts. Same result for your code — `page.evaluate()`, locators, everything works the same. But the detection signal is gone.
+The biggest change: instead of calling `Runtime.enable` (which is highly detectable), Patchright executes JavaScript through isolated `ExecutionContexts`. You get the exact same result for your code — `page.evaluate()`, locators, everything works the identically. But the detection signal is entirely gone.
 
-It also cleans up all the command flag problems — removes the automation flags, adds `--disable-blink-features=AutomationControlled`, re-enables extensions and default apps so the browser looks like a normal installation.
+It also cleans up all the command flag problems — it actively removes the automation flags, adds `--disable-blink-features=AutomationControlled`, and re-enables extensions and default apps so the browser actually looks like a normal Chrome installation.
 
-The trade-off? You lose `console.log` in the browser context because Patchright disables the Console API (another detection vector). Honestly, I don't miss it. I use Node.js logging for debugging, not the browser console. And if I really need browser-side debugging, I switch back to vanilla Playwright for that session.
+The trade-off? You lose `console.log` in the browser context because Patchright purposely disables the Console API (another detection vector). Honestly, I don't miss it. I use Node.js logging for debugging, not the browser console. And if I really need browser-side debugging, I just switch back to vanilla Playwright for that single session.
 
-The result is that Patchright in headed mode passes every major detection system I've thrown at it — Cloudflare, DataDome, Kasada, Akamai, Fingerprint.com. I've been running it in production for months.
+The result is that Patchright in headed mode passes every major detection system I've thrown at it — Cloudflare, DataDome, Kasada, Akamai, Fingerprint.com. I've literally been running it in production for months.
 
 ## Installation
 
@@ -58,15 +58,15 @@ npm install patchright
 npx patchright install chromium
 ```
 
-It sits alongside Playwright — you don't uninstall or replace anything. Both can coexist in the same project.
+It sits directly alongside Playwright — you don't uninstall or replace anything. Both can happily coexist in the same project.
 
-One thing: **Chromium only.** Patchright doesn't patch Firefox or WebKit. For scraping, this is fine — Chromium is what you want anyway.
+One thing: **Chromium only.** Patchright doesn't patch Firefox or WebKit. For scraping, this is perfectly fine — Chromium is what you want anyway.
 
 ## The Code Change
 
 Here's the part that made me feel stupid for not switching sooner.
 
-Playwright:
+Vanilla Playwright:
 
 ```typescript
 import { chromium } from 'playwright';
@@ -78,13 +78,13 @@ Patchright:
 import { chromium } from 'patchright';
 ```
 
-That's it. That's the entire migration. One import. Same API, same methods, same `page.goto()`, same `page.click()`, same `page.evaluate()`. Your existing Playwright code works with Patchright by changing a single word.
+That's it. That's the entire migration. One single import. The exact same API, same methods, same `page.goto()`, same `page.click()`, same `page.evaluate()`. Your existing Playwright code works identically with Patchright just by changing a single word.
 
-I migrated a 2,000-line scraping codebase in about 5 minutes. Most of that was find-and-replace.
+I migrated a 2,000-line production scraping codebase to Patchright in about 5 minutes. Most of that was just doing a global find-and-replace.
 
 ## Seeing the Difference
 
-Run both against [Pixelscan](https://pixelscan.net/) — a public page that checks every automation signal it can find.
+Run both against [Pixelscan](https://pixelscan.net/) — a public page that checks every single automation signal it can find.
 
 **Vanilla Playwright:**
 
@@ -103,7 +103,7 @@ async function main() {
 main();
 ```
 
-Result: Red flags everywhere. `navigator.webdriver` detected, WebDriver present, automation signals lit up.
+Result: Red flags everywhere. `navigator.webdriver` detected, WebDriver present, automation signals actively lit up.
 
 **Patchright:**
 
@@ -122,7 +122,7 @@ async function main() {
 main();
 ```
 
-Result: All green. Same code. One import change.
+Result: All green. The exact same code. One import change.
 
 **Vanilla Playwright on Pixelscan:**
 ![Playwright detected as automated on Pixelscan](/images/blog/patchright/playwright-pixelscan.png)
@@ -138,24 +138,24 @@ Result: All green. Same code. One import change.
 
 ## When to Use Which
 
-Don't overthink this. The rule is simple:
+Don't overthink this. The rule is extremely simple:
 
-**Use Playwright** when you're testing your own app, scraping sites that don't have bot detection, or running tests in CI. It's the better-supported tool with a bigger ecosystem. Use it by default.
+**Use Playwright** when you're testing your own app, scraping smaller sites that don't have aggressive bot detection, or running tests in CI. It's the better-supported tool with a bigger ecosystem. Always use it by default.
 
-**Use Patchright** when you're hitting bot detection you can't get past. Cloudflare challenges, DataDome blocks, CAPTCHAs appearing out of nowhere. Switch the import and see if the problem disappears. Most of the time, it will.
+**Use Patchright** when you're hitting bot detection you physically can't get past. Cloudflare challenges, DataDome blocks, CAPTCHAs appearing organically out of nowhere. Switch the import and see if the problem entirely disappears. Most of the time, it will.
 
-Don't use Patchright for everything just because you can. It's a fork — it lags slightly behind Playwright releases, it has a few edge-case bugs that vanilla Playwright doesn't, and you lose browser console access. Use the right tool for the job.
+Don't use Patchright for absolutely everything just because you can. It's a fork — it lags slightly behind official Playwright releases, it has a few edge-case bugs that vanilla Playwright doesn't, and you explicitly lose browser console access. Use the right tool for the job.
 
 ## What I Pair It With
 
-Patchright handles the browser fingerprint, but that's only half the battle. In production, I also use:
+Patchright perfectly handles the browser fingerprint, but that's only half the battle. In production, I also heavily use:
 
-- **Rotating residential proxies** — Your browser might look human, but if 500 requests come from the same IP, you're done. Rotate per session.
-- **Random delays** — Not `waitForTimeout(1000)` on every action. Actual randomness. `Math.random() * 2000 + 500` so each wait is different.
-- **Fresh contexts** — New browser context per session. Don't carry cookies or state between different accounts.
-- **Headed mode** — Always. Even with Patchright, headed vs headless makes a detectable difference. In CI, use `xvfb-run` to run headed without a display.
+- **Rotating residential proxies** — Your browser fingerprint might look remarkably human, but if 500 requests come from the same exact datacenter IP, you're done. Rotate per session.
+- **Random delays** — Not `waitForTimeout(1000)` on every action. Actual, organic randomness. I use `Math.random() * 2000 + 500` so each wait is uniquely different.
+- **Fresh contexts** — Launch a new browser context per session. Don't carry cookies or state between different scraping accounts.
+- **Headed mode** — Always. Even with Patchright, headed vs headless makes a highly detectable difference. In CI, use `xvfb-run` to run headed without needing a physical display.
 
-Patchright solves the hardest part — the leaks you can't fix from the outside. The rest is just common sense.
+Patchright solves the absolute hardest part — the undetectable leaks you can't fix from the outside. The rest is just common sense web scraping.
 
 ## Getting Started
 
@@ -165,6 +165,4 @@ Patchright solves the hardest part — the leaks you can't fix from the outside.
 4. Run in headed mode
 5. Stop getting blocked
 
-If you're new to Playwright entirely, start with the [Playwright tutorial](/tutorial/playwright) on this site — learn the API first, then come back here when you need stealth.
-
-I'm writing more about this world — CAPTCHA solving at scale, building anti-detection scripts that survive site updates, credential management systems. If that's what you do for work (or want to), join the Mage Circle!.
+If you're new to Playwright entirely, definitely start with the [Playwright tutorial](/tutorial/playwright) on this site — learn the API extremely well first, then come back here when you actually need stealth.
