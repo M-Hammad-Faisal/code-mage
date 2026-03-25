@@ -189,7 +189,7 @@ export default function AboutPage() {
                   href="https://webdriver.io/docs/best-practices/file-download"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-red-500 hover:underline"
+                  className="text-red-600 dark:text-red-400 underline"
                 >
                   Best Practices page on webdriver.io
                 </a>{' '}
@@ -339,7 +339,7 @@ export default function AboutPage() {
               href={`${SITE.socials.github}?tab=repositories`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1"
+              className="text-xs text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1"
             >
               All repos <ExternalLink className="w-3 h-3" />
             </a>
@@ -416,7 +416,10 @@ export default function AboutPage() {
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                 📧{' '}
-                <a href={`mailto:${SITE.author.email}`} className="text-red-500 hover:underline">
+                <a
+                  href={`mailto:${SITE.author.email}`}
+                  className="text-red-600 dark:text-red-400 underline"
+                >
                   {SITE.author.email}
                 </a>
               </p>
