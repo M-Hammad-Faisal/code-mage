@@ -23,12 +23,6 @@ const SOCIALS = [
     label: 'LinkedIn',
     color: 'hover:bg-blue-600 hover:border-blue-600 hover:text-white',
   },
-  {
-    href: SITE.socials.patreon,
-    icon: Heart,
-    label: 'Patreon',
-    color: 'hover:bg-orange-500 hover:border-orange-500 hover:text-white',
-  },
 ];
 
 export function Footer() {
@@ -108,24 +102,6 @@ export function Footer() {
                 </a>
               </p>
               <p>{SITE.author.location}</p>
-              <div className="flex gap-4 pt-1">
-                <a
-                  href={SITE.author.portfolio}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-gray-900 dark:hover:text-white transition-colors"
-                >
-                  Portfolio →
-                </a>
-                <a
-                  href={SITE.author.resume}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-gray-900 dark:hover:text-white transition-colors"
-                >
-                  Resume →
-                </a>
-              </div>
             </div>
           </div>
         </div>
