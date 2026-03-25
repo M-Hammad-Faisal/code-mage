@@ -3,17 +3,17 @@ title: 'Why I Switched from Selenium to Playwright (And Never Looked Back)'
 date: '2026-01-10'
 category: 'Test Automation'
 tags: ['playwright', 'selenium', 'testing', 'automation']
-excerpt: 'After years of writing Selenium tests, I switched to Playwright. Here is what changed, what stayed the same, and whether the switch was worth it.'
+excerpt: 'After years of writing Selenium tests, I switched to Playwright. Here''s what changed, what stayed the same, and whether the switch was worth it.'
 featured: true
 ---
 
 I spent three years writing Selenium tests. I learned to love it — the explicit waits, the page object pattern, the way it forced you to think about browser state. Then I moved to a project using Playwright and after two weeks, I never opened a Selenium file again.
 
-Here is an honest breakdown of why.
+Here's an honest breakdown of why.
 
-## The Problem with Selenium (in 2025)
+## The Problem with Selenium (in 2026)
 
-Selenium is not bad. It is battle-tested, it has a massive ecosystem, and every QA engineer on the planet knows it. But it has a fundamental design problem: it was built for a different web.
+Selenium isn't bad. It's battle-tested, it has a massive ecosystem, and every QA engineer on the planet knows it. But it has a fundamental design problem: it was built for a different web.
 
 The modern web is async. SPAs, React hydration, lazy loading, websockets — Selenium's synchronous mental model fights against all of this. You end up writing code like:
 
@@ -23,11 +23,11 @@ WebDriverWait(driver, 10).until(
 )
 ```
 
-You get used to it. But you are spending mental energy on *waiting* instead of *testing*.
+You get used to it. But you're spending mental energy on *waiting* instead of *testing*.
 
 ## What Playwright Does Differently
 
-Playwright's core insight is that **auto-waiting should be the default, not the exception**.
+Playwright's core insight is simple: **auto-waiting should be the default, not the exception**.
 
 When you call `page.click('#submit-btn')`, Playwright automatically waits for the element to be:
 - Attached to the DOM
@@ -48,7 +48,7 @@ await expect(page.locator('.success-message')).toBeVisible();
 
 ### 1. Parallel execution is a first-class citizen
 
-Selenium parallelism usually means Selenium Grid, Docker, or some CI magic. In Playwright, it is built into the test runner:
+Selenium parallelism usually means Selenium Grid, Docker, or some CI magic that inevitably breaks. In Playwright, it's built right into the test runner:
 
 ```typescript
 // playwright.config.ts
@@ -58,11 +58,11 @@ export default defineConfig({
 });
 ```
 
-I cut our CI pipeline from 18 minutes to 5 minutes on the same machine.
+I cut our CI pipeline from 18 minutes to 5 minutes on the same machine just by flipping this switch.
 
 ### 2. Network interception is trivial
 
-Mocking APIs in Selenium requires a proxy (like BrowserMob). In Playwright:
+Mocking APIs in Selenium requires a proxy (like BrowserMob). In Playwright, it's native:
 
 ```typescript
 await page.route('**/api/products', route =>
@@ -70,7 +70,7 @@ await page.route('**/api/products', route =>
 );
 ```
 
-This changed how I write tests. Instead of depending on a live backend, I mock the API layer and test the UI in isolation.
+This changed how I write tests. Instead of depending on a flaky live backend, I mock the API layer and test the UI in complete isolation.
 
 ### 3. Screenshots and video on failure — zero config
 
@@ -82,7 +82,7 @@ use: {
 }
 ```
 
-When a test fails in CI, I get a full video of exactly what happened. Game changer for debugging flaky tests.
+When a test fails in CI, I get a full video of exactly what happened. It's a game changer for debugging flaky tests.
 
 ### 4. The codegen tool
 
@@ -90,28 +90,28 @@ When a test fails in CI, I get a full video of exactly what happened. Game chang
 npx playwright codegen https://saucedemo.com
 ```
 
-Playwright opens a browser and records your interactions as test code. It is not perfect, but it is an incredible starting point for new testers.
+Playwright opens a browser and records your interactions as test code. It isn't perfect, but it's an incredible starting point for new testers to learn the API.
 
 ## What Selenium Still Wins At
 
-**Cross-company standardization.** If you are in a large enterprise where 50 teams use Selenium, you can not just switch. The ecosystem around Selenium — reporting tools, CI integrations, talent familiarity — is still larger.
+**Cross-company standardization.** If you're in a large enterprise where 50 teams use Selenium, you can't just switch overnight. The ecosystem around Selenium — reporting tools, CI integrations, talent familiarity — is still larger.
 
-**Mobile testing.** Selenium + Appium is the standard for native mobile app testing. Playwright is browser-only.
+**Mobile testing.** Selenium + Appium is the standard for native mobile app testing. Playwright is purely browser-centric.
 
-**Legacy browser support.** Need to test IE11? Selenium is your only option (and my condolences).
+**Legacy browser support.** Need to test IE11? Selenium is your only option (and you have my condolences).
 
 ## Should You Switch?
 
-If you are starting a new project: **yes, start with Playwright**. The developer experience is objectively better.
+If you're starting a new project: **yes, start with Playwright**. The developer experience is objectively better.
 
 If you have an existing Selenium suite: **migrate gradually**. Start with new test files in Playwright, and move old ones over when they need significant rework anyway.
 
-If you are a QA engineer learning automation: **learn Playwright first**. Selenium is worth understanding conceptually, but Playwright is where the industry is heading.
+If you're a QA engineer learning automation: **learn Playwright first**. Selenium is worth understanding conceptually, but Playwright is where the industry's heading.
 
 ## The Bottom Line
 
 Playwright is what Selenium would be if it were designed today. It respects the async nature of the web, it has sensible defaults, and it makes the happy path easy and the hard path possible.
 
-Three years of Selenium taught me *what* to test. Two weeks of Playwright taught me how much time I had been wasting on *how* to test.
+Three years of Selenium taught me *what* to test. Two weeks of Playwright taught me how much time I'd been wasting on *how* to test.
 
 Check out the [Playwright tutorial series](/tutorial/playwright) on this site if you want to go deep.
