@@ -6,7 +6,6 @@ import {
   Code2,
   ExternalLink,
   Github,
-  Heart,
   Linkedin,
   Mail,
   MapPin,
@@ -21,67 +20,69 @@ import { SITE } from '@/lib/site.config';
 export const metadata: Metadata = {
   title: 'About',
   description:
-    'Muhammad Hammad Faisal — Software Engineer & Test Automation specialist at Arbisoft. Founder of Code Mage. Based in Lahore, Pakistan.',
+    'Muhammad Hammad Faisal — Software Engineer at Arbisoft building production scraping pipelines, anti-detection systems, and browser automation tooling.',
 };
 
 const TECH_STACK = [
   {
-    category: 'Test Automation',
-    items: ['WebdriverIO', 'Playwright', 'Cypress', 'Selenium', 'Appium', 'Puppeteer', 'PyTest'],
+    category: 'Browser Automation',
+    items: [
+      'Playwright',
+      'Patchright',
+      'Puppeteer',
+      'WebdriverIO',
+      'Cypress',
+      'Selenium',
+      'Appium',
+    ],
   },
-  { category: 'Languages', items: ['TypeScript', 'JavaScript', 'Python', 'Java', 'Kotlin'] },
-  { category: 'Backend & Web', items: ['Django', 'FastAPI', 'React', 'Next.js', 'Node.js'] },
+  { category: 'Languages', items: ['TypeScript', 'JavaScript', 'Python', 'Java'] },
+  { category: 'Backend & Web', items: ['Next.js', 'React', 'Django', 'Node.js', 'FastAPI'] },
   {
-    category: 'Tools & Infra',
+    category: 'Infrastructure',
     items: ['Supabase', 'Vercel', 'Docker', 'GitHub Actions', 'Cloud Functions', 'Cloud Run'],
   },
 ];
 
 const TIMELINE = [
   {
-    company: 'UET Lahore',
-    date: '2020–2024',
-    desc: 'Bachelor of Software Engineering.',
-    title: 'Student',
-  },
-  {
     company: 'Ginkgo Retail',
     date: 'Aug 2022 – May 2023',
-    desc: 'Built React + Django web apps and a full-stack LMS.',
+    desc: 'Full-stack web apps with React + Django. Built a complete Learning Management System.',
     title: 'Jr. Software Engineer',
   },
   {
     company: 'Arbisoft',
     date: 'May 2023 – Jun 2024',
-    desc: 'WebdriverIO automation frameworks for web and mobile (Android, iOS). Set up Appium + Selenium Grid.',
+    desc: 'WebdriverIO E2E test suites for web and mobile (Android/iOS). Built Selenium Grid for parallel distributed testing with Appium.',
     title: 'Jr. Software Engineer',
   },
   {
     company: 'Arbisoft',
     date: 'Jun 2024 – Present',
-    desc: 'Puppeteer-based scraping pipelines, Playwright password-management tooling, Cloud Functions & Cloud Run deployments.',
+    desc: 'Production scraping pipelines with Puppeteer/Playwright/Patchright, anti-detection systems, credential management at scale, Cloud Functions & Cloud Run deployments.',
     title: 'Software Engineer',
   },
   {
     company: 'Code Mage',
     date: '2024 – Present',
-    desc: 'Founded Code Mage — Python tutorials, QA deep dives, project walkthroughs on YouTube and blog.',
+    desc: 'Test automation tutorials, web scraping deep dives, and career guides for engineers.',
     title: 'Founder & Content Creator',
   },
 ];
 
 const PROJECTS = [
   {
-    desc: 'Write messages to your future self, delivered at any date. Next.js + Supabase + Resend.',
-    href: 'https://timecapsula.website',
-    stack: ['Next.js', 'Supabase', 'Resend', 'Vercel'],
-    title: 'TimeCapsula',
+    desc: 'Technical content platform. 28 tutorial chapters, blog, newsletter.',
+    href: 'https://code-mage.dev',
+    stack: ['Next.js', 'Supabase', 'MDX', 'Vercel'],
+    title: 'Code Mage',
   },
   {
-    desc: 'Enterprise WebdriverIO framework with TypeScript, parallel execution, Allure reports, CI/CD.',
-    href: SITE.socials.github,
-    stack: ['WebdriverIO', 'TypeScript', 'Mocha', 'Allure'],
-    title: 'WD Automation Framework',
+    desc: 'Authored the Best Practices file download page for the official WebdriverIO docs.',
+    href: 'https://webdriver.io/docs/best-practices/file-download',
+    stack: ['WebdriverIO', 'Open Source', 'Documentation'],
+    title: 'WebdriverIO Best Practices',
   },
   {
     desc: 'Full Playwright + 2Captcha integration with retry logic, custom exceptions, pytest tests.',
@@ -90,45 +91,39 @@ const PROJECTS = [
     title: 'Captcha Solver Library',
   },
   {
-    desc: 'Dynamically generates CI/CD pipeline templates from runtime configs. Built for freelance speed.',
+    desc: 'Enterprise WebdriverIO framework with TypeScript, parallel execution, Allure reports, CI/CD.',
     href: SITE.socials.github,
-    stack: ['TypeScript', 'Open Source'],
-    title: 'CI/CD Generator',
+    stack: ['WebdriverIO', 'TypeScript', 'Mocha', 'Allure'],
+    title: 'WD Automation Framework',
   },
   {
-    desc: 'JSON comparison tool with GitHub-style diff, CLI + web interfaces.',
-    href: SITE.socials.github,
-    stack: ['JavaScript', 'Node.js', 'HTML/CSS'],
-    title: 'JSON Compare Tool',
-  },
-  {
-    desc: 'Privacy-focused AI chat powered by local Ollama models with Material-UI.',
-    href: SITE.socials.github,
-    stack: ['React', 'Material-UI', 'Ollama'],
-    title: 'Ollama Chat App',
+    desc: 'Write messages to your future self, delivered at any date. Next.js + Supabase + Resend.',
+    href: 'https://timecapsula.website',
+    stack: ['Next.js', 'Supabase', 'Resend', 'Vercel'],
+    title: 'TimeCapsula',
   },
 ];
 
 const WRITINGS = [
   {
-    color: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800',
-    label: 'Python & Test Automation',
-    sub: 'Deep dives, gotchas, real frameworks',
+    color: 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800',
+    label: 'Test Automation',
+    sub: 'Playwright, WebdriverIO, Cypress — real frameworks, real patterns, real production code.',
+  },
+  {
+    color: 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800',
+    label: 'Web Scraping & Anti-Detection',
+    sub: 'Bot bypass, CAPTCHA solving, Patchright, and how to not get blocked.',
   },
   {
     color: 'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800',
-    label: 'AI in Test Automation',
-    sub: 'How AI tools are changing QA — and how to use them',
-  },
-  {
-    color: 'bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800',
-    label: 'Project Breakdowns',
-    sub: 'How I built TimeCapsula & others',
+    label: 'AI in QA',
+    sub: 'How AI tools are reshaping automation — and how to actually use them.',
   },
   {
     color: 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800',
-    label: 'Career in QA & Freelancing',
-    sub: 'Upwork, remote work, leveling up',
+    label: 'Career in Engineering',
+    sub: 'Job market, freelancing, and why your title matters.',
   },
 ];
 
@@ -166,7 +161,8 @@ export default function AboutPage() {
               </h1>
 
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
-                <Briefcase className="w-3.5 h-3.5 text-red-400" /> Software Engineer @ Arbisoft
+                <Briefcase className="w-3.5 h-3.5 text-red-400" /> Software Engineer (Test
+                Automation) @ Arbisoft
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-5">
                 <MapPin className="w-3.5 h-3.5 text-red-400" /> Lahore, Punjab, Pakistan
@@ -174,27 +170,34 @@ export default function AboutPage() {
 
               <p className="text-base text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
                 I&apos;m a{' '}
-                <strong className="text-gray-900 dark:text-white">Test Automation Engineer</strong>{' '}
-                at <strong className="text-gray-900 dark:text-white">Arbisoft</strong> with hands-on
-                experience across Playwright, WebdriverIO, Cypress, Selenium, Appium, and Puppeteer.
-                I&apos;ve built automation frameworks for web, mobile (Android/iOS), and
-                cloud-deployed scraping pipelines.
+                <strong className="text-gray-900 dark:text-white">Software Engineer</strong> at{' '}
+                <strong className="text-gray-900 dark:text-white">Arbisoft</strong> where I build
+                production scraping pipelines, anti-detection systems, and browser automation
+                tooling with Playwright, Puppeteer, and Patchright. Before that I built WebdriverIO
+                test suites for web and mobile apps, set up Selenium Grid for parallel distributed
+                testing, and wrote Cypress architectures.
+              </p>
+              <p className="text-base text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
+                <strong className="text-gray-900 dark:text-white">Code Mage</strong> is where I
+                write about the stuff I actually do at work — test automation, web scraping, bot
+                engineering, and how to not get your scraper blocked. If you&apos;re an engineer who
+                automates things (or wants to), you&apos;re in the right place.
               </p>
               <p className="text-base text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                <strong className="text-gray-900 dark:text-white">Code Mage</strong> is where I
-                teach manual QA testers how to break into test automation — with real code, real
-                projects, and no fluff. If you&apos;re a manual tester wondering where to start,
-                you&apos;re in the right place.
+                I also contribute to open source — I authored the{' '}
+                <a
+                  href="https://webdriver.io/docs/best-practices/file-download"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-red-500 hover:underline"
+                >
+                  Best Practices page on webdriver.io
+                </a>{' '}
+                and contributed features and fixes to the WebdriverIO repository.
               </p>
 
               <div className="flex flex-wrap gap-2">
                 {[
-                  {
-                    href: SITE.socials.youtube,
-                    icon: Youtube,
-                    label: 'YouTube',
-                    cls: 'bg-red-600 hover:bg-red-700 text-white',
-                  },
                   {
                     href: SITE.socials.github,
                     icon: Github,
@@ -208,16 +211,10 @@ export default function AboutPage() {
                     cls: 'bg-blue-600 hover:bg-blue-700 text-white',
                   },
                   {
-                    href: SITE.author.portfolio,
-                    icon: ExternalLink,
-                    label: 'Portfolio',
-                    cls: 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300',
-                  },
-                  {
-                    href: SITE.author.resume,
-                    icon: BookOpen,
-                    label: 'Resume',
-                    cls: 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300',
+                    href: SITE.socials.youtube,
+                    icon: Youtube,
+                    label: 'YouTube',
+                    cls: 'bg-red-600 hover:bg-red-700 text-white',
                   },
                   {
                     href: `mailto:${SITE.author.email}`,
@@ -226,10 +223,10 @@ export default function AboutPage() {
                     cls: 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:border-red-300 hover:text-red-600 dark:hover:text-red-400',
                   },
                   {
-                    href: SITE.socials.patreon,
-                    icon: Heart,
-                    label: 'Patreon',
-                    cls: 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:border-orange-300 hover:text-orange-500',
+                    href: SITE.author.resume,
+                    icon: BookOpen,
+                    label: 'Resume',
+                    cls: 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300',
                   },
                 ].map((s) => (
                   <a
@@ -392,7 +389,7 @@ export default function AboutPage() {
               What I Write About
             </h2>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {WRITINGS.map((t) => (
               <div key={t.label} className={`rounded-xl border p-4 ${t.color}`}>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
@@ -411,11 +408,11 @@ export default function AboutPage() {
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 md:p-12 flex flex-col md:flex-row items-start md:items-center gap-8">
             <div className="flex-1">
               <h2 className="text-2xl md:text-3xl font-heading font-bold text-gray-900 dark:text-white mb-3">
-                Let&apos;s work together
+                Want to work together?
               </h2>
               <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-md">
-                Open to freelance projects, collaborations, or just a good tech conversation. Drop
-                me a message anytime.
+                I&apos;m open to freelance projects, consulting, or just a good conversation about
+                automation. Drop me a message anytime.
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                 📧{' '}
