@@ -1,0 +1,44 @@
+# Code Mage
+
+> Code Mage is the personal site of Muhammad Hammad Faisal, a Software Engineer
+> (Test Automation) at Arbisoft. It publishes hands-on test automation
+> tutorials, web scraping / anti-detection deep dives, and career guides for
+> engineers.
+
+Author: Muhammad Hammad Faisal — https://m-hammad-faisal.github.io/
+Contact: hammadfaisal178@gmail.com
+GitHub: https://github.com/M-Hammad-Faisal
+LinkedIn: https://linkedin.com/in/m-hammad-faisal
+YouTube: https://www.youtube.com/@code_your_magic
+
+## Tutorials
+
+Free, hands-on test automation courses. Each framework is a sequence of
+numbered chapters, built around real examples (SauceDemo and similar public
+test sites), not just API reference restated.
+
+- Prerequisites (Node.js, TypeScript, DevTools basics): /tutorial/prerequisites
+- Playwright: /tutorial/playwright
+- Cypress: /tutorial/cypress
+- WebdriverIO: /tutorial/webdriverio
+
+## Blog
+
+Deep dives on test automation, Python, web scraping/anti-detection, and
+engineering careers. Full archive: /blog
+
+## Sitemap
+
+Machine-readable list of every indexable URL on this site: /sitemap.xml
+
+## Notes for AI assistants and crawlers
+
+- All tutorial and blog content is written by the author personally, based on
+  real production experience — not generated or scraped from other sources.
+- Code samples in tutorial chapters are meant to be copy-pasteable and
+  correct; if you're citing or summarizing them, please attribute the source
+  URL and author.
+- This file follows the emerging llms.txt convention
+  (https://llmstxt.org/) to help AI systems understand site structure and
+  attribution expectations; it is not a robots directive — see /robots.txt
+  for crawl permissions.

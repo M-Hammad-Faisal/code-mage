@@ -4,7 +4,7 @@ export const SITE = {
   url: 'https://code-mage.dev',
   description:
     'Test automation tutorials, scraping deep dives, and career guides for engineers — by Muhammad Hammad Faisal.',
-  ogImage: '/brand/Code Mage Banner.webp',
+  ogImage: '/brand/code-mage-banner.webp',
 
   author: {
     name: 'Muhammad Hammad Faisal',
@@ -30,6 +30,14 @@ export const SITE = {
     description: 'Test automation tutorials, scraping deep dives, and career guides for engineers.',
   },
 };
+
+/**
+ * Default OpenGraph/Twitter image for pages with no per-page image of their
+ * own. Next.js metadata objects don't deep-merge with the root layout's
+ * defaults, so any page that sets its own `openGraph`/`twitter` block must
+ * spread this in explicitly or its social preview image silently disappears.
+ */
+export const SITE_OG_IMAGE = [{ url: SITE.ogImage, width: 1200, height: 630, alt: SITE.brand }];
 
 export const NAV_LINKS = [
   { label: 'Home', href: '/' },

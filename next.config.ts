@@ -21,8 +21,8 @@ const securityHeaders = [
       // 'unsafe-inline' stays for now: app/layout.tsx sets the theme via an
       // inline <script> before hydration; removing it needs nonce plumbing.
       "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
+      "style-src 'self' 'unsafe-inline'",
+      "font-src 'self'",
       "img-src 'self' data: https://images.unsplash.com https://m-hammad-faisal.github.io",
       "connect-src 'self' https://*.supabase.co https://vitals.vercel-insights.com",
       "frame-ancestors 'self'",

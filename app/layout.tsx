@@ -1,11 +1,34 @@
 import type { Metadata } from 'next';
+import { Syne, Outfit, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { SITE } from '@/lib/site.config';
+import { SITE, SITE_OG_IMAGE } from '@/lib/site.config';
+import { personJsonLd, websiteJsonLd, jsonLdScript } from '@/lib/json-ld';
+
+const syne = Syne({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-heading',
+  display: 'swap',
+});
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-body',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: { default: SITE.seo.title, template: '%s | Code Mage' },
@@ -32,7 +55,7 @@ export const metadata: Metadata = {
     siteName: SITE.brand,
     title: SITE.seo.title,
     description: SITE.seo.description,
-    images: [{ url: SITE.ogImage, width: 1200, height: 630, alt: SITE.brand }],
+    images: SITE_OG_IMAGE,
   },
   twitter: {
     card: 'summary_large_image',
@@ -50,13 +73,25 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${syne.variable} ${outfit.variable} ${jetbrainsMono.variable}`}
+    >
       <head>
         {/* Blocking script — syncs dark/light class before first paint to prevent flash */}
         <script
           dangerouslySetInnerHTML={{
             __html: `try{var t=localStorage.getItem('theme'),p=window.matchMedia('(prefers-color-scheme:dark)').matches,d=t||(p?'dark':'light');d==='dark'?document.documentElement.classList.add('dark'):document.documentElement.classList.remove('dark')}catch(e){}`,
           }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(websiteJsonLd()) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(personJsonLd()) }}
         />
       </head>
       <body className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-200">

@@ -82,3 +82,21 @@ export function getAllBlogCategories(): string[] {
   const categories = getAllBlogPosts().map((p) => p.category);
   return [...new Set(categories)].sort();
 }
+
+/** Same-category posts first, then posts sharing the most tags, excluding the post itself. */
+export function getRelatedPosts(slug: string, limit = 3): BlogPost[] {
+  const current = getBlogPost(slug);
+  if (!current) return [];
+
+  return getAllBlogPosts()
+    .filter((p) => p.slug !== slug)
+    .map((p) => {
+      const sharedTags = p.tags.filter((t) => current.tags.includes(t)).length;
+      const sameCategory = p.category === current.category ? 1 : 0;
+      return { post: p, score: sameCategory * 10 + sharedTags };
+    })
+    .filter((p) => p.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((p) => p.post);
+}

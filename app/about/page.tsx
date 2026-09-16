@@ -15,12 +15,28 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { SITE } from '@/lib/site.config';
+import { SITE, SITE_OG_IMAGE } from '@/lib/site.config';
+
+const aboutDescription =
+  'Muhammad Hammad Faisal — Software Engineer at Arbisoft building production scraping pipelines, anti-detection systems, and browser automation tooling.';
 
 export const metadata: Metadata = {
   title: 'About',
-  description:
-    'Muhammad Hammad Faisal — Software Engineer at Arbisoft building production scraping pipelines, anti-detection systems, and browser automation tooling.',
+  description: aboutDescription,
+  alternates: { canonical: `${SITE.url}/about` },
+  openGraph: {
+    url: `${SITE.url}/about`,
+    title: 'About — Code Mage',
+    description: aboutDescription,
+    type: 'profile',
+    images: SITE_OG_IMAGE,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'About — Code Mage',
+    description: aboutDescription,
+    images: SITE.ogImage,
+  },
 };
 
 const TECH_STACK = [

@@ -5,19 +5,22 @@ import { SITE } from '@/lib/site.config';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = SITE.url;
-  const now = new Date();
 
+  // `lastModified` is only set where we have a genuine per-content date
+  // (blog posts have real frontmatter dates). Stamping build time on pages
+  // with no real "last changed" signal would tell crawlers everything
+  // changes on every deploy, which is misleading rather than helpful.
   const staticPages: MetadataRoute.Sitemap = [
-    { url: base, lastModified: now, changeFrequency: 'weekly', priority: 1 },
-    { url: `${base}/blog`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
-    { url: `${base}/tutorial`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
-    { url: `${base}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${base}/contact`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
+    { url: base, changeFrequency: 'weekly', priority: 1 },
+    { url: `${base}/blog`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${base}/tutorial`, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${base}/about`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${base}/contact`, changeFrequency: 'monthly', priority: 0.5 },
   ];
 
   const blogPages: MetadataRoute.Sitemap = getAllBlogPosts().map((post) => ({
     url: `${base}/blog/${post.slug}`,
-    lastModified: post.date ? new Date(post.date) : now,
+    ...(post.date ? { lastModified: new Date(post.date) } : {}),
     changeFrequency: 'monthly',
     priority: post.featured ? 0.9 : 0.7,
   }));
@@ -25,13 +28,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const tutorialPages: MetadataRoute.Sitemap = getAllFrameworks().flatMap((fw) => [
     {
       url: `${base}/tutorial/${fw.slug}`,
-      lastModified: now,
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     },
     ...fw.chapters.map((ch) => ({
       url: `${base}/tutorial/${fw.slug}/${ch.chapter}`,
-      lastModified: now,
       changeFrequency: 'monthly' as const,
       priority: 0.7,
     })),
