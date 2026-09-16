@@ -1,0 +1,41 @@
+---
+title: "Playwright's Named Locks Fix a Problem I Used to Solve With a Mutex File"
+date: '2026-09-19'
+category: 'Test Automation'
+tags: ['playwright', 'parallelization', 'testing', 'ci-cd']
+excerpt: "Any suite with tests that touch a shared resource — one seeded account, a rate-limited API, a shared database row — eventually needs to stop those specific tests from running at the same time. Playwright now does this natively."
+featured: false
+---
+
+Parallel test execution is one of the reasons to use Playwright in the first place — split your suite across workers, cut a 40-minute run down to 8 minutes. But it creates a specific, recurring problem: what happens when two tests that run in different workers both need exclusive access to the same external thing? One seeded "admin" account. A third-party sandbox API with a strict rate limit. A single row in a shared database that two tests both mutate.
+
+I've solved this before with a homemade file-lock — write a lockfile before the test, delete it after, have other tests poll for its absence. It works, but it's exactly the kind of infrastructure code that has nothing to do with the actual test and everything to do with working around the test runner's parallelism.
+
+Playwright has a real answer to this now: named locks, declared directly on the test.
+
+```typescript
+test('update global site settings', { lock: 'site-settings' }, async ({ page }) => {
+  // only one test tagged with the 'site-settings' lock
+  // runs at a time, across every worker and every file
+});
+```
+
+Any test carrying the same lock name is guaranteed never to run concurrently with another test carrying that name — the runner acquires the lock before starting the test and releases it when the test finishes, regardless of which worker process picked it up. This holds across files and across projects, which is the part a hand-rolled solution is genuinely annoying to get right — a lockfile approach needs its own cleanup-on-crash handling to avoid a stale lock permanently blocking a suite; the built-in version doesn't have that failure mode.
+
+## Multiple locks on one test
+
+A test can declare more than one lock if it touches more than one contended resource:
+
+```typescript
+test('reset the database', { lock: ['database', 'external-api'] }, async ({ page }) => {
+  // ...
+});
+```
+
+This runs only when both `database` and `external-api` are free, and holds both for the duration of the test.
+
+## Where this actually matters in a real suite
+
+The honest case for this isn't "use it everywhere" — locks serialize the tests that carry them, which works against the entire point of parallelization if you overuse it. It matters specifically for the small number of tests that genuinely can't tolerate concurrent access: the one test that mutates a shared seed account instead of using a fresh one, the test hitting a sandbox payment API with a hard rate limit, a smoke test that intentionally runs against a shared staging environment rather than an isolated one. For everything else — which should be the overwhelming majority of a well-designed suite — tests should be written to not need this at all, each one creating and cleaning up its own isolated data.
+
+If you're maintaining a suite old enough to have accumulated a custom mutex-file or semaphore pattern for exactly this problem, this is worth an afternoon to go rip out and replace. It's less code, and it doesn't have the "what if the process crashes mid-test and never releases the lock" failure mode that a filesystem-based version always ends up needing extra handling for.

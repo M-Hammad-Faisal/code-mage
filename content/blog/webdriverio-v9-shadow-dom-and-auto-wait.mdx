@@ -1,0 +1,55 @@
+---
+title: "Two Small WebdriverIO v9 Changes That Delete Boilerplate You Probably Have"
+date: '2026-09-24'
+category: 'Test Automation'
+tags: ['webdriverio', 'shadow-dom', 'testing', 'best-practices']
+excerpt: 'Automatic shadow DOM piercing and built-in auto-wait for interactability both quietly remove code patterns that used to be considered normal, necessary WebdriverIO boilerplate.'
+featured: false
+---
+
+Two changes in WebdriverIO v9 don't get much attention individually, but they both do the same kind of thing: they take a workaround that used to be considered a normal, expected part of writing WebdriverIO tests, and make it unnecessary.
+
+## Shadow DOM piercing, without a special selector syntax
+
+If you've tested a page built with web components, you've probably had to write something like this to reach inside a shadow root:
+
+```javascript
+// old pattern — manually piercing into a shadow root
+const shadowHost = await $('my-custom-element');
+const shadowRoot = await shadowHost.shadow$('button');
+await shadowRoot.click();
+```
+
+Workable, but it means every selector chain that crosses a shadow boundary needs to know it's crossing one, and needs a different method call at that point. In v9, standard selectors — including accessibility-based ones — automatically traverse both open and closed shadow roots without a separate method:
+
+```javascript
+// v9 — no shadow-specific syntax needed
+await $('button=Submit').click();
+```
+
+The selector doesn't need to know or care whether the element it's targeting happens to live inside a web component's shadow tree. This matters more than it sounds like it should, because shadow DOM boundaries are an implementation detail of how a component happened to get built — your test shouldn't need to encode that detail into every selector that might cross one.
+
+## Auto-wait for interactability, replacing a wait-then-act pattern
+
+A common defensive pattern in older WebdriverIO code — and one I've written plenty of myself — is manually waiting for an element to be both present and actionable before interacting with it:
+
+```javascript
+// old defensive pattern
+const button = await $('#submit');
+await button.waitForDisplayed();
+await button.waitForEnabled();
+await button.click();
+```
+
+This exists because clicking something that's technically in the DOM but not yet visible, or not yet enabled, produces a flaky failure that has nothing to do with your test logic — the element just wasn't ready yet. In v9, this waiting is handled automatically before any interaction command executes:
+
+```javascript
+// v9 — the wait is implicit in .click() itself
+await $('#submit').click();
+```
+
+## Why I'm not deleting every instance of the old pattern immediately
+
+Both of these make older, more defensive code redundant rather than wrong — the manual waits and the shadow-specific selectors still work fine in v9, they're just no longer necessary. That's an important distinction when you're maintaining an existing suite: this is a "stop writing this going forward" change, not an urgent "go rip out every instance right now" one. I'd clean up the manual `waitForDisplayed()`/`waitForEnabled()` pairs opportunistically, whenever you're already touching a file for another reason, rather than treating it as its own migration project — the redundant code isn't causing bugs, it's just no longer teaching the pattern you'd want a newcomer to copy.
+
+The through-line with the rest of what changed in v9 is consistent: a fair number of the framework's breaking and non-breaking changes are the maintainers looking at what real test suites were doing defensively to work around framework limitations, and building the defense into the framework itself instead of leaving it as tribal knowledge every team has to rediscover.

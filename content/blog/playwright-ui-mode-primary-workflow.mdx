@@ -1,0 +1,40 @@
+---
+title: "UI Mode Should Be Your Default Way to Run Playwright, Not --debug"
+date: '2026-09-18'
+category: 'Test Automation'
+tags: ['playwright', 'debugging', 'developer-experience', 'testing']
+excerpt: "I've been reaching for --headed --slow-mo and --debug out of habit for years. UI Mode replaces both, plus gives you a locator playground and a real timeline neither of them has."
+featured: false
+---
+
+For a long time my default debugging loop for a failing Playwright test was some combination of `--headed`, `--slow-mo=500`, and occasionally `--debug` to drop into the inspector. It works. It's also not what Playwright actually wants you reaching for first anymore.
+
+```bash
+npx playwright test --ui
+```
+
+That's UI Mode — a full test-running interface with a "time travel" experience and a built-in watch mode, and it's been the officially recommended way to author and debug tests for a while now. I'd been skipping past it out of pure habit, so I sat down and actually used it properly on a real spec.
+
+## What it replaces
+
+**Watch mode replaces re-running the CLI by hand.** Every test in the sidebar has a watch toggle — flip it on for the file you're actively working on, and it reruns automatically on save. No more alt-tabbing to a terminal and pressing up-arrow-enter after every edit.
+
+**The timeline replaces guessing where a test diverged.** Instead of scrolling through terminal output trying to figure out which line of a 40-line test the failure happened on, UI Mode gives you a color-coded timeline of every action. Hover any point and you see the exact DOM snapshot at that moment; double-click an action to see how long it actually took. This is the part that made `--slow-mo` feel obsolete for me — slow-mo makes you watch the whole test happen in real time to catch the moment something goes wrong, the timeline just lets you jump straight to it.
+
+**The locator picker replaces the copy-paste-run loop.** Click the pick-locator button, hover an element on the page, and UI Mode shows you the selector Playwright would generate — and lets you edit it live in a playground and see it re-highlight before you commit it to code. I'd been writing a locator, running the test, seeing it fail to match, and iterating from the terminal. This collapses that into one pane.
+
+**Trace viewer tabs are just there, always.** Actions (with before/after snapshots), Errors, Console, Network, Attachments — every tab you'd normally have to explicitly generate a trace file and open separately is already populated after a run, no extra flags needed.
+
+## The one thing worth knowing before you reach for it in CI or a container
+
+UI Mode opens a local browser window, so it's a local dev tool, not something you run headless in CI. If you're working inside Docker or GitHub Codespaces and still want it, there's a host flag:
+
+```bash
+npx playwright test --ui-host=0.0.0.0
+```
+
+That binds the UI Mode server to all interfaces so you can forward the port and open it from your host machine's browser instead of the container's.
+
+## Why I'm not going back to --debug as a default
+
+`--debug` still has its place — it's lighter weight, and sometimes you genuinely just want to step through one test with the inspector and nothing else. But for the actual day-to-day loop of writing a new test or chasing down why an existing one broke, UI Mode's timeline plus watch mode plus locator playground covers what I was previously doing with three separate tools and a lot of manual terminal re-running. It's not a new feature I'm bolting onto my workflow — it's the thing that was supposed to replace the old one.
