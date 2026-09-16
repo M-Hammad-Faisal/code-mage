@@ -197,10 +197,11 @@ describe('Checkout Flow', () => {
     await expect(browser).toHaveUrl(expect.stringContaining('/inventory'))
   })
 
-  beforeEach(async () => {
-    // Start each test from inventory
-    await browser.url('/inventory.html')
-  })
+  // No beforeEach navigation here on purpose — before() already logged in
+  // and landed on /inventory.html via the app's own redirect, and every
+  // test below continues in that same session. Re-visiting /inventory.html
+  // directly would 404 (it has no real static route on this site, only a
+  // client-side one reached by logging in).
 
   it('should complete a purchase', async () => {
     // Add item to cart
@@ -238,7 +239,7 @@ describe('Checkout Flow', () => {
   })
 
   it('should sort products by price', async () => {
-    await $('[data-test="product_sort_container"]').selectByAttribute('value', 'lohi')
+    await $('[data-test="product-sort-container"]').selectByAttribute('value', 'lohi')
 
     const priceEls = await $$('.inventory_item_price')
     const prices = await Promise.all(priceEls.map(async el => {

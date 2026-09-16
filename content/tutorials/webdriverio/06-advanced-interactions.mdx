@@ -13,7 +13,7 @@ Basic click-and-type covers most tests. This chapter covers the interactions tha
 For `<select>` elements, WDIO provides three selection methods:
 
 ```typescript
-const sort = $('[data-test="product_sort_container"]')
+const sort = $('[data-test="product-sort-container"]')
 
 // By the text the user sees
 await sort.selectByVisibleText('Price (low to high)')
@@ -382,10 +382,13 @@ describe('Advanced Interactions', () => {
   })
 
   it('should interact with product sort and verify ordering', async () => {
-    await browser.url('/inventory.html')
+    // before() already logged in and landed on /inventory.html — every
+    // test in this file continues in that same session rather than
+    // re-navigating (which 404s: this site has no real static route for
+    // /inventory.html, only a client-side one reached by logging in).
 
     // Sort by price ascending
-    await $('[data-test="product_sort_container"]').selectByAttribute('value', 'lohi')
+    await $('[data-test="product-sort-container"]').selectByAttribute('value', 'lohi')
 
     // Scroll to the last product (might be off-screen)
     const lastProduct = (await $$('.inventory_item')).at(-1)!
@@ -400,17 +403,16 @@ describe('Advanced Interactions', () => {
 
     // Verify prices are in ascending order
     const priceEls = await $$('.inventory_item_price')
-    const prices = await Promise.all(
-      priceEls.map(async el => parseFloat((await el.getText()).replace('$', '')))
-    )
+    const prices: number[] = []
+    for (const el of priceEls) {
+      prices.push(parseFloat((await el.getText()).replace('$', '')))
+    }
     for (let i = 1; i < prices.length; i++) {
       expect(prices[i]).toBeGreaterThanOrEqual(prices[i - 1])
     }
   })
 
   it('should open and interact with a new tab from a link', async () => {
-    await browser.url('/inventory.html')
-
     const handlesBefore = await browser.getWindowHandles()
 
     // LinkedIn link in footer opens in a new tab
@@ -435,8 +437,6 @@ describe('Advanced Interactions', () => {
   })
 
   it('should use JavaScript execution to read localStorage after adding to cart', async () => {
-    await browser.url('/inventory.html')
-
     await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()
 
     // SauceDemo stores cart in localStorage — read it directly

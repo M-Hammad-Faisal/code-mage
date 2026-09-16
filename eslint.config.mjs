@@ -13,6 +13,10 @@ const config = [
       '.claude/',
       'out/',
       'node_modules/',
+      // Standalone downloadable example projects — self-contained, meant to
+      // be copied out and run independently (matches tsconfig.json's
+      // exclusion of the same path).
+      'public/downloads/**',
       '*.min.js',
       '*.min.css',
       'next-env.d.ts',

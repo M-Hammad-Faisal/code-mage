@@ -1,0 +1,19 @@
+{
+  "name": "wdio-saucedemo",
+  "version": "1.0.0",
+  "description": "Complete runnable WebdriverIO v9 example project for SauceDemo — from the WebdriverIO tutorial at code-mage.dev/tutorial/webdriverio",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "wdio run wdio.conf.ts",
+    "wdio": "wdio run wdio.conf.ts"
+  },
+  "devDependencies": {
+    "@wdio/cli": "^9.0.0",
+    "@wdio/local-runner": "^9.0.0",
+    "@wdio/mocha-framework": "^9.0.0",
+    "@wdio/spec-reporter": "^9.0.0",
+    "typescript": "^5.5.0",
+    "tsx": "^4.19.0"
+  }
+}

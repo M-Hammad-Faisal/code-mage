@@ -77,7 +77,7 @@ await expect($('.product-description')).toHaveHTML(
 await expect($('[data-test="firstName"]')).toHaveValue('Hammad')
 
 // HTML attribute
-await expect($('[data-test="social-twitter"]')).toHaveAttr('target', '_blank')
+await expect($('[data-test="social-x"]')).toHaveAttr('target', '_blank')
 
 // Attribute existence (no second argument = just check it's there)
 await expect($('[data-test="login-button"]')).toHaveAttr('disabled')
@@ -189,7 +189,12 @@ export function flushSoftAssertions(): void {
 import { softExpect, flushSoftAssertions } from '../helpers/softAssert'
 
 it('should verify all product details on the page', async () => {
-  await browser.url('/inventory.html')
+  // /inventory.html has no real static route on this site — reach it by
+  // logging in through '/', not by navigating to it directly.
+  await browser.url('/')
+  await $('#user-name').setValue('standard_user')
+  await $('#password').setValue('secret_sauce')
+  await $('#login-button').click()
 
   await softExpect(
     () => expect($$('.inventory_item')).toHaveLength(6),

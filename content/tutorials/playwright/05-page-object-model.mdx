@@ -108,13 +108,17 @@ export class InventoryPage {
     this.sortDropdown = page.locator('[data-test="product-sort-container"]');
   }
 
-  async goto() {
-    await this.page.goto('/inventory.html');
-  }
+  // No goto() here on purpose — /inventory.html has no real static route
+  // on this site, so navigating to it directly 404s. You only ever reach
+  // this page by logging in through LoginPage first, which is why every
+  // test below uses loginPage.login() instead of inventoryPage.goto().
 
   async addToCart(productName: string) {
+    // SauceDemo's product cards are plain <div>s with no ARIA role, so
+    // use the data-test attribute the cards actually carry instead of
+    // getByRole('listitem').
     await this.page
-      .getByRole('listitem')
+      .locator('[data-test="inventory-item"]')
       .filter({ hasText: productName })
       .getByRole('button', { name: 'Add to cart' })
       .click();
@@ -122,7 +126,7 @@ export class InventoryPage {
 
   async removeFromCart(productName: string) {
     await this.page
-      .getByRole('listitem')
+      .locator('[data-test="inventory-item"]')
       .filter({ hasText: productName })
       .getByRole('button', { name: 'Remove' })
       .click();

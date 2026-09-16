@@ -1,0 +1,14 @@
+{
+  "name": "code-mage-cypress-example",
+  "version": "1.0.0",
+  "description": "Complete runnable Cypress example project from the code-mage.dev Cypress tutorial, testing https://www.saucedemo.com",
+  "private": true,
+  "scripts": {
+    "cy:open": "cypress open",
+    "cy:run": "cypress run --browser chrome"
+  },
+  "devDependencies": {
+    "cypress": "^16.1.0",
+    "typescript": "^5.6.0"
+  }
+}

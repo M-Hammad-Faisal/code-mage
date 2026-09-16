@@ -127,7 +127,12 @@ By default, a failing assertion stops the test immediately. Soft assertions let 
 
 ```typescript
 test('product card shows all details', async ({ page }) => {
-  await page.goto('/inventory.html');
+  // /inventory.html has no real static route on this site — it's only
+  // reachable by logging in through '/' first.
+  await page.goto('/');
+  await page.getByPlaceholder('Username').fill('standard_user');
+  await page.getByPlaceholder('Password').fill('secret_sauce');
+  await page.getByRole('button', { name: 'Login' }).click();
 
   const item = page.locator('.inventory_item').first();
 
@@ -177,9 +182,11 @@ test('login redirects to inventory', async ({ page }) => {
 test('cart updates after adding item', async ({ page }) => {
   await inventoryPage.addToCart('Sauce Labs Backpack');
 
-  // Button text changes from "Add to cart" to "Remove"
+  // Button text changes from "Add to cart" to "Remove". SauceDemo's product
+  // cards are plain <div>s with no ARIA role, so use the data-test
+  // attribute the cards actually carry instead of getByRole('listitem').
   await expect(
-    page.getByRole('listitem')
+    page.locator('[data-test="inventory-item"]')
       .filter({ hasText: 'Sauce Labs Backpack' })
       .getByRole('button')
   ).toHaveText('Remove');

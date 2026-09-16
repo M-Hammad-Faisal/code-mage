@@ -129,14 +129,18 @@ await browser.waitUntil(
 The most common race condition: clicking an element immediately after navigating to a page, before the JS has bound event listeners.
 
 ```typescript
-// FLAKY — click happens before JS is ready
-await browser.url('/inventory.html')
-await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()  // might not respond
+// Both snippets assume you're already logged in and on /inventory.html
+// (reached via login — this site has no real static route for that page,
+// only a client-side one, so there's nothing to browser.url() back to).
+
+// FLAKY — click happens before JS is ready right after a page transition
+await $('[data-test="shopping-cart-link"]').click()
+await $('[data-test="checkout"]').click()  // might not respond yet
 
 // RELIABLE — assert a stable landmark before acting
-await browser.url('/inventory.html')
-await expect($('.inventory_list')).toBeDisplayed()  // waits until inventory loads
-await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+await $('[data-test="shopping-cart-link"]').click()
+await expect($('[data-test="checkout"]')).toBeDisplayed()  // waits until the cart page loads
+await $('[data-test="checkout"]').click()
 ```
 
 Another common pattern: clicking a button that triggers navigation and then immediately asserting on the new page:
@@ -256,7 +260,13 @@ reporters: [
 
 ```typescript
 it('should debug flaky interaction', async () => {
-  await browser.url('/inventory.html')
+  // /inventory.html has no real static route on this site — reach it by
+  // logging in through '/', not by navigating to it directly.
+  await browser.url('/')
+  await $('#user-name').setValue('standard_user')
+  await $('#password').setValue('secret_sauce')
+  await $('#login-button').click()
+
   await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()
 
   await browser.debug()  // execution pauses here
@@ -284,7 +294,7 @@ await browser.cdp('Network', 'emulateNetworkConditions', {
 })
 
 // Run your test...
-await browser.url('/inventory.html')
+await browser.url('/')
 
 // Reset to normal
 await browser.cdp('Network', 'emulateNetworkConditions', {

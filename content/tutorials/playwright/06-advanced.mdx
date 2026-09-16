@@ -77,8 +77,13 @@ test.describe('Login', () => {
 ```typescript
 test.describe('Inventory page', () => {
   test.beforeEach(async ({ page }) => {
-    // This runs before EACH test below
-    await page.goto('/inventory.html');
+    // This runs before EACH test below. /inventory.html has no real static
+    // route on this site, so it's reached by logging in, not by navigating
+    // to it directly.
+    await page.goto('/');
+    await page.getByPlaceholder('Username').fill('standard_user');
+    await page.getByPlaceholder('Password').fill('secret_sauce');
+    await page.getByRole('button', { name: 'Login' }).click();
   });
 
   test('shows 6 products', async ({ page }) => {

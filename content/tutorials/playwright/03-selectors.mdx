@@ -129,7 +129,7 @@ The one exception: CSS attribute selectors on stable attributes like `data-test`
 
 ```typescript
 // This is acceptable — data attributes are stable
-await page.locator('[data-test="shopping_cart_link"]').click();
+await page.locator('[data-test="shopping-cart-link"]').click();
 ```
 
 ## Chaining and Filtering
@@ -140,12 +140,14 @@ When you have multiple matching elements, narrow them down:
 // First match
 await page.getByRole('button', { name: 'Add to cart' }).first().click();
 
-// Nth match (0-indexed)
-await page.getByRole('listitem').nth(2).click();
+// Nth match (0-indexed) — SauceDemo's product cards are plain <div>s with
+// no ARIA role, so getByRole('listitem') won't match anything on this
+// site. Use the data-test attribute the cards actually carry instead.
+await page.locator('[data-test="inventory-item"]').nth(2).click();
 
 // Filter by child content
 await page
-  .getByRole('listitem')
+  .locator('[data-test="inventory-item"]')
   .filter({ hasText: 'Sauce Labs Backpack' })
   .getByRole('button', { name: 'Add to cart' })
   .click();
@@ -155,15 +157,18 @@ The `.filter()` + child locator pattern is the cleanest way to handle lists of s
 
 ## Real Example: Adding a Specific Product to Cart
 
-Here's how you'd add the Backpack to the cart using a stable, chained selector:
+Here's how you'd add the Backpack to the cart using a stable, chained selector. Note the login first — `/inventory.html` isn't a real page you can navigate to directly (this site is a client-routed SPA with no matching static route), so every test needs to log in through `/` first:
 
 ```typescript
 test('add specific product to cart', async ({ page }) => {
-  await page.goto('/inventory.html');
+  await page.goto('/');
+  await page.getByPlaceholder('Username').fill('standard_user');
+  await page.getByPlaceholder('Password').fill('secret_sauce');
+  await page.getByRole('button', { name: 'Login' }).click();
 
-  // Find the list item containing the Backpack, then click its button
+  // Find the product card containing the Backpack, then click its button
   await page
-    .getByRole('listitem')
+    .locator('[data-test="inventory-item"]')
     .filter({ hasText: 'Sauce Labs Backpack' })
     .getByRole('button', { name: 'Add to cart' })
     .click();
@@ -205,8 +210,8 @@ page.locator('[data-test="cart-link"]')
 page.locator('.item-name').first()
 
 // Chaining
-page.getByRole('listitem').filter({ hasText: 'Backpack' }).getByRole('button')
-page.getByRole('listitem').nth(0)
+page.locator('[data-test="inventory-item"]').filter({ hasText: 'Backpack' }).getByRole('button')
+page.locator('[data-test="inventory-item"]').nth(0)
 ```
 
 Next chapter: assertions — making sure your tests are checking the right things the right way.

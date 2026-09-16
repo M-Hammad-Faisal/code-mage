@@ -285,13 +285,11 @@ Store environment-specific values (base URLs, credentials, API keys) in `cypress
 }
 ```
 
-Access them in tests with `cy.env()` — this keeps secrets in the Node process instead of exposing them to the browser (`Cypress.expose()` is the newer alternative, but only for values that are safe to leak into browser-side code). Like any `cy.*` command, it's chainable rather than awaitable — resolve the value with `.then()`:
+Access them in tests with `cy.env()` — this keeps secrets in the Node process instead of exposing them to the browser (`Cypress.expose()` is the newer alternative, but only for values that are safe to leak into browser-side code). As of Cypress 16, `cy.env()` only accepts an array of keys and yields an object of `{ key: value }` pairs — there's no single-key `cy.env('username')` getter form anymore. Like any `cy.*` command, it's chainable rather than awaitable — resolve the values with `.then()`:
 
 ```typescript
-cy.env('username').then((username) => {
-  cy.env('password').then((password) => {
-    cy.login(username, password)
-  })
+cy.env(['username', 'password']).then(({ username, password }) => {
+  cy.login(username, password)
 })
 ```
 

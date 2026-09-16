@@ -22,6 +22,11 @@
 - Selector typo `shopping_cart_badge` (underscore) → `shopping-cart-badge` (hyphen), matching the rest of the tutorial.
 - CI action versions bumped: see [github-actions.md](github-actions.md).
 
+### Fixed this pass — additional breaking change found while building the downloadable example project
+
+- **`cy.env()` now only accepts an array of keys**, verified empirically by running the actual test suite against a real Cypress 16.1.0 install: `cy.env('username')` throws `CypressError: cy.env() must be passed a non-empty list of strings.` The correct current form is `cy.env(['username', 'password']).then(({ username, password }) => ...)`. `06-network-and-advanced.mdx` still shows the old nested single-key form (`cy.env('username').then((username) => { cy.env('password').then((password) => ...) })`) — needs the same fix applied to `public/downloads/cypress/project/cypress/e2e/network-and-advanced.cy.ts`.
+- Also found empirically: SauceDemo's product sort dropdown now has `data-test="product-sort-container"` (hyphenated) even though its CSS class is still `product_sort_container` (underscored) — `03-selectors-and-commands.mdx` and `05-page-object-model.mdx` both use the old underscored `data-test` value, which no longer matches a live element on saucedemo.com.
+
 ### Newer features NOT yet covered — candidates for new content
 
 - **HTTP/2 (and HTTP/3) support by default** in Chrome/Chromium/Edge (16.0.0) — faster, more realistic network behavior.
