@@ -9,14 +9,22 @@ interface Props {
 
 export function ShareButtons({ url, title }: Props) {
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   const encoded = encodeURIComponent(url);
   const encodedTitle = encodeURIComponent(title);
 
   const copyLink = async () => {
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API can throw in insecure contexts, denied permissions,
+      // or older browsers — surface it instead of failing silently.
+      setCopyFailed(true);
+      setTimeout(() => setCopyFailed(false), 2000);
+    }
   };
 
   return (
@@ -47,7 +55,8 @@ export function ShareButtons({ url, title }: Props) {
         aria-label="Copy link"
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 text-xs font-medium transition-all"
       >
-        <Link2 className="w-3.5 h-3.5" /> {copied ? 'Copied!' : 'Copy link'}
+        <Link2 className="w-3.5 h-3.5" />{' '}
+        {copied ? 'Copied!' : copyFailed ? 'Copy failed' : 'Copy link'}
       </button>
     </div>
   );
