@@ -1,0 +1,66 @@
+---
+title: 'WebdriverIO v9 and the ts-node Trap'
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['webdriverio', 'typescript', 'configuration', 'debugging']
+excerpt: 'Zero tests passed, every single one with the same cryptic module-resolution error — and the fix was that the config I was using had quietly gone stale a full major version ago.'
+featured: false
+---
+
+I ran a WebdriverIO test suite I'd just finished writing. Seven spec files, zero passing. Every single one failed with the same error, before any actual test logic ran:
+
+```
+ERROR @wdio/local-runner: Failed launching test session: Error: Cannot find module '.../ts-node/register'
+Require stack:
+- node_modules/mocha/lib/nodejs/esm-utils.js
+- node_modules/mocha/lib/mocha.js
+```
+
+Not a test failure. Not a selector problem. WebdriverIO couldn't even *start* — it was trying to load `ts-node/register` and failing to resolve it, despite `ts-node` being right there in `package.json` as a listed dependency.
+
+## The instinct that wastes time here
+
+My first move was to check if `ts-node` had actually installed. It had. Then I checked the path resolution in the error more carefully — it was resolving `ts-node/register` as if it were a *local file path relative to the project root*, not a package lookup. That's an unusual failure mode, and unusual failure modes are exactly where it's tempting to start guessing: reinstall node_modules, check for a lockfile mismatch, try a different Node version, add the path to `tsconfig.json`'s `paths` field just in case.
+
+None of that would have worked, because none of it addressed the actual cause: the configuration itself — `mochaOpts: { require: ['ts-node/register', 'tsconfig-paths/register'] }` — was correct advice for an older WebdriverIO, and silently wrong for the one I had installed.
+
+## What actually changed
+
+WebdriverIO v9 compiles TypeScript automatically, through `tsx`, without you wiring up `ts-node` yourself at all. I confirmed this directly against the current docs rather than trusting memory, since "I'm pretty sure this used to work" is exactly the kind of assumption that gets you into this situation in the first place:
+
+> WebdriverIO v9 automatically handles TypeScript compilation without requiring `ts-node/register` in mochaOpts. Instead, you need to install `tsx`... No mochaOpts.require needed — WDIO v9 handles compilation through `tsx` automatically.
+
+The error I was staring at wasn't really about a missing module. It was WDIO's own `tsx`-based auto-compilation mechanism getting confused by a leftover manual `require: ['ts-node/register']` entry that used to be necessary and now actively conflicts with the new default behavior. Two TypeScript-loading mechanisms, fighting over the same job, and the error message pointed at the symptom (module not found) rather than the cause (a stale config option nobody removed when the framework's defaults changed underneath it).
+
+## The fix
+
+```typescript
+// wdio.conf.ts — before
+mochaOpts: {
+  ui: 'bdd',
+  timeout: 60000,
+  require: ['ts-node/register', 'tsconfig-paths/register'],
+},
+
+// after
+mochaOpts: {
+  ui: 'bdd',
+  timeout: 60000,
+},
+```
+
+```json
+// package.json — swap the dependency
+"devDependencies": {
+  "tsx": "^4.19.0"
+  // ts-node and tsconfig-paths are no longer needed
+}
+```
+
+That's the entire fix. Delete the `require` array, add `tsx`, done. Path aliases in `tsconfig.json` still resolve correctly without `tsconfig-paths/register` — `tsx` handles that natively.
+
+## Why I'm writing this up instead of just fixing it and moving on
+
+This is the kind of bug that's genuinely hard to find from the error message alone, because the error message is technically accurate (`ts-node/register` really couldn't be resolved) while pointing you at completely the wrong layer to fix it in. If you're on WebdriverIO v9 and you inherited a `wdio.conf.ts` from a project that started on an earlier version — or copied a config snippet from a tutorial or Stack Overflow answer written before v8.14 — you will hit exactly this, and "reinstall node_modules" will not save you, because the config itself is the thing that's wrong, not your install.
+
+The tell, in retrospect: if a framework's major version bump changes a default behavior, and your config still manually configures the *old* default, you don't get a clean "this option is deprecated" warning nearly as often as you'd hope. You get whatever downstream failure the conflict happens to produce — in this case, a Node module resolution error that has nothing obviously to do with the real cause.

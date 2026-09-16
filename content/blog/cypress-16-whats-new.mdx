@@ -21,14 +21,18 @@ The replacement isn't a single drop-in function — it's two, split by sensitivi
 // Before (removed in 16.0.0)
 const apiKey = Cypress.env('apiKey');
 
-// After — sensitive values, stays in the Node process
-const apiKey = await cy.env('apiKey');
+// After — sensitive values, stays in the Node process. cy.env() is a
+// chainable Cypress command, not a Promise — awaiting it directly won't
+// work — and it only accepts an array of keys, not a single string.
+cy.env(['apiKey']).then(({ apiKey }) => {
+  // use apiKey here
+});
 
 // After — non-sensitive values, readable in the browser
 Cypress.expose({ featureFlag: true });
 ```
 
-`cy.env()` is the async, Node-process-only replacement for anything you don't want reaching the browser context — API keys, credentials, tokens. `Cypress.expose()` is for the opposite case: values you genuinely want readable client-side, with per-suite or per-test overrides supported.
+`cy.env()` is the Node-process-only replacement for anything you don't want reaching the browser context — API keys, credentials, tokens. `Cypress.expose()` is for the opposite case: values you genuinely want readable client-side, with per-suite or per-test overrides supported.
 
 The migration path here isn't mechanical find-and-replace — you have to actually decide, for every `Cypress.env()` call in your codebase, whether that value was sensitive. If it was credentials (and if you were using `Cypress.env()` for credentials, it probably was), it goes to `cy.env()`. If it was a feature flag or environment label, `Cypress.expose()`.
 

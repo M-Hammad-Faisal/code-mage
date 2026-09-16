@@ -1,0 +1,72 @@
+---
+title: "Reset App State and the Iterable That Wasn't"
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['webdriverio', 'testing', 'debugging', 'flaky-tests']
+excerpt: "Two unrelated bugs, both invisible until you actually read the failures carefully: a cleanup feature that doesn't fully clean up, and a WebdriverIO pattern straight from the docs that throws at runtime."
+featured: false
+---
+
+Two separate bugs showed up while I was hardening a WebdriverIO cart-cleanup helper between tests. Neither was hard to fix once I saw it clearly. Both were the kind of thing you'll only see if you stop trusting the first explanation that fits.
+
+## Bug one: "Reset App State" doesn't fully reset
+
+SauceDemo has a built-in menu option, "Reset App State," whose entire job is to put the app back to a clean slate between tests — clear the cart, reset every "Add to cart" button back to its default state. I was using it in an `afterEach` hook, the standard pattern for keeping tests independent of each other.
+
+Except independence broke anyway. Every so often, a test would start with the cart badge showing zero items — reset app state clearly ran, the badge cleared — but one specific product's button still read "Remove" instead of "Add to cart." Not consistently the same product, not consistently reproducible from a cold run, which is exactly the profile of a bug that looks like test flakiness until you go looking for a real cause.
+
+I checked the obvious explanation first: a race condition in my own code, clicking the menu button before the app finished processing the click. I added a `waitUntil` after triggering reset, gave it more time, reran. Still happened, just less often — which told me it wasn't purely timing, or at least not only timing. A localStorage clear and a DOM button state are two different pieces of state that the app is responsible for keeping in sync, and "Reset App State" apparently doesn't always do that atomically.
+
+The fix isn't to trust the reset feature blindly — it's to verify the actual DOM state it's supposed to produce, and clean up anything it missed:
+
+```typescript
+async clearCart() {
+  // ... trigger Reset App State via the menu ...
+
+  // Reset App State can desync — localStorage clears but a button
+  // occasionally doesn't. Sweep any leftover "Remove" buttons directly.
+  const leftoverRemoveButtons = await $$('[data-test^="remove-"]');
+  for (const button of leftoverRemoveButtons) {
+    await button.click();
+  }
+
+  // Confirm the real end state instead of trusting the reset happened
+  await browser.waitUntil(
+    async () => {
+      const addButtons = await $$('[data-test^="add-to-cart-"]');
+      return addButtons.length === 6;
+    },
+    { timeout: 5000, timeoutMsg: 'expected all 6 products to show Add to cart' },
+  );
+}
+```
+
+The lesson generalizes past this one app: any "reset" or "clear" feature you depend on for test isolation is itself untested code, written by someone else, for a purpose that probably wasn't "guarantee perfect test isolation for a stranger's test suite." Verify its output the same way you'd verify anything else — don't just trust the button because it has the word "Reset" on it.
+
+## Bug two: `$$()` plus `.map()` plus `Promise.all()` doesn't behave
+
+Separately, while writing the sweep logic above in an earlier draft, I reached for the pattern WebdriverIO's own docs show for acting on multiple elements at once:
+
+```typescript
+const buttons = await $$('[data-test^="remove-"]');
+await Promise.all(buttons.map((button) => button.click()));
+```
+
+This threw, immediately, with `TypeError: object is not iterable`. Not a selector problem — the elements existed, `buttons.length` was correct when I logged it. `.map()` itself was the thing failing.
+
+WDIO's `$$()` returns a `ChainablePromiseArray`, not a plain array. It behaves like an array in a lot of contexts — you can index into it, check `.length` — but it's a proxy object, and depending on the exact WebdriverIO and Node version in play, `.map()` on it doesn't reliably behave like `Array.prototype.map`. Sometimes it works. Sometimes it doesn't. That inconsistency is worse than a clean failure, because it means the pattern can pass in one environment and break in another without any code change at all.
+
+The fix is boring, which is exactly what you want from a fix like this:
+
+```typescript
+const buttons = await $$('[data-test^="remove-"]');
+for (const button of buttons) {
+  await button.click();
+}
+```
+
+A plain `for...of` loop doesn't care whether `buttons` is a real array or a proxy that mostly acts like one — it just calls the iterator, which `ChainablePromiseArray` does implement correctly. I made this change everywhere I'd used the `.map()` + `Promise.all()` pattern across the test suite, not just in the one spot that had actually failed, since the same inconsistency was latent in every other instance.
+
+## Why these two belong in the same post
+
+Neither bug is dramatic on its own. What connects them is the same failure of trust: SauceDemo's reset button *should* fully reset state, and WebdriverIO's array-like return value *should* behave like an array — both are reasonable assumptions, both are wrong often enough to matter, and neither wrongness announces itself with a clear error message pointing at the actual cause. The reset bug shows up as flaky, unrelated-looking test failures downstream. The iterable bug shows up as a `TypeError` that names the wrong culprit. In both cases, the fix came from checking what was actually true at runtime instead of what the API's name or the docs' example implied should be true.

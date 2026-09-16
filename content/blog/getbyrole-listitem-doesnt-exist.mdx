@@ -1,0 +1,55 @@
+---
+title: "getByRole('listitem') Doesn't Exist"
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['playwright', 'selectors', 'accessibility', 'testing']
+excerpt: "A selector strategy I'd taught as the gold standard turned out to be querying a role that was never actually there — and the fix says something bigger about ARIA-based selectors."
+featured: false
+---
+
+Playwright's locator hierarchy teaches you to reach for ARIA roles before CSS classes, and `getByRole('listitem')` is the textbook example — you've got a list of products, each one is a list item, query by that. I'd written this pattern into three separate chapters of a Playwright tutorial as *the* recommended way to scope a locator to one product card in a list. It read as correct. It followed the framework's own stated best practice.
+
+It also matched zero elements on the actual page.
+
+## How I found out
+
+I was re-verifying every downloadable example project against the live site rather than trusting my own earlier review — a habit I'd been burned into adopting after finding a completely unrelated bug the same week (a URL that 404s no matter what you do to it, a different story). Part of that process was checking the real DOM directly:
+
+```javascript
+const item = document.querySelector('.inventory_item');
+({ tag: item?.tagName, role: item?.getAttribute('role') })
+// { tag: "DIV", role: null }
+```
+
+A plain `<div>`. No `role` attribute at all. Not `listitem`, not anything. `getByRole('listitem')` was never going to match this element — not today, not whenever this content was originally written, unless the site's markup changed at some point and nobody re-verified the selector strategy against it.
+
+## Why this is worse than a typo
+
+A wrong CSS class or a mistyped `data-test` attribute usually fails loudly and immediately — one selector, one broken test, easy to spot in a diff. This failed differently. `getByRole('listitem')` is *syntactically valid Playwright*. It compiles. It runs. It just silently returns zero matches, and depending on what you chain after it — `.filter()`, `.nth()`, `.first()` — the failure surfaces somewhere downstream, often with an error message that points at the chained method instead of the actual broken link at the start of the chain.
+
+Worse: this wasn't one broken test. It was a *pattern*, repeated across a chapter specifically about how to choose good selectors, in the page object model chapter that built on it, and in the assertions chapter that reused it again. Teaching a pattern once and getting it wrong is a bug. Teaching it three times, consistently, because each subsequent chapter trusted the first one, is how a wrong idea gets load-bearing.
+
+## The actual fix, and why it's more honest than the original
+
+SauceDemo's product cards do carry a stable identifier — just not an ARIA role. They carry `data-test="inventory-item"`:
+
+```javascript
+document.querySelector('.inventory_item').getAttribute('data-test')
+// "inventory-item"
+```
+
+Which, once I actually looked, is *exactly* the kind of selector the same chapter's own hierarchy already recommends as the fallback when no meaningful ARIA role exists — `data-test`/`data-testid` attributes, explicitly added for testing, stable by convention. The fix wasn't a compromise. It was using the chapter's own second-choice strategy correctly, instead of forcing a first-choice strategy onto markup that never supported it:
+
+```typescript
+// Doesn't match anything — SauceDemo's product cards have no ARIA role
+await page.getByRole('listitem').filter({ hasText: 'Sauce Labs Backpack' })...
+
+// Matches reliably — this is the actual identifier the cards carry
+await page.locator('[data-test="inventory-item"]').filter({ hasText: 'Sauce Labs Backpack' })...
+```
+
+## The lesson that generalizes
+
+Locator hierarchies — role, then label, then placeholder, then text, then test ID, then CSS as a last resort — are genuinely good guidance. But they're guidance about *preference order when multiple options exist*, not a guarantee that the preferred option is always present. A `<div>` with no semantic role isn't a bug in the app you're testing; most content on the web isn't semantically marked up, and it doesn't need to be for every possible case. It's a bug in the *test* to assume ARIA roles exist without checking.
+
+The check itself takes ten seconds — open dev tools, inspect the element, look at what's actually there. I'd skipped that step because the pattern *looked* right, matched the framework's own stated best practice, and had already been copy-pasted successfully into two other chapters. All three of those are exactly the conditions under which a wrong pattern feels safest to trust without re-verifying it.

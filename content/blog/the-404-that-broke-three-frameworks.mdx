@@ -1,0 +1,70 @@
+---
+title: 'The 404 That Broke Three Test Frameworks'
+date: '2026-09-17'
+category: 'Project Breakdown'
+tags: ['playwright', 'cypress', 'webdriverio', 'debugging', 'testing']
+excerpt: 'A navigation pattern that looked completely normal was quietly broken in Playwright, WebdriverIO, and my own tutorial content — and it took a real HTTP request, not a stack trace, to find it.'
+featured: true
+---
+
+I was building downloadable example projects for three test automation tutorials — Playwright, Cypress, WebdriverIO — all testing the same practice site. I'd already fixed a batch of stale selectors and shipped what I thought was solid, working code. Then I actually ran the tests.
+
+WebdriverIO: 0 passing, 7 failing. Every single spec file.
+
+## The error that lied to me
+
+The first failure was a Node module resolution error — `ts-node/register` couldn't be found. Real bug, separate story, fixed it (turns out WebdriverIO v9 wants `tsx`, not `ts-node`, for TypeScript compilation — more on that another time). Fixed that, reran. Now tests actually executed, but a new failure showed up everywhere: `Can't call click on element with selector "[data-test="add-to-cart-sauce-labs-backpack"]" because element wasn't found`.
+
+My first instinct was the same one every test engineer reaches for: the selector's wrong. I checked it. It wasn't wrong. I checked it *again*, more carefully, using the browser's own dev tools this time. Still correct. The button was on the page. WebdriverIO just couldn't find it in that specific test run.
+
+This is the moment where a debugging session either gets faster or slower depending on what you do next. I did the slow thing first — I stared at the code, reasoned about timing, added waits, reran. Nothing changed. Then I did the thing that actually worked: I stopped trusting the error message and went and looked at what was really happening on the wire.
+
+## `curl -I` told me in two seconds what an hour of guessing hadn't
+
+```bash
+curl -sI https://www.saucedemo.com/inventory.html
+```
+
+```
+HTTP/2 404
+server: GitHub.com
+```
+
+Not a Cypress error. Not a WebdriverIO error. A real, unambiguous 404 from GitHub's own servers, for a URL every single tutorial chapter across all three frameworks assumed you could navigate to directly.
+
+The site is a GitHub Pages-hosted single-page app. `/` is a real static file. `/inventory.html`, `/cart.html`, every "page" past the login screen — none of them are real files. They're client-side routes, rendered by JavaScript after you log in through the root URL. Type that URL into a fresh browser tab, or call `page.goto()`, `browser.url()`, or `cy.visit()` directly against it, and you get exactly what `curl` showed me: a 404, from the actual server, before any of your test framework's own logic even runs.
+
+This explains why it looked so inconsistent. A test that logs in through `/` and lets the app's own router carry it to `/inventory.html` works perfectly — no real navigation ever happens, it's all `history.pushState()` under the hood. A test that tries to *reload* or *revisit* that same URL directly — which is an extremely normal thing to do in a `beforeEach` hook, "start every test from a clean page" — fails, every time, with an error that has nothing to do with your selectors.
+
+## Why this survived multiple rounds of "working" code
+
+Here's the part I actually want to own: this bug had been sitting in my *existing* tutorial content for who knows how long, across Playwright, WebdriverIO, and a prerequisites chapter. It hadn't been caught because nobody — including me, in earlier passes — had actually run the code against the live site from a cold start. It read as correct. It followed every convention the rest of the chapter taught. It just didn't work.
+
+Once I had the real cause, the grep was trivial:
+
+```bash
+grep -rn "goto('/inventory.html')\|browser.url('/inventory.html')\|visit('/inventory.html')" content/tutorials/
+```
+
+Fourteen matches. Cypress's own tutorial content, interestingly, never had this bug — whoever wrote those chapters had already structured every example around logging in first. Playwright and WebdriverIO both had it, repeatedly, including inside a `beforeEach` block that ran before *every single test* in one chapter.
+
+## The actual fix is almost anticlimactic
+
+```typescript
+// Broken — 404s every time, logged in or not
+await page.goto('/inventory.html');
+
+// Correct — the only way to actually reach this page
+await page.goto('/');
+await page.getByPlaceholder('Username').fill('standard_user');
+await page.getByPlaceholder('Password').fill('secret_sauce');
+await page.getByRole('button', { name: 'Login' }).click();
+```
+
+Nothing clever. Log in through the real route, let the app's own client-side router do the rest. The fix isn't the interesting part — the interesting part is how confidently wrong the broken version looked, and how little a stack trace told me about *why* it was wrong.
+
+## What I'd tell someone hitting this
+
+If a selector-not-found error shows up in a context where the selector is definitely right and the element is definitely visible when you check manually, stop debugging the selector. Check what actually loaded. `curl -I` the exact URL your test is navigating to. If it's not a 200, none of your selector logic matters yet — you're not even on the page you think you're on.
+
+This is a two-minute check that would have saved me an hour, if I'd reached for it first instead of last.
