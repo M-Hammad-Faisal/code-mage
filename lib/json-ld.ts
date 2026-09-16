@@ -1,7 +1,19 @@
 import { SITE } from '@/lib/site.config';
 
-/** JSON-LD helpers. Each returns a plain object meant to be JSON.stringify'd
- * into a `<script type="application/ld+json">` tag. */
+/** JSON-LD helpers. Each returns a plain object meant to be passed through
+ * `jsonLdScript()` into a `<script type="application/ld+json">` tag. */
+
+/**
+ * Serializes a JSON-LD object for use in dangerouslySetInnerHTML.
+ * `JSON.stringify` does not escape `<`, so a value containing a literal
+ * `</script>` (e.g. a future blog post title) would break out of the script
+ * tag. Escaping `<` as `<` is a no-op for JSON-LD consumers (parsers
+ * unescape it like any other string) but makes the HTML safe regardless of
+ * what post content ends up embedded here.
+ */
+export function jsonLdScript(data: unknown): string {
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}
 
 export function personJsonLd() {
   return {
@@ -39,6 +51,8 @@ export function blogPostingJsonLd(post: {
     '@type': 'BlogPosting',
     headline: post.title,
     description: post.excerpt,
+    // Matches the app/blog/[slug]/opengraph-image.tsx file-convention route.
+    // If that file is ever renamed/moved, update this too.
     image: `${url}/opengraph-image`,
     url,
     datePublished: post.date || undefined,

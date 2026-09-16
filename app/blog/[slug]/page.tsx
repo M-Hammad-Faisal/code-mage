@@ -17,7 +17,7 @@ import { ReadingProgress } from '@/components/ReadingProgress';
 import { NewsletterCTA } from '@/components/NewsletterCTA';
 import { ShareButtons } from '@/components/ShareButtons';
 import { TableOfContents } from '@/components/TableOfContents';
-import { blogPostingJsonLd } from '@/lib/json-ld';
+import { blogPostingJsonLd, jsonLdScript } from '@/lib/json-ld';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -77,7 +77,7 @@ export default async function BlogPostPage({ params }: Props) {
     <div className="min-h-screen py-12">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingJsonLd(post)) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(blogPostingJsonLd(post)) }}
       />
       <ReadingProgress />
       <div className="container-max">

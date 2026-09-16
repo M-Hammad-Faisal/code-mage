@@ -6,8 +6,8 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { SITE } from '@/lib/site.config';
-import { personJsonLd, websiteJsonLd } from '@/lib/json-ld';
+import { SITE, SITE_OG_IMAGE } from '@/lib/site.config';
+import { personJsonLd, websiteJsonLd, jsonLdScript } from '@/lib/json-ld';
 
 const syne = Syne({
   subsets: ['latin'],
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     siteName: SITE.brand,
     title: SITE.seo.title,
     description: SITE.seo.description,
-    images: [{ url: SITE.ogImage, width: 1200, height: 630, alt: SITE.brand }],
+    images: SITE_OG_IMAGE,
   },
   twitter: {
     card: 'summary_large_image',
@@ -87,11 +87,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd()) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(websiteJsonLd()) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd()) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(personJsonLd()) }}
         />
       </head>
       <body className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-200">

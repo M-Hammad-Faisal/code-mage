@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { FRAMEWORKS, getFrameworkChapters } from '@/lib/tutorials';
-import { SITE } from '@/lib/site.config';
-import { breadcrumbJsonLd } from '@/lib/json-ld';
+import { SITE, SITE_OG_IMAGE } from '@/lib/site.config';
+import { breadcrumbJsonLd, jsonLdScript } from '@/lib/json-ld';
 
 interface Props {
   params: Promise<{ framework: string }>;
@@ -20,19 +20,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!fw) return { title: 'Not Found', robots: { index: false, follow: false } };
   const url = `${SITE.url}/tutorial/${framework}`;
   return {
-    title: `${fw.title} Tutorial — Code Mage`,
+    // No manual "— Code Mage" suffix: the layout's title.template appends it.
+    title: `${fw.title} Tutorial`,
     description: fw.description,
     alternates: { canonical: url },
     openGraph: {
       url,
-      title: `${fw.title} Tutorial`,
+      title: `${fw.title} Tutorial — Code Mage`,
       description: fw.description,
       type: 'website',
+      images: SITE_OG_IMAGE,
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${fw.title} Tutorial`,
+      title: `${fw.title} Tutorial — Code Mage`,
       description: fw.description,
+      images: SITE.ogImage,
     },
   };
 }
@@ -52,7 +55,7 @@ export default async function FrameworkPage({ params }: Props) {
     <div className="min-h-screen py-12">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumb) }}
       />
       <div className="container-max">
         <div className="max-w-3xl mx-auto">

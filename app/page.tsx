@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { ArrowRight, BookOpen, Code2, Youtube, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { getAllBlogCategories, getAllBlogPosts } from '@/lib/mdx';
-import { SITE, CATEGORY_COLORS } from '@/lib/site.config';
+import { SITE, SITE_OG_IMAGE, CATEGORY_COLORS } from '@/lib/site.config';
 import { NewsletterForm } from '@/components/NewsletterForm';
 import { PostCard } from '@/components/PostCard';
 import { HeroAnimation } from '@/components/HeroAnimation';
@@ -18,12 +18,14 @@ export const metadata: Metadata = {
     description:
       'Hands-on test automation tutorials for Playwright, Cypress, and WebdriverIO, plus web scraping deep dives and career guides.',
     type: 'website',
+    images: SITE_OG_IMAGE,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Code Mage — Test Automation Tutorials & Deep Dives',
     description:
       'Hands-on test automation tutorials for Playwright, Cypress, and WebdriverIO, plus web scraping deep dives and career guides.',
+    images: SITE.ogImage,
   },
 };
 

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getAllBlogPosts, getAllBlogCategories } from '@/lib/mdx';
-import { SITE } from '@/lib/site.config';
+import { SITE, SITE_OG_IMAGE } from '@/lib/site.config';
 import { BlogClient } from './BlogClient';
 
 const description =
@@ -18,11 +18,13 @@ export const metadata: Metadata = {
     title: 'Blog — Code Mage',
     description,
     type: 'website',
+    images: SITE_OG_IMAGE,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Blog — Code Mage',
     description,
+    images: SITE.ogImage,
   },
 };
 

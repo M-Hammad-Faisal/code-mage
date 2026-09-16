@@ -5,11 +5,11 @@ import { MDXRemote } from 'next-mdx-remote/rsc';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { FRAMEWORKS, getFrameworkChapters, getChapter } from '@/lib/tutorials';
 import { getMDXComponents } from '@/lib/mdx-components';
-import { SITE } from '@/lib/site.config';
+import { SITE, SITE_OG_IMAGE } from '@/lib/site.config';
 import { BackToTop } from '@/components/BackToTop';
 import { ReadingProgress } from '@/components/ReadingProgress';
 import { NewsletterCTA } from '@/components/NewsletterCTA';
-import { breadcrumbJsonLd } from '@/lib/json-ld';
+import { breadcrumbJsonLd, jsonLdScript } from '@/lib/json-ld';
 
 interface Props {
   params: Promise<{ framework: string; chapter: string }>;
@@ -36,14 +36,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const fw = FRAMEWORKS[framework];
   const url = `${SITE.url}/tutorial/${framework}/${chapter}`;
   return {
-    title: `${ch.title} — ${fw?.title} Tutorial — Code Mage`,
+    // No manual "— Code Mage" suffix: the layout's title.template appends it.
+    title: `${ch.title} — ${fw?.title} Tutorial`,
     description: ch.description,
     alternates: { canonical: url },
-    openGraph: { url, title: ch.title, description: ch.description, type: 'article' },
+    openGraph: {
+      url,
+      title: `${ch.title} — ${fw?.title} Tutorial`,
+      description: ch.description,
+      type: 'article',
+      images: SITE_OG_IMAGE,
+    },
     twitter: {
       card: 'summary_large_image',
-      title: ch.title,
+      title: `${ch.title} — ${fw?.title} Tutorial`,
       description: ch.description,
+      images: SITE.ogImage,
     },
   };
 }
@@ -100,7 +108,7 @@ export default async function ChapterPage({ params }: Props) {
     <div className="min-h-screen py-12">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumb) }}
       />
       <ReadingProgress />
       <div className="container-max">

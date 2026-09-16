@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { SITE } from '@/lib/site.config';
+import { SITE, SITE_OG_IMAGE } from '@/lib/site.config';
 import { ContactClient } from './ContactClient';
 
 const contactDescription =
@@ -14,11 +14,13 @@ export const metadata: Metadata = {
     title: 'Contact — Code Mage',
     description: contactDescription,
     type: 'website',
+    images: SITE_OG_IMAGE,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Contact — Code Mage',
     description: contactDescription,
+    images: SITE.ogImage,
   },
 };
 
