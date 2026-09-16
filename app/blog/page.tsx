@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getAllPosts, getAllCategories } from '@/lib/mdx';
+import { getAllBlogPosts, getAllBlogCategories } from '@/lib/mdx';
 import { BlogClient } from './BlogClient';
 
 export const metadata: Metadata = {
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default function BlogPage() {
-  const posts = getAllPosts();
-  const categories = getAllCategories();
+  const posts = getAllBlogPosts();
+  const categories = getAllBlogCategories();
   return <BlogClient posts={posts} categories={categories} />;
 }

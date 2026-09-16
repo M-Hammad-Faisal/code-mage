@@ -64,6 +64,7 @@ export const FRAMEWORKS: Record<string, Omit<TutorialFramework, 'chapters'>> = {
 };
 
 const TUTORIALS_DIR = path.join(process.cwd(), 'content/tutorials');
+const SAFE_SEGMENT = /^[a-z0-9-]+$/;
 
 function estimateReadTime(content: string): number {
   const words = content.trim().split(/\s+/).length;
@@ -71,6 +72,8 @@ function estimateReadTime(content: string): number {
 }
 
 export function getFrameworkChapters(framework: string): TutorialChapter[] {
+  if (!SAFE_SEGMENT.test(framework)) return [];
+
   const dir = path.join(TUTORIALS_DIR, framework);
   if (!fs.existsSync(dir)) return [];
 
@@ -97,6 +100,8 @@ export function getFrameworkChapters(framework: string): TutorialChapter[] {
 }
 
 export function getChapter(framework: string, chapter: string): TutorialChapter | null {
+  if (!SAFE_SEGMENT.test(framework) || !SAFE_SEGMENT.test(chapter)) return null;
+
   const dir = path.join(TUTORIALS_DIR, framework);
   if (!fs.existsSync(dir)) return null;
 

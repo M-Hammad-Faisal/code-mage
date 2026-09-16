@@ -137,21 +137,6 @@ export function getAllLessons(): Lesson[] {
 }
 
 export function getLessonById(id: string): Lesson | null {
+  if (!SAFE_SLUG.test(id)) return null;
   return getAllLessons().find((l) => l.id === id) ?? null;
 }
-
-// ---------------------------------------------------------------------------
-// Legacy aliases — keeps old names so existing pages don't need to change
-// ---------------------------------------------------------------------------
-
-/** @deprecated use getAllBlogPosts */
-export const getAllPosts = getAllBlogPosts;
-
-/** @deprecated use getBlogPost */
-export const getPostBySlug = getBlogPost;
-
-/** @deprecated use getFeaturedBlogPosts */
-export const getFeaturedPosts = getFeaturedBlogPosts;
-
-/** @deprecated use getAllBlogCategories */
-export const getAllCategories = getAllBlogCategories;
