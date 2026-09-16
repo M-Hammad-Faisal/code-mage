@@ -11,6 +11,7 @@ interface Props {
 
 export function NewsletterForm({ source = 'site', compact = false }: Props) {
   const [email, setEmail] = useState('');
+  const [company, setCompany] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
@@ -23,7 +24,7 @@ export function NewsletterForm({ source = 'site', compact = false }: Props) {
       const res = await fetch('/api/newsletter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), source }),
+        body: JSON.stringify({ email: email.trim(), source, company }),
       });
       const data = await res.json();
 
@@ -57,6 +58,19 @@ export function NewsletterForm({ source = 'site', compact = false }: Props) {
   return (
     <div>
       <form onSubmit={handleSubmit} className={`flex gap-2 ${compact ? 'max-w-xs' : 'max-w-sm'}`}>
+        {/* Honeypot — hidden from sighted users, bots that autofill every field trip it */}
+        <div className="absolute -left-[9999px]" aria-hidden="true">
+          <label htmlFor="newsletter-company">Company</label>
+          <input
+            type="text"
+            id="newsletter-company"
+            tabIndex={-1}
+            autoComplete="off"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+          />
+        </div>
+
         <div className="relative flex-1">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
           <input

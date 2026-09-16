@@ -14,7 +14,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { email, source } = await req.json();
+    const { email, source, company } = await req.json();
+
+    // Honeypot — a hidden field real users never fill in.
+    if (company) {
+      return NextResponse.json({ message: "You're on the list! Welcome to the Mage Circle 🪄" });
+    }
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: 'Please enter a valid email address.' }, { status: 400 });

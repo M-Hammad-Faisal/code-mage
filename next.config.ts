@@ -17,7 +17,10 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+      // 'unsafe-eval' dropped — not needed by any prod script here.
+      // 'unsafe-inline' stays for now: app/layout.tsx sets the theme via an
+      // inline <script> before hydration; removing it needs nonce plumbing.
+      "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https://images.unsplash.com https://m-hammad-faisal.github.io",

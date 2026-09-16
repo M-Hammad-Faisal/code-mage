@@ -52,7 +52,11 @@ function estimateReadTime(content: string): number {
   return Math.max(1, Math.round(words / 200));
 }
 
+const SAFE_SLUG = /^[a-z0-9-]+$/;
+
 export function getBlogPost(slug: string): BlogPost | null {
+  if (!SAFE_SLUG.test(slug)) return null;
+
   const mdxPath = path.join(BLOG_DIR, `${slug}.mdx`);
   const mdPath = path.join(BLOG_DIR, `${slug}.md`);
   const filePath = fs.existsSync(mdxPath) ? mdxPath : fs.existsSync(mdPath) ? mdPath : null;

@@ -53,7 +53,7 @@ const CONTACTS = [
 ];
 
 export function ContactClient() {
-  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
+  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '', company: '' });
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [msg, setMsg] = useState('');
 
@@ -73,7 +73,7 @@ export function ContactClient() {
       if (res.ok) {
         setStatus('success');
         setMsg(data.message);
-        setForm({ name: '', email: '', subject: '', message: '' });
+        setForm({ name: '', email: '', subject: '', message: '', company: '' });
       } else {
         setStatus('error');
         setMsg(data.error ?? 'Something went wrong.');
@@ -177,6 +177,20 @@ export function ContactClient() {
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Honeypot — hidden from sighted users, bots that autofill every field trip it */}
+                  <div className="absolute -left-[9999px]" aria-hidden="true">
+                    <label htmlFor="company">Company</label>
+                    <input
+                      type="text"
+                      id="company"
+                      name="company"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={form.company}
+                      onChange={handleChange}
+                    />
+                  </div>
+
                   <div className="grid sm:grid-cols-2 gap-4">
                     {[
                       {

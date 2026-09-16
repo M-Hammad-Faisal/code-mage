@@ -14,7 +14,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { name, email, subject, message } = await req.json();
+    const { name, email, subject, message, company } = await req.json();
+
+    // Honeypot — a hidden field real users never fill in. Bots that
+    // autofill every form field trip this; report success so they move on.
+    if (company) {
+      return NextResponse.json({ message: "Message sent! I'll get back to you soon 🚀" });
+    }
 
     if (!name?.trim() || !email?.trim() || !message?.trim()) {
       return NextResponse.json({ error: 'Name, email and message are required.' }, { status: 400 });
