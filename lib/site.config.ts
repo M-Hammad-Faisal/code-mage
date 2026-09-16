@@ -8,7 +8,7 @@ export const SITE = {
 
   author: {
     name: 'Muhammad Hammad Faisal',
-    role: 'Software Engineer (Test Automation) @ Arbisoft',
+    role: 'Software Engineer @ Arbisoft',
     email: 'hammadfaisal178@gmail.com',
     location: 'Lahore, Punjab, Pakistan',
     portfolio: 'https://m-hammad-faisal.github.io/',

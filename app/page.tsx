@@ -8,7 +8,7 @@ import { PostCard } from '@/components/PostCard';
 import { HeroAnimation } from '@/components/HeroAnimation';
 
 export const metadata: Metadata = {
-  title: 'Playwright & Cypress Test Automation Tutorials',
+  title: SITE.seo.title,
   description:
     'Hands-on test automation tutorials for Playwright, Cypress, and WebdriverIO, plus web scraping deep dives and career guides — by Muhammad Hammad Faisal.',
   alternates: { canonical: SITE.url },
