@@ -25,6 +25,9 @@ export async function generateStaticParams() {
   return params;
 }
 
+// Only framework/chapter pairs returned above are servable at request time.
+export const dynamicParams = false;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { framework, chapter } = await params;
   const ch = getChapter(framework, chapter);
