@@ -15,6 +15,8 @@ export async function generateStaticParams() {
   return getAllLessons().map((l) => ({ id: l.id }));
 }
 
+export const dynamicParams = false;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const lesson = getLessonById(id);

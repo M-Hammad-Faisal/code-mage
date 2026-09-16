@@ -25,6 +25,10 @@ export async function generateStaticParams() {
   return getAllPosts().map((p) => ({ slug: p.slug }));
 }
 
+// Only slugs returned by generateStaticParams are servable — an unknown slug
+// 404s instead of hitting getPostBySlug with attacker-controlled input.
+export const dynamicParams = false;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = getPostBySlug(slug);
