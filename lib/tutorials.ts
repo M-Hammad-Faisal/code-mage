@@ -1,6 +1,7 @@
 import fs from 'fs';
 import matter from 'gray-matter';
 import path from 'path';
+import { cache } from 'react';
 import { SAFE_SLUG as SAFE_SEGMENT, estimateReadTime } from '@/lib/content-utils';
 
 export interface TutorialChapter {
@@ -66,7 +67,7 @@ export const FRAMEWORKS: Record<string, Omit<TutorialFramework, 'chapters'>> = {
 
 const TUTORIALS_DIR = path.join(process.cwd(), 'content/tutorials');
 
-export function getFrameworkChapters(framework: string): TutorialChapter[] {
+export const getFrameworkChapters = cache((framework: string): TutorialChapter[] => {
   if (!SAFE_SEGMENT.test(framework)) return [];
 
   const dir = path.join(TUTORIALS_DIR, framework);
@@ -92,35 +93,37 @@ export function getFrameworkChapters(framework: string): TutorialChapter[] {
       content,
     };
   });
-}
+});
 
-export function getChapter(framework: string, chapter: string): TutorialChapter | null {
-  if (!SAFE_SEGMENT.test(framework) || !SAFE_SEGMENT.test(chapter)) return null;
+export const getChapter = cache(
+  (framework: string, chapter: string): TutorialChapter | null => {
+    if (!SAFE_SEGMENT.test(framework) || !SAFE_SEGMENT.test(chapter)) return null;
 
-  const dir = path.join(TUTORIALS_DIR, framework);
-  if (!fs.existsSync(dir)) return null;
+    const dir = path.join(TUTORIALS_DIR, framework);
+    if (!fs.existsSync(dir)) return null;
 
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.mdx') || f.endsWith('.md'));
-  const match = files.find((f) => f.replace(/^\d+-/, '').replace(/\.(mdx|md)$/, '') === chapter);
-  if (!match) return null;
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.mdx') || f.endsWith('.md'));
+    const match = files.find((f) => f.replace(/^\d+-/, '').replace(/\.(mdx|md)$/, '') === chapter);
+    if (!match) return null;
 
-  const raw = fs.readFileSync(path.join(dir, match), 'utf8');
-  const { data, content } = matter(raw);
+    const raw = fs.readFileSync(path.join(dir, match), 'utf8');
+    const { data, content } = matter(raw);
 
-  return {
-    framework,
-    chapter,
-    title: data.title ?? chapter,
-    description: data.description ?? '',
-    order: data.order ?? 0,
-    readTime: estimateReadTime(content),
-    content,
-  };
-}
+    return {
+      framework,
+      chapter,
+      title: data.title ?? chapter,
+      description: data.description ?? '',
+      order: data.order ?? 0,
+      readTime: estimateReadTime(content),
+      content,
+    };
+  }
+);
 
-export function getAllFrameworks(): TutorialFramework[] {
+export const getAllFrameworks = cache((): TutorialFramework[] => {
   return Object.values(FRAMEWORKS).map((f) => ({
     ...f,
     chapters: getFrameworkChapters(f.slug),
   }));
-}
+});

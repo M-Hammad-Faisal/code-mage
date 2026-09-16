@@ -101,8 +101,12 @@ await expect(page.getByRole('checkbox')).not.toBeChecked();
 ### CSS Class
 
 ```typescript
-await expect(locator).toHaveClass('active');
-await expect(locator).toHaveClass(/selected/);
+// Exact match — the class attribute must equal this string exactly,
+// including every other class on the element and their order
+await expect(locator).toHaveClass('btn active');
+
+// Partial match — use a regex when you only care that one class is present
+await expect(locator).toHaveClass(/active/);
 ```
 
 Use sparingly — class names change. Prefer checking visible state or text instead.
@@ -262,4 +266,4 @@ Before committing a test, ask:
 
 If the answer to the last question is yes, switch to a web-first assertion.
 
-Next chapter: what to do when tests are flaky.
+Next chapter: Page Object Model — how to organize all these selectors and assertions so they don't end up scattered across 20 test files.

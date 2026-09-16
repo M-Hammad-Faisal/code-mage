@@ -43,9 +43,9 @@ jobs:
         shardTotal: [4]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: 'npm'
@@ -54,7 +54,7 @@ jobs:
         run: npm ci
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
@@ -76,7 +76,7 @@ jobs:
 
       - name: Upload shard report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-shard-${{ matrix.shardIndex }}
           path: playwright-report/
@@ -89,15 +89,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: 'npm'
       - run: npm ci
 
       - name: Download all shard reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: playwright-report-shard-*
           path: all-reports/
@@ -107,7 +107,7 @@ jobs:
         run: npx playwright merge-reports --reporter=html ./all-reports
 
       - name: Upload merged HTML report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-html-report
           path: playwright-report/
@@ -134,7 +134,7 @@ With 200 tests that each take 3 seconds, serial execution takes ~10 minutes. Wit
 
 ```yaml
 - name: Cache Playwright browsers
-  uses: actions/cache@v4
+  uses: actions/cache@v6
   id: playwright-cache
   with:
     path: ~/.cache/ms-playwright
@@ -188,14 +188,12 @@ If you want your team pinged on failure (without spamming them on every run):
 ```yaml
   - name: Notify Slack on failure
     if: failure()
-    uses: slackapi/slack-github-action@v1
+    uses: slackapi/slack-github-action@v2
     with:
+      webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+      webhook-type: incoming-webhook
       payload: |
-        {
-          "text": "❌ Playwright tests failed on `${{ github.ref_name }}`\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        }
-    env:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        text: "❌ Playwright tests failed on `${{ github.ref_name }}`\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 ```
 
 This *only* runs if the test job fails, and sends a link directly to the failed run. Much better than generic email notifications nobody reads.

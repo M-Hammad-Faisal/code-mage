@@ -246,20 +246,11 @@ cy.window().then((win) => {
 
 ## File Uploads
 
-Cypress doesn't support file uploads natively. Use the `cypress-file-upload` plugin:
-
-```bash
-npm install --save-dev cypress-file-upload
-```
-
-```typescript
-// cypress/support/commands.ts
-import 'cypress-file-upload'
-```
+Cypress has built-in file upload support via `.selectFile()` — no plugin needed:
 
 ```typescript
 // In your test
-cy.get('[data-test="file-input"]').attachFile('test-document.pdf')
+cy.get('[data-test="file-input"]').selectFile('cypress/fixtures/test-document.pdf')
 cy.get('[data-test="upload-button"]').click()
 cy.get('[data-test="upload-success"]').should('be.visible')
 ```
@@ -294,10 +285,14 @@ Store environment-specific values (base URLs, credentials, API keys) in `cypress
 }
 ```
 
-Access them in tests:
+Access them in tests with `cy.env()` — this keeps secrets in the Node process instead of exposing them to the browser (`Cypress.expose()` is the newer alternative, but only for values that are safe to leak into browser-side code). Like any `cy.*` command, it's chainable rather than awaitable — resolve the value with `.then()`:
 
 ```typescript
-cy.login(Cypress.env('username'), Cypress.env('password'))
+cy.env('username').then((username) => {
+  cy.env('password').then((password) => {
+    cy.login(username, password)
+  })
+})
 ```
 
 Never commit `cypress.env.json` to version control. Add it to `.gitignore`. Pass secrets in CI as environment variables instead — Cypress picks up any variable prefixed with `CYPRESS_`:

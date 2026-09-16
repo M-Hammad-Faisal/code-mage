@@ -30,7 +30,7 @@ All three are legitimate choices. Here's the honest comparison:
 | Protocol | WebDriver + CDP | CDP (proprietary) | In-browser |
 | Mobile testing | ✅ (Appium) | ❌ | ❌ |
 | Multi-tab | ✅ | ✅ | ⚠️ Limited |
-| Cross-origin | ✅ | ✅ | ⚠️ Limited |
+| Cross-origin | ✅ | ✅ (via `cy.origin()`) | ⚠️ Limited |
 | Speed | Moderate | Fast | Fast (headed) |
 | Learning curve | Steeper | Moderate | Gentle |
 | Enterprise features | Excellent | Good | Good |
@@ -73,7 +73,7 @@ For mobile testing, Appium sits between WDIO and the mobile device, translating 
 
 ## Synchronous-Style Code
 
-WDIO v8 (current) uses synchronous-style async code — all async operations are automatically awaited inside test files:
+Modern WDIO (v9, current) uses `async`/`await` throughout — every browser command returns a promise, and you await it directly instead of chaining callbacks:
 
 ```javascript
 // WDIO style — reads synchronously
@@ -136,9 +136,13 @@ This tutorial uses [SauceDemo](https://www.saucedemo.com) throughout. Credential
 We'll cover:
 
 1. **Installation & Configuration** — getting WDIO up and running
-2. **Writing Tests** — selectors, commands, assertions
-3. **Page Object Model** — structuring tests for maintainability
-4. **Appium & Mobile** — extending tests to iOS and Android
-5. **CI/CD** — running WDIO in GitHub Actions
+2. **Writing Tests** — selectors and commands
+3. **Assertions** — `expect-webdriverio` matchers
+4. **Page Object Model** — structuring tests for maintainability
+5. **Advanced Interactions** — browser control beyond the basics
+6. **Flaky Tests** — retry strategies and diagnosis
+7. **CI/CD** — running WDIO in GitHub Actions
+
+Mobile testing with Appium is WDIO's other big use case (see above), but it's a large enough topic to deserve its own guide — this tutorial stays focused on web.
 
 Let's start with installation.

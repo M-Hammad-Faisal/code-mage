@@ -200,7 +200,7 @@ mochaOpts: {
 }
 ```
 
-To retry only specific tests, use the `wdio-retry-service` package or add `this.retries(2)` inline:
+To retry only specific tests rather than the whole spec file, add `this.retries(2)` inline:
 
 ```typescript
 it('should complete checkout (flaky in CI)', async function() {

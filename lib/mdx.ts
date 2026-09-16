@@ -1,6 +1,7 @@
 import fs from 'fs';
 import matter from 'gray-matter';
 import path from 'path';
+import { cache } from 'react';
 import { SAFE_SLUG, estimateReadTime } from '@/lib/content-utils';
 
 // ---------------------------------------------------------------------------
@@ -37,7 +38,7 @@ export function getBlogSlugs(): string[] {
     .map((f) => f.replace(/\.(mdx|md)$/, ''));
 }
 
-export function getBlogPost(slug: string): BlogPost | null {
+export const getBlogPost = cache((slug: string): BlogPost | null => {
   if (!SAFE_SLUG.test(slug)) return null;
 
   const mdxPath = path.join(BLOG_DIR, `${slug}.mdx`);
@@ -60,14 +61,14 @@ export function getBlogPost(slug: string): BlogPost | null {
     readTime: estimateReadTime(content),
     content,
   };
-}
+});
 
-export function getAllBlogPosts(): BlogPost[] {
+export const getAllBlogPosts = cache((): BlogPost[] => {
   return getBlogSlugs()
     .map((slug) => getBlogPost(slug))
     .filter((post): post is BlogPost => post !== null)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
-}
+});
 
 export function getFeaturedBlogPosts(limit?: number): BlogPost[] {
   const posts = getAllBlogPosts().filter((p) => p.featured);

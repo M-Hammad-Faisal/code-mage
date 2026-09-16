@@ -14,13 +14,15 @@ Unit tests are fast and cheap to run on every commit. E2E tests are slower but c
 
 ## Running Headless
 
-Cypress runs headlessly by default when you use `cypress run` (as opposed to `cypress open`). In headless mode there's no visible browser window — Cypress uses Electron by default, or you can specify Chrome:
+Cypress runs headlessly by default when you use `cypress run` (as opposed to `cypress open`). In headless mode there's no visible browser window — Cypress falls back to its bundled Electron browser unless you specify one:
 
 ```bash
-npx cypress run                          # headless Electron
+npx cypress run                          # headless Electron (deprecated — see below)
 npx cypress run --browser chrome         # headless Chrome
 npx cypress run --browser firefox        # headless Firefox
 ```
+
+Electron is deprecated as Cypress's default browser and slated for future removal — always pass `--browser chrome` explicitly in CI rather than relying on the Electron fallback.
 
 Chrome and Firefox require `--headless` only if they're desktop browser installs without a display. In a CI container, Cypress handles this automatically.
 
@@ -65,19 +67,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
       - name: Run Cypress tests
-        uses: cypress-io/github-action@v6
+        uses: cypress-io/github-action@v7
         with:
           browser: chrome
           # If you need to start a local server first:
@@ -85,7 +87,7 @@ jobs:
           # wait-on: 'http://localhost:3000'
 
       - name: Upload screenshots on failure
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: cypress-screenshots
@@ -93,7 +95,7 @@ jobs:
           retention-days: 7
 
       - name: Upload videos
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: cypress-videos
@@ -104,7 +106,7 @@ jobs:
 Key decisions in this workflow:
 
 - `npm ci` instead of `npm install` — it's faster and uses the lockfile exactly, no resolution surprises
-- `cypress-io/github-action@v6` — the official action handles caching Cypress binaries automatically
+- `cypress-io/github-action@v7` — the official action handles caching Cypress binaries automatically
 - Screenshots upload only `if: failure()` — no point storing them on passing runs
 - Videos upload `if: always()` — useful for debugging even when tests pass but something looks off
 
@@ -155,7 +157,7 @@ The report is generated in `cypress/reports/`. Add an upload step to your workfl
 
 ```yaml
 - name: Upload HTML report
-  uses: actions/upload-artifact@v4
+  uses: actions/upload-artifact@v7
   if: always()
   with:
     name: cypress-report
@@ -202,7 +204,7 @@ In GitHub Actions, set environment variables in the workflow:
 
 ```yaml
 - name: Run Cypress tests
-  uses: cypress-io/github-action@v6
+  uses: cypress-io/github-action@v7
   with:
     browser: chrome
   env:
@@ -231,7 +233,7 @@ Record runs in CI:
 
 ```yaml
 - name: Run Cypress tests with recording
-  uses: cypress-io/github-action@v6
+  uses: cypress-io/github-action@v7
   with:
     browser: chrome
     record: true
@@ -255,13 +257,13 @@ jobs:
         containers: [1, 2, 3, 4, 5] # 5 parallel runners
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       - run: npm ci
-      - uses: cypress-io/github-action@v6
+      - uses: cypress-io/github-action@v7
         with:
           browser: chrome
           record: true
@@ -277,15 +279,15 @@ Cypress downloads its browser binary (~300MB) on first install. Cache it to avoi
 
 ```yaml
 - name: Setup Node.js with caching
-  uses: actions/setup-node@v4
+  uses: actions/setup-node@v7
   with:
-    node-version: '20'
+    node-version: '22'
     cache: 'npm'
 
 # The cypress-io/github-action handles Cypress binary caching automatically.
 # If you're running Cypress directly without the action, cache manually:
 - name: Cache Cypress binary
-  uses: actions/cache@v4
+  uses: actions/cache@v6
   with:
     path: ~/.cache/Cypress
     key: cypress-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -317,19 +319,19 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
       - name: Run Cypress E2E tests
-        uses: cypress-io/github-action@v6
+        uses: cypress-io/github-action@v7
         with:
           browser: chrome
           record: true
@@ -346,7 +348,7 @@ jobs:
           CYPRESS_PASSWORD: ${{ secrets.CYPRESS_PASSWORD }}
 
       - name: Upload screenshots on failure
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: cypress-screenshots-${{ matrix.containers }}
@@ -354,7 +356,7 @@ jobs:
           retention-days: 7
 
       - name: Upload test report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: cypress-report-${{ matrix.containers }}
@@ -363,5 +365,18 @@ jobs:
 ```
 
 This workflow runs tests in parallel across 3 containers, records to Cypress Cloud, uploads screenshots on failure, and publishes the HTML report as an artifact — everything you need for a production test pipeline.
+
+## Download the Login Spec
+
+Want a working starting point instead of typing everything from scratch?
+
+<DownloadCard
+  filename="login.cy.ts"
+  href="/downloads/cypress/login.cy.ts"
+  description="Login flow — happy path + all error states, with an inline Page Object"
+  tests={9}
+/>
+
+Drop it into `cypress/e2e/` in a fresh Cypress project with `baseUrl: 'https://www.saucedemo.com'` and it'll run as-is.
 
 That's the full Cypress tutorial. You've got selectors, assertions, page objects, network interception, stability patterns, and CI integration. Build on these foundations and you'll have a test suite that actually catches bugs instead of creating noise.

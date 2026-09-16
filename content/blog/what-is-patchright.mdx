@@ -146,6 +146,8 @@ Don't overthink this. The rule is extremely simple:
 
 Don't use Patchright for absolutely everything just because you can. It's a fork — it lags slightly behind official Playwright releases, it has a few edge-case bugs that vanilla Playwright doesn't, and you explicitly lose browser console access. Use the right tool for the job.
 
+Patchright isn't the only stealth-patched fork anymore, either. `rebrowser-patches` takes a similar CDP-minimal approach (skipping `Runtime.enable` via `Page.createIsolatedWorld`), and Camoufox does the same job on Firefox instead of Chromium if you need a non-Chromium engine. Worth comparing if Patchright alone doesn't get you past a particular target — but Patchright remains the most widely used option and the one with the most active community around it.
+
 ## What I Pair It With
 
 Patchright perfectly handles the browser fingerprint, but that's only half the battle. In production, I also heavily use:

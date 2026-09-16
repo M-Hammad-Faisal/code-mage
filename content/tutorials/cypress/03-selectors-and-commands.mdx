@@ -166,8 +166,8 @@ Cypress discourages traditional `if/else` based on element existence because com
 ```javascript
 // Check if something exists before acting on it
 cy.get('body').then(($body) => {
-  if ($body.find('[data-test="shopping_cart_badge"]').length > 0) {
-    cy.get('[data-test="shopping_cart_badge"]').click()
+  if ($body.find('[data-test="shopping-cart-badge"]').length > 0) {
+    cy.get('[data-test="shopping-cart-badge"]').click()
   }
 })
 ```

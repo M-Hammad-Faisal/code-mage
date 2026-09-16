@@ -45,19 +45,3 @@ export function createServiceClient() {
     }
   );
 }
-
-// Publishable client — uses the publishable key, respects RLS.
-// Use in server-side API routes where the table's RLS policy already allows the operation
-// (e.g. public INSERT on contact_messages / newsletter_subscribers).
-export function createAnonClient() {
-  return createSupabaseClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }
-  );
-}

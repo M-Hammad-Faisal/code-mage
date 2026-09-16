@@ -51,9 +51,6 @@ Do you want to use a compiler?
 Do you want WebdriverIO to autogenerate some test files?
   → Yes
 
-Would you like to add a service to your project?
-  → chromedriver (select this to avoid manual driver setup)
-
 What is the base url?
   → https://www.saucedemo.com
 
@@ -209,7 +206,7 @@ capabilities: [
 maxInstances: 2,
 ```
 
-Install geckodriver: `npm install --save-dev wdio-geckodriver-service`
+No separate driver install needed — WDIO auto-manages browser drivers (Chrome, Firefox, Edge, Safari) since v8.14, downloading and starting the matching driver binary for whatever's in `capabilities`.
 
 ## TypeScript Path Aliases
 
@@ -227,14 +224,11 @@ For cleaner imports, add path aliases to `tsconfig.json`:
 }
 ```
 
-And in `wdio.conf.ts`:
+And in `wdio.conf.ts`, register `tsconfig-paths` so the aliases resolve at runtime:
 ```typescript
-import { compilerOptions } from './tsconfig.json'
-import { pathsToModuleNameMapper } from 'ts-jest'
-
 // Add to config:
 mochaOpts: {
-  require: ['ts-node/register'],
+  require: ['ts-node/register', 'tsconfig-paths/register'],
 },
 ```
 
