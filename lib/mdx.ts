@@ -19,22 +19,11 @@ export interface BlogPost {
   content: string;
 }
 
-export interface Lesson {
-  id: string;
-  title: string;
-  description: string;
-  duration: number;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  tags: string[];
-  content: string;
-}
-
 // ---------------------------------------------------------------------------
 // Paths
 // ---------------------------------------------------------------------------
 
 const BLOG_DIR = path.join(process.cwd(), 'content/blog');
-const LESSONS_DIR = path.join(process.cwd(), 'content/lessons');
 
 // ---------------------------------------------------------------------------
 // Blog helpers
@@ -92,45 +81,4 @@ export function getBlogPostsByCategory(category: string): BlogPost[] {
 export function getAllBlogCategories(): string[] {
   const categories = getAllBlogPosts().map((p) => p.category);
   return [...new Set(categories)].sort();
-}
-
-// ---------------------------------------------------------------------------
-// Lesson helpers
-// ---------------------------------------------------------------------------
-
-export function getAllLessons(): Lesson[] {
-  const indexPath = path.join(LESSONS_DIR, 'index.json');
-  if (!fs.existsSync(indexPath)) return [];
-
-  const index = JSON.parse(fs.readFileSync(indexPath, 'utf8')) as Array<{
-    id?: string;
-    slug?: string;
-    title: string;
-    summary?: string;
-    description?: string;
-    duration: number;
-    level: string;
-    tags?: string[];
-  }>;
-
-  return index.map((item) => {
-    const id = item.id ?? item.slug ?? '';
-    const mdPath = path.join(LESSONS_DIR, `${id}.md`);
-    const content = fs.existsSync(mdPath) ? fs.readFileSync(mdPath, 'utf8') : '';
-
-    return {
-      id,
-      title: item.title,
-      description: item.summary ?? item.description ?? '',
-      duration: item.duration,
-      level: (item.level?.toLowerCase() ?? 'beginner') as Lesson['level'],
-      tags: item.tags ?? [],
-      content,
-    };
-  });
-}
-
-export function getLessonById(id: string): Lesson | null {
-  if (!SAFE_SLUG.test(id)) return null;
-  return getAllLessons().find((l) => l.id === id) ?? null;
 }
