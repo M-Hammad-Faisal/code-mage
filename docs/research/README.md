@@ -6,11 +6,12 @@ This directory is a running record of research done to keep `content/blog/` and 
 
 **How to use it:** before auditing a tool's content again, read its file here first. Update the "Last verified" date and log new findings each time you re-check — don't just overwrite old entries, append a dated section so we can see the tool's trajectory over time.
 
-| File | Tool | Last verified |
-|---|---|---|
-| [playwright.md](playwright.md) | Playwright | 2026-09-16 |
-| [cypress.md](cypress.md) | Cypress | 2026-09-16 |
-| [webdriverio.md](webdriverio.md) | WebdriverIO | 2026-09-16 |
-| [typescript.md](typescript.md) | TypeScript | 2026-09-16 |
-| [patchright.md](patchright.md) | Patchright | 2026-09-16 |
-| [github-actions.md](github-actions.md) | GitHub Actions (CI actions used across tutorials) | 2026-09-16 |
+| File                                             | Tool                                              | Last verified |
+| ------------------------------------------------ | ------------------------------------------------- | ------------- |
+| [playwright.md](playwright.md)                   | Playwright                                        | 2026-09-16    |
+| [cypress.md](cypress.md)                         | Cypress                                           | 2026-09-16    |
+| [webdriverio.md](webdriverio.md)                 | WebdriverIO                                       | 2026-09-16    |
+| [typescript.md](typescript.md)                   | TypeScript                                        | 2026-09-16    |
+| [patchright.md](patchright.md)                   | Patchright                                        | 2026-09-16    |
+| [github-actions.md](github-actions.md)           | GitHub Actions (CI actions used across tutorials) | 2026-09-16    |
+| [dependency-security.md](dependency-security.md) | npm dependency vulnerabilities (Dependabot)       | 2026-09-16    |
