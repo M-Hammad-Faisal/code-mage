@@ -1,0 +1,103 @@
+---
+title: 'From 8 Hours to 2: Cutting a WebdriverIO Suite''s Runtime by 75%'
+date: '2026-04-22'
+category: 'Project Breakdown'
+tags: ['webdriverio', 'performance', 'ci-cd', 'testing', 'parallelization']
+excerpt: 'How I took an inherited 100+ file WebdriverIO suite down to 60 files and an 8-hour runtime down to 2, and where each hour of savings actually came from.'
+featured: false
+---
+
+I inherited a WebdriverIO regression suite with 100+ spec files that took 8 hours to run. Eight hours. That's not a suite you run before merging a PR — that's a suite you kick off before you go home and hope it's green by morning. By the time it finished, whatever it caught was already a day old.
+
+Six weeks later it ran in 2 hours. This is the breakdown of what was actually wrong with it and what fixed it — not the sanitized version, the honest one, including the part where cutting tests is risky if you do it carelessly.
+
+## Diagnosing Why It Was Slow
+
+Before touching anything, I spent the first few days just watching runs and reading logs, because "it's slow" isn't a diagnosis. Three things showed up clearly:
+
+**1. Everything ran serially on one machine.** The existing `wdio.conf.ts` had `maxInstances: 1`. One browser session at a time, for 100+ files. This alone explained most of the wall-clock time — the suite wasn't *doing* 8 hours of work, it was doing maybe 2.5 hours of work stretched across a single-threaded queue.
+
+**2. Redundant coverage across files.** Multiple spec files independently re-tested the same login flow, the same cart-add flow, as setup steps before getting to what they actually wanted to test. Nobody had removed the duplication as the suite grew — each new feature file just copy-pasted the nearest existing file as a starting point, gotchas included.
+
+**3. No test categorization.** Every CI run — including PR checks — executed the entire regression suite. There was no smoke subset. A one-line CSS fix triggered the same 8-hour run as a data-model migration.
+
+Flaky retries made the diagnosis noisier but weren't the primary driver — some tests did retry due to bad waits, but even with retries stripped out, serial execution and duplicated coverage were the two big line items.
+
+## Fix 1: Cutting 100+ Files Down to 60
+
+This wasn't deleting tests wholesale — that's how you lose coverage without noticing until something ships broken. The process was:
+
+1. **Map every spec file to the user flows it actually exercised**, not just its filename. Several "different" files turned out to test the identical flow with cosmetic variation (different product names, same assertions).
+2. **Consolidate flows that shared setup**, moving repeated login/cart/checkout scaffolding into shared fixtures instead of re-testing them as a side effect of every spec.
+3. **Review each proposed deletion against a coverage checklist before removing it** — what assertion does this file make that no other file makes? If the answer was "none," it was a duplicate and got merged into the surviving file. If the answer was "yes, this edge case," it got kept, sometimes as one `it()` block folded into a broader file rather than its own spec.
+
+That review step mattered more than the consolidation itself. It's tempting to eyeball two similar-looking files and assume one is redundant — but "looks similar" and "asserts the same thing" aren't the same claim, and the only way to tell them apart is reading the assertions, not the filenames. We went file by file, not in bulk, specifically to avoid quietly deleting the one edge case that made a file worth keeping.
+
+The result was 60 files that covered the same functional surface with none of the copy-paste duplication. Roughly 40% fewer files, and — because a lot of the deleted duplication was itself slow (each redundant login flow cost real seconds) — a meaningful chunk of runtime disappeared before we'd touched parallelization at all.
+
+## Fix 2: Distributing Execution Across Selenium Grid
+
+The bigger lever was concurrency. We stood up a local Selenium Grid — a hub plus multiple Chrome nodes, sized to the CI runner's core count — and configured WebdriverIO to actually use it.
+
+```typescript
+// wdio.conf.ts
+export const config: WebdriverIO.Config = {
+  // Point the client at the Grid hub instead of spawning a local driver
+  hostname: process.env.GRID_HOST ?? 'localhost',
+  port: 4444,
+  path: '/wd/hub',
+
+  // Root-level maxInstances caps total parallel sessions across all capabilities
+  maxInstances: 8,
+
+  capabilities: [
+    {
+      browserName: 'chrome',
+      // Per-capability maxInstances caps how many Chrome sessions
+      // run at once — useful when the Grid has a fixed node pool
+      maxInstances: 8,
+      'goog:chromeOptions': {
+        args: ['--headless', '--disable-gpu', '--no-sandbox'],
+      },
+    },
+  ],
+
+  specFileRetries: 1,
+  specFileRetriesDelay: 2,
+
+  // ...reporters, framework config, etc.
+}
+```
+
+`maxInstances` at the root controls total parallel jobs across the whole run; the per-capability value caps how many sessions of that specific capability run concurrently, which matters once you have a fixed-size node pool and don't want the test runner queuing sessions the Grid can't actually serve. We tuned it to match available Chrome nodes rather than an arbitrary high number — overshooting just meant sessions queued waiting for a node, which looks like parallelism in the config but isn't in practice.
+
+We also split CI itself with WebdriverIO's spec sharding (`--shard=x/y`), running shards across separate CI jobs rather than relying on a single machine's Grid capacity — that's the piece that let us go from "several Chrome sessions on one box" to genuinely distributed execution.
+
+## Fix 3: Smoke vs. Full Regression
+
+The last piece wasn't a runtime optimization at all — it was recognizing that not every commit needs the same suite. We split specs into two categories:
+
+- **Smoke** (`@smoke` tag, ~15 files): the critical paths — login, checkout, search. Runs on every PR, finishes in under 10 minutes with the Grid in place.
+- **Full regression** (all 60 files): runs on merge to `main` and nightly. This is the one that dropped from 8 hours to 2.
+
+```typescript
+// package.json
+{
+  "scripts": {
+    "test:smoke": "wdio run wdio.conf.ts --mochaOpts.grep @smoke",
+    "test:regression": "wdio run wdio.conf.ts"
+  }
+}
+```
+
+This didn't change the regression suite's own runtime, but it changed how often anyone had to *wait* for the slow path — which was really the actual complaint underneath "the suite is too slow."
+
+## Where the Time Actually Went
+
+If I had to split credit honestly, roughly half the improvement came from parallelization (serial → distributed Grid execution) and roughly half came from cutting redundant coverage — not evenly across every file, but as two separate levers that stacked. Parallelization alone, with all 100+ files intact, would have gotten us to somewhere around 3-3.5 hours. Consolidation alone, still running serially, would have gotten us to maybe 5 hours. Doing both compounded rather than added, because the files we cut were disproportionately the ones with expensive shared setup (login, cart seeding) that had been needlessly repeated — so removing them also made the remaining parallel run more efficient per node.
+
+The smoke/regression split didn't reduce the 8-hour number itself, but it's the change that mattered most day to day, since most CI runs never touch the full 2-hour path at all.
+
+## The Trade-off Worth Naming
+
+Consolidating tests is a real risk, not a hypothetical one. Every deleted file is a bet that nothing it covered was unique. We guarded against that with the per-file coverage review described above, and afterward, by watching production incident reports for a full release cycle to confirm nothing that used to be caught in regression slipped through — nothing did, but that verification step is the part people skip when they're in a hurry to make the number smaller. Cutting a suite in half looks great in a retro slide. It's only actually a win if you can show what each deleted file used to prove and where that assertion still lives.

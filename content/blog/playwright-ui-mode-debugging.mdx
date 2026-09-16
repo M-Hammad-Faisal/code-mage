@@ -1,0 +1,88 @@
+---
+title: "Playwright's UI Mode Is Now How I Debug Everything"
+date: '2026-08-26'
+category: 'Test Automation'
+tags: ['playwright', 'debugging', 'developer-experience', 'testing']
+excerpt: 'How Playwright UI Mode replaced console.log, --debug, and headed-mode guesswork as my default way to write and fix tests.'
+featured: false
+---
+
+For about a year after I switched to Playwright, my debugging workflow was still basically Selenium-era habits wearing a Playwright costume. Test fails, I add a `console.log`, re-run. Still confused, I reach for `--debug` and step through the inspector one breakpoint at a time. Still confused, I run headed with `--headed --slow-mo=500` and just *watch* the browser, squinting at the screen trying to catch the exact frame where things went wrong.
+
+It worked. It was also slow, and most of that time was spent re-running the same test over and over to catch something I'd missed the first three times.
+
+UI Mode (`npx playwright test --ui`) has quietly become the default way I write and fix tests. Not because it's new — it's been around a while — but because the last few releases (I'm on 1.63) filled in the gaps that used to send me back to the old tools. Here's what changed and, just as importantly, when I still don't reach for it.
+
+## What Debugging Looked Like Before
+
+Three tools, three different jobs, none of them great at showing you the *whole* picture at once:
+
+**`console.log` / `page.pause()`** — cheap, but you're guessing what to log before you know what's wrong. Half the time I'd add a log statement, re-run, realize I logged the wrong thing, and re-run again.
+
+**`--debug` (Playwright Inspector)** — genuinely useful for stepping through actions one at a time, but it's linear. You step forward, you can't easily jump back three actions to compare DOM state, and there's no persistent view of network requests alongside the action that triggered them.
+
+**Headed mode + `--slow-mo`** — this is the "just watch it happen" approach. It tells you *that* something broke but rarely *why*, because you're watching pixels, not state.
+
+None of these gave me time-travel. If a test failed on step 12, I couldn't easily rewind to step 8 and check what the DOM actually looked like versus what I assumed it looked like.
+
+## What UI Mode Actually Gives You
+
+Run it with:
+
+```bash
+npx playwright test --ui
+```
+
+You get a persistent app window: a sidebar listing every test file (expandable tree, filterable by text, `@tag`, project name, or pass/fail/skip status), and a main pane that fills in once you run a test.
+
+### The timeline is the part that changed my workflow
+
+Every action in the test — navigation, click, fill, assertion — shows up as a colored block on a timeline strip at the top. Hover over any block and you get a live preview of the DOM snapshot at that exact point in the test, no re-run required. Double-click an action to zoom into just that time range.
+
+This is the actual replacement for my old "run it five times and squint" loop. Instead of re-running to catch a specific moment, I scrub the timeline like a video editor and land exactly where the state went wrong.
+
+### DOM snapshots per step, not just on failure
+
+Click any action in the Actions tab and the DOM snapshot for that exact step renders in the preview pane — matching what the page looked like at that moment, not a reconstruction. There's a pop-out icon that opens the snapshot in its own window, which I use constantly to put the snapshot side-by-side with my test code and inspect it with real DevTools (computed styles, box model, the works) instead of Playwright's built-in viewer.
+
+### The locator picker fixes bad selectors in place
+
+This is the one I actually want to walk through, because it's where UI Mode saves the most real time.
+
+### A concrete example: fixing a flaky selector
+
+Say I've got a test that intermittently fails on a "remove item" button in a cart page:
+
+```typescript
+await page.locator('.cart-item:nth-child(2) button').click();
+```
+
+It's flaky because the DOM order isn't guaranteed to match the order items were added — a re-render can shuffle `.cart-item` position. In UI Mode:
+
+1. Run the test, let it fail.
+2. Click the failing action in the Actions tab. The DOM snapshot at that exact moment shows up in the preview.
+3. Click the pick-locator button and hover over the button I actually meant to click, right there in the snapshot. Playwright highlights the matching element and generates a candidate locator live.
+4. The picker playground lets me type an alternate locator and see the match count update in real time — so I can test `getByRole('button', { name: 'Remove' }).nth(1)` against the actual snapshot before touching test code at all.
+5. Once it matches exactly one element reliably, I copy the locator straight into my test.
+
+What used to be "edit selector, save, re-run, check if it still flakes, repeat" becomes "hover, verify, copy" — against the real DOM state that caused the failure, not a fresh page load that might not even reproduce the original ordering.
+
+### Network tab, console tab, and watch mode round it out
+
+The Network tab lists every request for the run — sortable by type, status, method — with headers and payload, right next to the action that triggered it. No more separately opening DevTools to check if a mock actually intercepted. The Console tab merges browser and test-runner logs with icons showing which is which, so you stop losing track of whether a log line came from your test or the page under test.
+
+Watch mode is the other habit-changer: click the eye icon next to a test (or the sidebar's top eye icon for all tests) and it re-runs automatically on save. I used to run `npx playwright test path/to/file.spec.ts` after every edit; now I just save and watch the sidebar update.
+
+## Where I Still Reach for `--debug` or Trace Viewer
+
+UI Mode isn't a full replacement, and pretending otherwise would be dishonest.
+
+**CI-only failures.** If a test only fails on the CI runner — different viewport, different timing, a race condition that doesn't reproduce locally — I don't have a live UI Mode session for that run. What I have is a trace file, generated by `trace: 'on-first-retry'` in CI (see my [CI/CD setup post](/blog/ci-cd-for-playwright-tests) for the full config). For that, `npx playwright show-trace trace.zip` and the standalone Trace Viewer are still the tool, since UI Mode requires a live test run and Trace Viewer is built specifically for inspecting a recorded one after the fact.
+
+**Quick one-off breakpoint debugging.** If I just want to pause at a specific `page.pause()` call mid-script without spinning up the full UI Mode app, `--debug` is still faster to reach for.
+
+**Debugging inside an already-complex CI matrix** where I'm comparing behavior across shards — trace files from multiple shards, viewed independently, still beat trying to force everything into one UI Mode session.
+
+## The Bottom Line
+
+UI Mode didn't add a new debugging feature so much as it merged three tools I used to context-switch between — logs, inspector, headed-mode watching — into one view where the timeline, the DOM state, and the network activity are all the same test run, scrubbable, not three separate re-runs. For anything I'm actively writing or fixing locally, it's the first thing I open now. For CI-only flakiness, the trace file (and `show-trace`) is still where the real detective work happens, because that's the only artifact you actually have.

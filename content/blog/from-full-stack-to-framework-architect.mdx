@@ -1,0 +1,44 @@
+---
+title: 'From Full-Stack to Framework Architect: How My Role Actually Changed'
+date: '2026-08-12'
+category: 'Career'
+tags: ['career', 'test-automation', 'software-engineering', 'growth']
+excerpt: 'My career has moved through three genuinely different kinds of engineering, not one continuous upward line — here is what actually transferred between them and what did not.'
+featured: true
+---
+
+There's a version of this post that goes "and then I grew as an engineer and learned so much," and it would be true in the most useless possible way. What actually happened is more specific: I've worked three distinct kinds of engineering in four years, and they are not the same skill wearing different clothes. Each one asked something different of me, and pretending it was all one smooth upward line would flatten the parts that were actually interesting.
+
+## Kind one: building product features
+
+I started at Ginkgo Retail in August 2022 as a full-stack engineer — React on the frontend, Django on the backend. The main thing I built there was a complete Learning Management System, end to end. Not a widget bolted onto someone else's LMS — the whole thing, from data models to UI, plus contributing to CI/CD and doing code review alongside it.
+
+This is what most people mean by "software engineering": you're given a product requirement, and your job is to make it real and make it work for the people using it. Success is a feature that does what it's supposed to do. The audience for your work is end users, and the metric is "does the LMS let a student track their course progress correctly."
+
+I didn't know it at the time, but this was the easiest of the three requirements models to reason about. A requirement is a requirement. It doesn't change on you mid-sprint because it's adversarial, and it doesn't have an infinite state space because a browser rendered slightly differently. If something breaks, you can generally reproduce it, because the system isn't actively trying to behave unpredictably.
+
+## Kind two: building infrastructure for other engineers
+
+In May 2023 I moved to Arbisoft as a Jr. Software Engineer — Test Automation, and the target of my work flipped entirely. I stopped building things end users touch and started building things other engineers use to verify their own features work: WebdriverIO frameworks meant to run across multiple platforms, Cypress and Playwright suites, Selenium Grid infrastructure, abstraction layers meant to hide framework mess from the people writing tests on top of them.
+
+This is a different discipline than product engineering, even though it's still "just code." Your users are engineers, and engineers are a much harsher audience than end users — they will find every rough edge in your API design, every inconsistent naming choice, every place your abstraction leaks. Developer experience stopped being a nice-to-have and became the actual product. A test framework nobody wants to write tests in is a failed framework, no matter how technically sound its internals are.
+
+The muscle I built here was abstraction design — figuring out what should be exposed to the person writing a test versus what should be hidden inside the framework doing the hard work for them. That habit followed me everywhere after. It's the same instinct that later shaped how I approached consolidating twenty-three separate payer integrations into a shared pattern instead of twenty-three bespoke ones, how I structured a WebdriverIO framework to run identically across different platforms instead of forking it per platform, and how I built a PDF extraction service around a common interface instead of one-off parsers per document type. Different projects, same underlying question every time: what's the one abstraction that makes the next ten use cases easy instead of each one being its own special case.
+
+Concurrently — from April 2023 through December 2024 — I was also freelancing on Upwork doing multi-framework test automation for various clients, which reinforced the same lesson from a different angle: I wrote about that overlap separately, but the short version is that building frameworks for strangers' teams repeatedly is a fast way to learn which parts of "good framework design" are universal and which parts were just one team's local preference.
+
+## Kind three: adversarial engineering
+
+In June 2024 I moved into a Software Engineer role at Arbisoft focused on production scraping pipelines, anti-detection systems, browser automation tooling, and backend microservices in FastAPI, plus credential management at scale. This is where the ground shifted again, and it shifted in a way the first two roles hadn't prepared me for.
+
+Test automation and product engineering both want the same underlying property: deterministic, reproducible behavior. You write a test because you expect the system to behave the same way every time, and when it doesn't, that's a bug to fix. Scraping and anti-detection work inverts that assumption completely. The system on the other side — the site you're interacting with — is actively trying to detect and block you, and it's evolving specifically to counter whatever you did last week. There is no stable spec. The "requirements" are set by an adversary, not a product manager, and they change without notice specifically because you had some success.
+
+That's not a bigger version of test automation. It's a different discipline that happens to reuse a browser automation toolchain. Debugging a flaky Playwright test and debugging why a scraping pipeline started getting blocked look superficially similar — both involve staring at browser behavior — but the mental model underneath is opposite. In testing, flakiness is the enemy and you engineer it away. In anti-detection work, looking too consistent is itself the tell that gets you flagged, so you're sometimes engineering variability back in on purpose.
+
+## What actually transferred, and what didn't
+
+The things that carried across all three: general engineering fundamentals, a debugging mindset that doesn't panic when the first hypothesis is wrong, and that abstraction/factory-pattern habit I picked up in the framework-architecture phase. That habit turned out to be domain-agnostic — it's as useful for structuring a FastAPI microservice as it was for structuring a test framework.
+
+What didn't transfer cleanly: the actual skill of testing and the actual skill of anti-detection engineering are genuinely different disciplines, not points on the same skill curve. Getting very good at writing deterministic, reproducible test automation doesn't make you good at adversarial, non-deterministic scraping work — if anything, some of the instincts fight each other. A tester wants to eliminate flakiness. A scraping engineer sometimes needs to introduce it deliberately to look human. I had to unlearn a few reflexes moving from one to the other, not just add new ones on top.
+
+Looking back, I don't think of this as one continuous "growth" story. It's three different engineering disciplines that happened to run through the same person, each one demanding I throw out an assumption the last one had taught me to trust. The only thing that stayed constant was the willingness to notice which assumption needed throwing out.

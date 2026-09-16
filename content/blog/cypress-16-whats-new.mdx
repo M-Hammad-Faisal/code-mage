@@ -1,0 +1,138 @@
+---
+title: "Cypress 16: What's New (and What Broke)"
+date: '2026-09-09'
+category: 'Test Automation'
+tags: ['cypress', 'testing', 'release-notes', 'javascript']
+excerpt: 'A practical upgrade guide to Cypress 16 — the breaking changes you have to fix, the flakiness fixes worth having, and an honest look at the new AI features.'
+featured: false
+---
+
+Cypress 16.0.0 shipped September 1st with the tagline "faster tests, less flake." That's marketing copy, but for once it's not wrong — there's real substance in this release. It's also a breaking major version, which means upgrading isn't a `npm update` and a coffee break. I went through the migration on one of our suites this week; here's what actually needs your attention, in the order it'll bite you.
+
+## The Breaking Changes You Have to Act On
+
+### `Cypress.env()` is gone. Fully removed.
+
+This was deprecated back in 15.10 (February), and as of 16.0.0 it's not just discouraged — it doesn't exist. If your config or tests still call `Cypress.env('apiKey')`, that line throws now.
+
+The replacement isn't a single drop-in function — it's two, split by sensitivity:
+
+```javascript
+// Before (removed in 16.0.0)
+const apiKey = Cypress.env('apiKey');
+
+// After — sensitive values, stays in the Node process
+const apiKey = await cy.env('apiKey');
+
+// After — non-sensitive values, readable in the browser
+Cypress.expose({ featureFlag: true });
+```
+
+`cy.env()` is the async, Node-process-only replacement for anything you don't want reaching the browser context — API keys, credentials, tokens. `Cypress.expose()` is for the opposite case: values you genuinely want readable client-side, with per-suite or per-test overrides supported.
+
+The migration path here isn't mechanical find-and-replace — you have to actually decide, for every `Cypress.env()` call in your codebase, whether that value was sensitive. If it was credentials (and if you were using `Cypress.env()` for credentials, it probably was), it goes to `cy.env()`. If it was a feature flag or environment label, `Cypress.expose()`.
+
+One more casualty: the `env` key in test-level config overrides no longer works — use `expose: { KEY: value }` in its place. And `allowCypressEnv` is gone entirely, since there's no `Cypress.env()` left to allow.
+
+### Node 20 support is dropped
+
+Cypress 16 requires Node 22.x, 24.x, or ≥26.x. Node 20 and Node 25 are both unsupported. If your CI pipeline pins `node-version: '20'`, the install will fail outright — not degrade gracefully.
+
+```yaml
+# .github/workflows/cypress.yml
+- uses: actions/setup-node@v7
+  with:
+    node-version: 22
+```
+
+Cypress also bumped its own bundled Node from 22.19.0 to 24.15.0, so even if you're not hand-managing the Node version, anything relying on the bundled runtime shifts underneath you.
+
+### Electron is deprecated as the default browser
+
+Electron — the browser Cypress runs headlessly by default if you don't specify one — is now marked deprecated, with removal planned for a future major version. It still works in 16.0.0, but I wouldn't build new CI configs around it.
+
+The fix is trivial but easy to forget: be explicit.
+
+```json
+{
+  "scripts": {
+    "cypress:run": "cypress run --browser chrome"
+  }
+}
+```
+
+If you're running in CI with a Docker image that doesn't have Chrome installed, this is also the moment to check that — `cypress/browsers` images ship Chrome, but a bare `cypress/base` image might not.
+
+### Cookie and storage commands changed how they retry — check custom overwrites
+
+`cy.getCookie()`, `cy.getCookies()`, and `cy.getAllCookies()` are now retry-able *query* commands, governed by `defaultCommandTimeout` like any other query. Same for `cy.getAllLocalStorage()` and `cy.getAllSessionStorage()`, which now accept a `timeout` option directly.
+
+The catch: if you were overwriting any of these with `Cypress.Commands.overwrite()`, that stops working. Queries need `Cypress.Commands.overwriteQuery()` instead:
+
+```javascript
+// Before — no longer valid for query commands
+Cypress.Commands.overwrite('getCookie', (originalFn, name) => { ... });
+
+// After
+Cypress.Commands.overwriteQuery('getCookie', function (name) { ... });
+```
+
+It's a small syntax change, but if you skip it, the overwrite silently fails to register instead of erroring loudly — worth grepping your `support/` folder for `Commands.overwrite` before you upgrade.
+
+## The Genuinely Useful New Stuff
+
+### HTTP/2 support, on by default
+
+Chrome, Chromium, and Edge now intercept test traffic on the native browser network stack with HTTP/2 (and HTTP/3) support, instead of forcing everything through Cypress's legacy HTTP/1.1 proxy layer. Your app gets tested over the same protocol it actually runs in production — multiplexed requests, no more six-connection-per-host ceiling artificially throttling parallel requests in tests.
+
+Firefox, WebKit, and Electron still use the legacy network path (this is part of why Electron's on its way out). If you're mid-migration and something behaves differently under the new networking, there's an escape hatch:
+
+```javascript
+// cypress.config.js
+export default defineConfig({
+  forceHttp1: true, // routes all browsers through legacy networking
+});
+```
+
+I'd only reach for `forceHttp1` temporarily, to isolate whether a flaky test is actually a networking-path regression versus something else — not as a permanent setting.
+
+### Retryable cookie/storage commands fix a real flakiness class
+
+This is the one I actually care about. Before 16.0.0, `cy.getCookie('session')` was a one-shot read — if the cookie hadn't been set yet by an async auth flow, you got `null` and had to manually wrap it in a `should()` retry or a custom wait. Now that it's a retryable query, Cypress keeps re-checking until `defaultCommandTimeout` expires, the same way `cy.get()` already retries for DOM elements.
+
+```javascript
+// Before — race condition if the cookie isn't set instantly
+cy.getCookie('session').should('exist');
+
+// After — the command itself retries, no workaround needed
+cy.getCookie('session').should('exist');
+```
+
+Same code, different (better) behavior underneath. If you had custom retry wrappers around cookie or storage reads specifically to paper over this, you can likely delete them now — test that they're actually redundant before ripping them out, though.
+
+### `manageBrowserMemory` is default `true`
+
+The experimental `experimentalMemoryManagement` flag has been replaced by `manageBrowserMemory`, and it now defaults to on for Chromium-based browsers. If you'd previously set `experimentalMemoryManagement: false` to work around some odd interaction, that flag doesn't exist anymore — swap it for `manageBrowserMemory: false`. For most people, this quietly fixes the "browser tab crashes after 300 tests in one run" problem without you doing anything.
+
+## The AI Features: Worth Using Yet?
+
+Cypress has been shipping AI-assisted tooling across the 15.x and 16.x line: `cy.prompt()` and `cypress tap`.
+
+**`cy.prompt()`** moved from experimental to public beta in 15.13 — no config flag needed anymore, it's just available. The pitch is plain-English test authoring: you describe an interaction, and Cypress generates the underlying commands. I tried it on a handful of straightforward flows (login forms, adding an item to a cart) and it did fine — the kind of boilerplate you'd also get from Cypress's own code-gen tooling. I wouldn't trust it yet for anything involving custom commands, non-obvious selectors, or assertions that depend on app-specific business logic. It's the same trust boundary as any AI-generated test code: fine as a first draft, not fine unreviewed.
+
+**`cypress tap`**, introduced in 15.21, is a different kind of feature — it's not about writing tests, it's about giving an AI coding agent direct access to a running open-mode Cypress session. It can list running sessions, start or rerun a spec, report pass/fail status, print errors and the command log, and inspect the DOM and accessibility tree. This is more interesting to me than `cy.prompt()`, honestly, because it's infrastructure rather than a shortcut — it's the plumbing that lets something like Claude Code actually drive Cypress debugging instead of you copy-pasting terminal output back and forth.
+
+My honest take: `cy.prompt()` is a "worth watching, not yet load-bearing" beta. `cypress tap` is more immediately useful if you're already working with an AI coding agent day to day, since it removes a real amount of manual context-passing. Neither is something I'd point a team at as a primary workflow today.
+
+## Upgrade Checklist
+
+If you're planning the jump, do it roughly in this order:
+
+1. Bump Node to 22.x, 24.x, or 26.x+ locally and in CI.
+2. Grep for `Cypress.env(` and split every call into `cy.env()` (sensitive) or `Cypress.expose()` (non-sensitive).
+3. Grep for `Cypress.Commands.overwrite(` targeting cookie/storage commands, switch to `overwriteQuery()`.
+4. Add `--browser chrome` explicitly wherever you were relying on the Electron default.
+5. Delete any custom cookie-retry wrappers, but verify with a real run before trusting the built-in retry to have replaced them.
+6. If you had `experimentalMemoryManagement: false`, rename it to `manageBrowserMemory: false` — or better, remove it and see if the flakiness it worked around is actually gone.
+
+None of this is exotic, but skipping the `Cypress.env()` migration is the one that'll break your suite outright rather than degrade quietly — do that one first.

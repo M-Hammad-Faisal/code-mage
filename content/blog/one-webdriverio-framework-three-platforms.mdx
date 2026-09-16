@@ -1,0 +1,180 @@
+---
+title: 'One Framework, Three Platforms: WebdriverIO for Web, Android, and iOS'
+date: '2026-07-01'
+category: 'Test Automation'
+tags: ['webdriverio', 'appium', 'mobile-testing', 'automation', 'architecture']
+excerpt: 'How a factory pattern let one WebdriverIO codebase drive web, Android, and iOS tests instead of maintaining three separate suites.'
+featured: false
+---
+
+When I joined the test automation team at Arbisoft, the mobile + web app I was testing had three test suites: one Selenium suite for web, one Espresso suite for Android, one XCUITest suite for iOS. Three codebases, three CI pipelines, three sets of flaky-test firefighting. A login test existed in triplicate, and when the login flow changed, someone had to remember to update it in three places — and someone always forgot one.
+
+That's the actual cost of testing three platforms with three tools. It's not that any one of them is bad. It's that you're paying the maintenance tax three times over for logic that's 80% identical.
+
+We rebuilt it as a single WebdriverIO + TypeScript framework using the factory pattern. One codebase, one CI setup, platform-specific configuration isolated to one place. Here's how it worked and where it didn't.
+
+## The Core Idea: A Driver Factory
+
+WebdriverIO can drive a real browser via the WebDriver protocol, and it can drive native Android/iOS apps through Appium, which implements the same protocol for mobile automation. That shared protocol is what makes a unified framework possible at all — you're not bolting together two unrelated tools, you're using one client against three different backends.
+
+The factory's job is simple: given a target platform, return the right capabilities object. Nothing else in the test code needs to know or care which platform it's running against.
+
+```typescript
+// config/capability.factory.ts
+import type { Options } from '@wdio/types'
+
+export type Platform = 'web' | 'android' | 'ios'
+
+export function getCapabilities(platform: Platform): WebdriverIO.Capabilities {
+  switch (platform) {
+    case 'web':
+      return {
+        browserName: 'chrome',
+        'goog:chromeOptions': {
+          args: process.env.CI ? ['--headless', '--disable-gpu'] : [],
+        },
+      }
+
+    case 'android':
+      return {
+        platformName: 'Android',
+        'appium:automationName': 'UiAutomator2',
+        'appium:deviceName': process.env.ANDROID_DEVICE ?? 'Pixel_7_API_34',
+        'appium:app': process.env.ANDROID_APP_PATH,
+        'appium:autoGrantPermissions': true,
+        'appium:newCommandTimeout': 240,
+      }
+
+    case 'ios':
+      return {
+        platformName: 'iOS',
+        'appium:automationName': 'XCUITest',
+        'appium:deviceName': process.env.IOS_DEVICE ?? 'iPhone 15 Pro',
+        'appium:platformVersion': process.env.IOS_VERSION ?? '17.5',
+        'appium:app': process.env.IOS_APP_PATH,
+        'appium:autoAcceptAlerts': true,
+      }
+  }
+}
+```
+
+```typescript
+// wdio.conf.ts
+import { getCapabilities, type Platform } from './config/capability.factory'
+
+const platform = (process.env.TEST_PLATFORM as Platform) ?? 'web'
+
+export const config: WebdriverIO.Config = {
+  capabilities: [getCapabilities(platform)],
+  services: platform === 'web' ? [] : [['appium', { command: 'appium' }]],
+  // ...specs, reporters, etc. shared across all three
+}
+```
+
+Run `TEST_PLATFORM=android npx wdio run wdio.conf.ts` and the exact same test files execute against a real Android session instead of Chrome. The factory is the only place that knows what a "session" means on each platform.
+
+## Page Objects That Work Across Platforms
+
+The trickier part is the page object layer, because selectors are fundamentally different across platforms. Web uses CSS selectors. Android uses `UiAutomator2` accessibility IDs or resource-ids. iOS uses `XCUITest` predicate strings or accessibility IDs. You can't paper over that difference — you can only isolate it.
+
+The pattern that worked for us: define an interface for what a page *does*, then give each platform its own selector implementation behind that interface.
+
+```typescript
+// pages/interfaces/login-page.interface.ts
+export interface LoginPage {
+  login(username: string, password: string): Promise<void>
+  getErrorText(): Promise<string>
+}
+```
+
+```typescript
+// pages/web/login.page.ts
+import type { LoginPage } from '../interfaces/login-page.interface'
+
+class WebLoginPage implements LoginPage {
+  get usernameInput() { return $('#username') }
+  get passwordInput() { return $('#password') }
+  get loginButton()   { return $('#login-btn') }
+  get errorMessage()  { return $('.error-banner') }
+
+  async login(username: string, password: string): Promise<void> {
+    await this.usernameInput.setValue(username)
+    await this.passwordInput.setValue(password)
+    await this.loginButton.click()
+  }
+
+  async getErrorText(): Promise<string> {
+    await this.errorMessage.waitForDisplayed()
+    return this.errorMessage.getText()
+  }
+}
+
+export default new WebLoginPage()
+```
+
+```typescript
+// pages/android/login.page.ts
+import type { LoginPage } from '../interfaces/login-page.interface'
+
+class AndroidLoginPage implements LoginPage {
+  get usernameInput() { return $('~username_field') }        // accessibility id
+  get passwordInput() { return $('~password_field') }
+  get loginButton()   { return $('android=new UiSelector().resourceId("com.app:id/login_btn")') }
+  get errorMessage()  { return $('~error_banner') }
+
+  async login(username: string, password: string): Promise<void> {
+    await this.usernameInput.setValue(username)
+    await this.passwordInput.setValue(password)
+    await this.loginButton.click()
+  }
+
+  async getErrorText(): Promise<string> {
+    await this.errorMessage.waitForDisplayed()
+    return this.errorMessage.getText()
+  }
+}
+
+export default new AndroidLoginPage()
+```
+
+```typescript
+// pages/index.ts — resolve the right implementation at runtime
+import type { LoginPage } from './interfaces/login-page.interface'
+import webLoginPage from './web/login.page'
+import androidLoginPage from './android/login.page'
+import iosLoginPage from './ios/login.page'
+
+export function resolveLoginPage(platform: Platform): LoginPage {
+  switch (platform) {
+    case 'web': return webLoginPage
+    case 'android': return androidLoginPage
+    case 'ios': return iosLoginPage
+  }
+}
+```
+
+The test file imports `resolveLoginPage(platform)` and calls `.login()` — it has zero idea whether that's clicking a CSS button or tapping an accessibility-id element on a simulator. That's the actual win: business logic (login, checkout, search) is written once; only the selector layer forks.
+
+## Where the Abstraction Breaks Down
+
+I want to be straight about this, because "one framework for everything" is a pitch you'll see in a lot of conference talks and it oversells what actually happens day to day.
+
+**Native gestures don't map cleanly.** Swipe-to-delete, pinch-to-zoom, long-press context menus — these have no web equivalent, and Appium's gesture API (`action('pointer')` sequences, or `driver.execute('mobile: swipe', ...)`) is verbose and platform-specific enough that you end up writing Android and iOS gesture helpers separately anyway. The `LoginPage` interface pattern works great for forms and buttons; it falls apart for a carousel that only exists on mobile.
+
+**Waits behave differently per platform.** Web waits are mostly about DOM state — element attached, visible, not animating. Mobile waits are about app state — is the activity still transitioning, has the keyboard finished animating in, is the webview inside a hybrid screen actually loaded. We ended up with platform-specific wait helpers (`waitForKeyboardDismissed()` on mobile has no web analog) rather than one universal `waitForReady()`.
+
+**Not every screen exists on every platform.** Feature parity between your web and mobile apps is a product decision, not a testing one, and it's rarely 100%. Some page objects only ever get a `web` implementation. Forcing an interface onto a screen that only exists on one platform is wasted abstraction — we didn't do it, and you shouldn't either.
+
+**Session setup cost is real and different per platform.** A Chrome session in headless mode starts in under a second. An Android emulator cold-booting through Appium can take 30-90 seconds before the first command even runs. If your CI treats all three platforms as equally cheap to spin up, your pipeline timing will be a mess.
+
+## Where Appium and Selenium Grid Fit
+
+Appium is the piece that makes any of this possible for mobile — it exposes the same WebDriver-style protocol WebdriverIO already speaks, but backed by `UiAutomator2` for Android and `XCUITest` for iOS instead of a browser driver. WebdriverIO doesn't know the difference; it just POSTs commands to whatever endpoint the capabilities point it at.
+
+Selenium Grid is the piece that lets you run all of this in parallel instead of serially. Register Chrome nodes for web, and register Appium as a node type for mobile sessions, and the Grid hub distributes incoming sessions across whatever's available. I go deeper into the actual Grid + `maxInstances` configuration — and the real runtime numbers from doing this at scale — in the [8-hours-to-2 breakdown](/blog/webdriverio-suite-8-hours-to-2).
+
+## Was It Worth It?
+
+Yes, but not because it gave us "one framework to rule them all" — it didn't, and nothing does. It was worth it because it collapsed three redundant copies of business logic into one, made platform differences explicit instead of hidden in three separate codebases, and meant a new test for a shared user flow got written once instead of three times.
+
+The honest framing: you're not eliminating platform-specific work, you're isolating it. The login flow, the checkout flow, the search flow — those get written once. The sixty-line gesture helper for a mobile-only swipe interaction still gets written per platform, because it should.

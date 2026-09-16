@@ -1,0 +1,140 @@
+---
+title: 'Migrating From Cypress to Playwright Without Touching a Test File'
+date: '2026-05-06'
+category: 'Test Automation'
+tags: ['playwright', 'cypress', 'architecture', 'migration', 'testing']
+excerpt: 'How an adapter layer let us swap Cypress for Playwright by changing one file instead of rewriting hundreds of tests — and what that approach quietly doesn''t solve.'
+featured: false
+---
+
+At one point I was on a team with a few hundred Cypress tests and a growing sense that Playwright was the better long-term bet — better parallelization, native multi-tab support, and a trace viewer that's genuinely closer to time-travel debugging than anything Cypress ships. But we weren't ready to commit. We didn't know if the CI provider we were about to move to would play nicer with one tool over the other, and nobody wanted to rewrite 300+ tests on a hunch.
+
+So instead of picking a side, we built a wall between the tests and the tool.
+
+## The Actual Problem
+
+Cypress tests are usually written directly against `cy.*` commands:
+
+```typescript
+cy.get('#username').type('standard_user');
+cy.get('#password').type('secret_sauce');
+cy.get('#login-button').click();
+cy.get('.error-message').should('be.visible');
+```
+
+That's fine until you want to leave. Every one of those `cy.get()` calls is a direct dependency on Cypress's API. Multiply by a few hundred test files and a migration isn't a migration, it's a rewrite — with all the risk that implies: new flakiness, subtly different assertion semantics, and weeks of QA re-validating tests that used to just work.
+
+## The Fix: Write Tests Against Your Own API, Not the Tool's
+
+The idea is simple and not new — it's just the adapter pattern applied to test automation. Instead of tests calling `cy.get().click()` or `page.click()` directly, they call a thin wrapper you own:
+
+```typescript
+await automation.fill('#username', 'standard_user');
+await automation.fill('#password', 'secret_sauce');
+await automation.click('#login-button');
+await automation.assertVisible('.error-message');
+```
+
+`automation` is an interface. One adapter file implements it against Cypress, another against Playwright, and a config flag decides which one gets instantiated. The test files never change — they don't even know which tool is running underneath.
+
+Here's the interface and both implementations, trimmed to the handful of methods that cover most day-to-day test actions:
+
+```typescript
+// automation-adapter.ts
+export interface AutomationAdapter {
+  navigate(url: string): Promise<void>;
+  click(selector: string): Promise<void>;
+  fill(selector: string, value: string): Promise<void>;
+  assertVisible(selector: string): Promise<void>;
+  getText(selector: string): Promise<string>;
+}
+```
+
+```typescript
+// cypress-adapter.ts
+export class CypressAdapter implements AutomationAdapter {
+  async navigate(url: string) {
+    cy.visit(url);
+  }
+
+  async click(selector: string) {
+    cy.get(selector).click();
+  }
+
+  async fill(selector: string, value: string) {
+    cy.get(selector).clear().type(value);
+  }
+
+  async assertVisible(selector: string) {
+    cy.get(selector).should('be.visible');
+  }
+
+  async getText(selector: string): Promise<string> {
+    let text = '';
+    cy.get(selector).then(($el) => {
+      text = $el.text();
+    });
+    return text;
+  }
+}
+```
+
+```typescript
+// playwright-adapter.ts
+import { Page } from '@playwright/test';
+
+export class PlaywrightAdapter implements AutomationAdapter {
+  constructor(private page: Page) {}
+
+  async navigate(url: string) {
+    await this.page.goto(url);
+  }
+
+  async click(selector: string) {
+    await this.page.click(selector);
+  }
+
+  async fill(selector: string, value: string) {
+    await this.page.fill(selector, value);
+  }
+
+  async assertVisible(selector: string) {
+    await this.page.waitForSelector(selector, { state: 'visible' });
+  }
+
+  async getText(selector: string): Promise<string> {
+    return (await this.page.textContent(selector)) ?? '';
+  }
+}
+```
+
+```typescript
+// automation.ts — swap this line to switch backends
+export const automation: AutomationAdapter = process.env.TEST_RUNNER === 'playwright'
+  ? new PlaywrightAdapter(page)
+  : new CypressAdapter();
+```
+
+That `getText` method in the Cypress adapter is worth pausing on — it's already a smell. Cypress's command queue doesn't return values synchronously the way `async/await` implies; you're faking a synchronous-looking interface over a queued, callback-driven system. It works, but it's the first crack in the abstraction, and it won't be the last.
+
+## What This Actually Buys You
+
+For the 80% of a typical UI test — navigate, click, fill a field, assert something is visible, read some text — this works well. We migrated by pointing `TEST_RUNNER` at `playwright` for a subset of test suites in CI, watched them run green next to the Cypress ones for a couple of weeks, then flipped the default once we trusted it. Zero test files touched. If a suite behaved oddly on the new backend, we could roll it back per-suite by flipping an env var, not by reverting a rewrite.
+
+## What It Doesn't Solve — Be Honest About This Upfront
+
+This is the part people skip when they write up "we migrated with zero test changes," and it's the part that actually matters if you're deciding whether to build this yourself.
+
+**Framework-specific behavior doesn't map 1:1.** Cypress's automatic retry-ability applies to assertions and is deeply tied to its command queue and DOM snapshotting; Playwright's auto-waiting is a different mechanism — it waits for actionability (attached, visible, stable, enabled, receiving events) before an action fires, not after. They produce similar outcomes for the common case, but the failure modes differ. A test that depends on Cypress re-querying the DOM after a re-render mid-assertion may not behave identically through a Playwright adapter that's just calling `page.click()` underneath.
+
+**Debugging tooling isn't abstractable.** Cypress's live runner and time-travel snapshots are built for watching a test run interactively. Playwright's trace viewer is built for forensic replay of a CI failure after the fact — screenshots, DOM snapshots, network activity, and a scrubbable timeline. These are genuinely different tools solving different problems, and your adapter layer can't paper over that: whichever one you're running, you debug it with its own tooling, not your wrapper's.
+
+**Multi-tab, iframes, and shadow DOM handling diverge.** Playwright has first-class multi-tab and multi-context support; Cypress historically doesn't (`cy.origin()` narrowed the gap but it's not the same model). If your adapter's `click()` needs to work identically against both, you either restrict yourself to the lowest common denominator of both tools' capabilities, or you start adding tool-specific escape hatches into your "abstraction" — at which point you have to ask what the abstraction bought you.
+
+**Network mocking and component testing are basically not portable.** Playwright's `page.route()` and Cypress's `cy.intercept()` have different interception models (Playwright can intercept at the browser network layer more flexibly; Cypress operates through its own proxy). Trying to wrap this in a generic adapter method usually means implementing the intersection of both APIs, which is smaller than either one alone.
+
+## Is This Worth Building?
+
+Only if you're genuinely uncertain which tool you'll land on, or you specifically need a bridge period to de-risk a migration — which was exactly our situation. If you already know you're moving to Playwright and you're doing it because you want its features, don't build this. You'll spend real engineering time maintaining two adapter implementations, and the abstraction will actively stop you from using anything Playwright-specific, which was the point of migrating in the first place.
+
+We treated ours as scaffolding with an expiration date. Once we'd validated Playwright in CI for a month, we deleted the Cypress adapter and, more importantly, started letting new tests call `page.*` directly again. Keeping the adapter layer permanently would have meant permanently writing tests against the lowest common denominator of two frameworks instead of using either one well. A bridge is supposed to get torn down once you're across it.

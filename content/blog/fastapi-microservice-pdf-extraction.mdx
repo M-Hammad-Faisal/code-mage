@@ -1,0 +1,196 @@
+---
+title: 'Building a FastAPI Microservice for PDF Data Extraction'
+date: '2026-06-03'
+category: 'Project Breakdown'
+tags: ['fastapi', 'python', 'backend', 'architecture', 'automation']
+excerpt: 'How and why I pulled PDF data extraction out of our scraping bots into its own FastAPI service, and the factory pattern that lets it handle wildly different document layouts.'
+featured: false
+---
+
+Our scraping pipelines don't just pull HTML. A lot of what they collect is PDFs — invoices, statements, reports, the kind of documents that a healthcare portal or a billing system generates and hands you as a download link instead of a web page. The bot's job ends the moment it has the file. Someone still has to turn that PDF into structured data — line items, dates, amounts, account numbers — that the rest of the system can actually use.
+
+For a while, that "someone" was code living directly inside the bots. Every bot that touched PDFs had its own parsing logic bolted on. It worked, until it didn't scale, and here's why that approach falls apart.
+
+## Why This Needed to Be Its Own Service
+
+Baking extraction into the bot code means the extraction logic scales exactly as awkwardly as the bot does. Every bot instance ends up carrying a full PDF parsing stack, image-based OCR dependencies and all, even though extraction is CPU-bound and browser automation is I/O-bound — two completely different scaling profiles crammed into one process.
+
+Worse: when a document layout drifts (and it always drifts — someone on the source side redesigns their invoice template and every bot using the old parsing logic silently breaks), you have to redeploy the bot to fix it. That means touching browser automation code, CAPTCHA handling, session logic — none of which changed — just to patch a regex that stopped matching a date field.
+
+Pulling extraction into its own FastAPI microservice fixes both problems. The bots download a PDF and POST it to an internal endpoint. The service does the extraction, returns structured JSON, and the bot never has to know or care how that happened. We can scale extraction workers independently of scraping workers, deploy an extraction fix without touching a single bot, and reuse the same service across every bot that produces PDFs instead of reimplementing parsing logic five times over.
+
+## The Real Problem: Not All PDFs Are the Same PDF
+
+This is the part that actually makes the service non-trivial. A "PDF" is not one format, it's a container, and what's inside varies wildly by source:
+
+- **Text-based PDFs** generated straight from a template — the text is embedded and extractable directly, no OCR needed. Fast and reliable, when you can get it.
+- **Scanned image PDFs** — someone printed a document and scanned it back in, or exported it as a flattened image. There's no embedded text at all. You need OCR, and OCR is fundamentally probabilistic — it *will* misread characters.
+- **Structured, table-heavy PDFs** — consistent layouts, like a recurring statement from the same source, where you can template-match specific regions of the page instead of doing generic parsing.
+
+Trying to write one extraction function that handles all three is how you end up with a 400-line function full of `if` branches nobody wants to touch. The fix is the factory pattern: pick the right extraction strategy based on the document type, and keep each strategy dead simple and testable in isolation.
+
+## The Extractor Interface
+
+Every strategy implements the same contract, so the caller never has to know which one it's dealing with:
+
+```python
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+
+
+@dataclass
+class ExtractionResult:
+    fields: dict
+    confidence: float
+    strategy_used: str
+    warnings: list[str] = field(default_factory=list)
+
+
+class PDFExtractor(ABC):
+    @abstractmethod
+    def extract(self, pdf_bytes: bytes) -> ExtractionResult:
+        """Extract structured fields from raw PDF bytes."""
+        raise NotImplementedError
+```
+
+`confidence` isn't decorative — it's the thing the rest of the pipeline actually acts on, and I'll get to that.
+
+## The Factory
+
+The factory's whole job is classification: look at the document (or the metadata the bot already knows about it — source site, document type, filename pattern) and hand back the right extractor.
+
+```python
+import fitz  # PyMuPDF
+
+
+def classify_pdf(pdf_bytes: bytes) -> str:
+    """Cheap heuristic classification before picking a strategy."""
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    text_len = sum(len(page.get_text()) for page in doc)
+
+    if text_len > 200:
+        return "text_based"
+
+    # No extractable text layer — it's an image, likely scanned
+    return "scanned_image"
+
+
+def get_extractor(document_type: str, pdf_bytes: bytes) -> PDFExtractor:
+    if document_type == "known_statement_template":
+        return TemplateMatchExtractor()
+
+    classification = classify_pdf(pdf_bytes)
+    if classification == "text_based":
+        return TextLayerExtractor()
+
+    return OCRExtractor()
+```
+
+Two layers of classification here on purpose. If the bot already knows the document type — it downloaded it from a source we've seen a hundred times and there's a known, stable template — we skip straight to the template extractor, which is faster and far more accurate than generic parsing. Otherwise we fall back to a cheap structural check (does this PDF have an actual text layer, or is it just an image wrapped in a PDF container) and route from there.
+
+## The Strategies
+
+**Text-based extraction** is the easy case — pull the text layer directly and pattern-match against known field labels. [pdfplumber](https://github.com/jsvine/pdfplumber) and [PyMuPDF](https://pymupdf.readthedocs.io/) (imported as `fitz`) are the two libraries that actually matter here in practice: PyMuPDF is dramatically faster for raw text extraction (it renders and extracts an order of magnitude quicker than pure-Python alternatives), while pdfplumber's table-detection is genuinely better for anything with rows and columns, at the cost of being noticeably slower. In production we use both — PyMuPDF for bulk text and page rendering, pdfplumber specifically for pages we've flagged as table-heavy. One thing to know going in: PyMuPDF ships under AGPL, so if you're distributing this rather than running it as an internal service, check that it actually fits your license situation.
+
+```python
+import pdfplumber
+
+
+class TextLayerExtractor(PDFExtractor):
+    FIELD_PATTERNS = {
+        "invoice_number": r"Invoice\s*#?\s*:?\s*(\S+)",
+        "total_amount": r"Total\s*:?\s*\$?([\d,]+\.\d{2})",
+        "date": r"Date\s*:?\s*(\d{1,2}/\d{1,2}/\d{4})",
+    }
+
+    def extract(self, pdf_bytes: bytes) -> ExtractionResult:
+        import re
+        import io
+
+        fields, warnings = {}, []
+        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+            full_text = "\n".join(p.extract_text() or "" for p in pdf.pages)
+
+        for field_name, pattern in self.FIELD_PATTERNS.items():
+            match = re.search(pattern, full_text)
+            if match:
+                fields[field_name] = match.group(1)
+            else:
+                warnings.append(f"missing_field:{field_name}")
+
+        confidence = 1.0 - (len(warnings) / len(self.FIELD_PATTERNS))
+        return ExtractionResult(fields, confidence, "text_layer", warnings)
+```
+
+**Scanned-document extraction** needs OCR because there's no text layer to read. [Tesseract](https://github.com/tesseract-ocr/tesseract) via `pytesseract` is the default open-source choice and it's free, but its accuracy on noisy scans (skewed pages, low-resolution faxes, coffee-stained originals — we've genuinely seen all three) is inconsistent enough that for anything accuracy-critical we fall back to a cloud OCR API (AWS Textract or Google Document AI, depending on the doc type) which handles layout-aware extraction far better than raw Tesseract, at actual per-page cost. We only pay for cloud OCR when Tesseract's own confidence score comes back low — it reports word-level confidence natively, so that's a free signal to gate on before spending money.
+
+```python
+import pytesseract
+from pdf2image import convert_from_bytes
+
+
+class OCRExtractor(PDFExtractor):
+    LOW_CONFIDENCE_THRESHOLD = 60  # Tesseract's own 0-100 scale
+
+    def extract(self, pdf_bytes: bytes) -> ExtractionResult:
+        images = convert_from_bytes(pdf_bytes, dpi=300)
+        ocr_data = pytesseract.image_to_data(
+            images[0], output_type=pytesseract.Output.DICT
+        )
+
+        confidences = [c for c in ocr_data["conf"] if c != -1]
+        avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+
+        if avg_confidence < self.LOW_CONFIDENCE_THRESHOLD:
+            return self._fallback_to_cloud_ocr(pdf_bytes)
+
+        text = " ".join(ocr_data["text"])
+        fields = self._parse_fields(text)
+        return ExtractionResult(fields, avg_confidence / 100, "tesseract_ocr")
+
+    def _fallback_to_cloud_ocr(self, pdf_bytes: bytes) -> ExtractionResult:
+        # Route to AWS Textract / Google Document AI — higher accuracy,
+        # real per-page cost, so we only hit this path when Tesseract
+        # already told us it isn't confident.
+        ...
+```
+
+**Template-match extraction** is the odd one out — for sources where we've already reverse-engineered the layout, we skip generic parsing entirely and pull fixed coordinate regions off the page. It's the fastest and most accurate strategy by a wide margin, and it's also the most brittle: the moment the source changes its template, this extractor breaks completely rather than degrading gracefully. That's a deliberate tradeoff, not an oversight — you want a hard failure here, not a silently wrong extraction.
+
+## The FastAPI Endpoint
+
+The endpoint itself stays almost boring by design — all the interesting decisions already happened in the factory:
+
+```python
+from fastapi import FastAPI, UploadFile, HTTPException
+
+app = FastAPI()
+
+CONFIDENCE_THRESHOLD = 0.75
+
+
+@app.post("/extract")
+async def extract_pdf(
+    file: UploadFile,
+    document_type: str = "unknown",
+) -> ExtractionResult:
+    pdf_bytes = await file.read()
+    if not pdf_bytes:
+        raise HTTPException(400, "Empty file")
+
+    extractor = get_extractor(document_type, pdf_bytes)
+    result = extractor.extract(pdf_bytes)
+
+    if result.confidence < CONFIDENCE_THRESHOLD:
+        await flag_for_manual_review(file.filename, result)
+
+    return result
+```
+
+## Being Honest About the Hard Part
+
+Here's the thing nobody wants to hear when they're scoping a project like this: 100% automated extraction accuracy is not a realistic target. PDFs are messy in ways that are genuinely hard to anticipate — inconsistent whitespace, fields that move between document versions, OCR misreading a `0` as an `O`, a table that spans two pages and gets split mid-row. You will not catch every failure mode with regex and heuristics, and pretending otherwise is how bad data quietly ends up in a downstream system that trusts it.
+
+The `confidence` field on every `ExtractionResult` exists specifically so we don't have to pretend. Every strategy computes it differently — missing expected fields for the text-layer extractor, OCR's own per-word confidence score for the scanned-document path — but the contract is the same: anything below a threshold gets flagged for manual review instead of flowing straight through. That threshold (0.75 in the example above, though the real number depends on how costly a wrong value actually is downstream) is a business decision, not an engineering one, and it's worth getting someone outside the engineering team to sign off on where it sits.
+
+The failure mode to actively design against isn't "extraction fails" — a failure is loud and easy to handle. It's "extraction silently returns a plausible-looking but wrong value." A misread invoice total that's off by a digit is far more dangerous than an extraction that throws an error, because nothing downstream has a reason to double-check it. That's the entire argument for routing low-confidence results to a human instead of trusting the number: a service that knows what it doesn't know is worth more than one that's slightly more automated but occasionally, silently, wrong.

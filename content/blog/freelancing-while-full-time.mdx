@@ -1,0 +1,48 @@
+---
+title: 'Freelancing While Full-Time: What a Year and a Half on Upwork Taught Me'
+date: '2026-07-29'
+category: 'Career'
+tags: ['career', 'freelancing', 'automation', 'testing']
+excerpt: 'For a year and a half I worked a full-time job and freelanced on Upwork at the same time. Here is what that actually taught me, and what it cost.'
+featured: false
+---
+
+From April 2023 to December 2024, I had two jobs. During the day — and often well past it — I was a test automation engineer at Arbisoft. In the evenings and on weekends, I was "Hammad, the Upwork guy who does test automation." Same skill set, different clients, zero overlap in codebases, and for a year and a half, no real gap between the two.
+
+People ask why I'd do that to myself. The honest answer isn't "hustle culture" or needing the money badly enough to burn out for it. It's that a single employer, no matter how good, only shows you one shape of problem. I wanted to see more shapes.
+
+## Why bother
+
+At Arbisoft I was deep in one codebase, one team's conventions, one set of tools they'd already picked. That's normal and it's fine — you go deep, you get good at the stack you're on. But depth in one place doesn't tell you which of your habits are actually good engineering and which are just "how we do it here." You don't find that out until you're dropped into a different codebase with different constraints and your reflexes either hold up or they don't.
+
+Freelancing was the fastest way I knew to get that exposure without quitting a job I liked. Different clients meant different frameworks (Playwright one week, WebdriverIO the next, Cypress after that, Selenium when a client's stack demanded it), different levels of technical maturity, different ideas about what "done" meant for a test suite. Income was part of it too — I won't pretend otherwise — but if it had only been about money there were less exhausting ways to get there.
+
+## The actual logistics
+
+Two jobs at once is not glamorous. It's a lot of protecting boundaries that are easy to let slide.
+
+The thing that made it survivable was being upfront with freelance clients from the first message: I have a full-time job, here are the hours I can realistically give you, here's how I communicate async, and here's what "urgent" needs to look like before I treat it as urgent. Clients who couldn't work with that weren't clients I took. That filtered out a surprising number of engagements that would have been miserable, and it meant the ones I did take had reasonable expectations baked in from day one.
+
+Time management came down to blocking specific hours and defending them the way I'd defend a meeting — freelance work got real slots, not "whatever's left of my evening after I'm too tired to think." When a Arbisoft sprint got heavy, freelance hours shrank for that week, and I told clients that in advance rather than apologizing after a missed deadline. The rule I held myself to: neither side gets the tired, distracted version of me. If I couldn't give a task real attention, I didn't start it that night.
+
+The cost was real, though. Context-switching between a corporate WebdriverIO framework and a client's scrappy Playwright setup isn't free — there's a tax every time you swap mental models, and after a full day of one, paying that tax again in the evening is genuinely draining. Some weeks I said no to freelance work not because I was busy but because I knew I had nothing left to give it that wouldn't be sloppy. I'd rather turn down a week than ship something half-thought-through.
+
+## What clients actually needed
+
+Almost nobody came to me asking to maintain or extend an existing test suite. The recurring request, over and over, was: "we have no test automation, set it up from scratch." Greenfield work, not maintenance. A client would have a product shipping on manual QA alone, or a half-abandoned script someone wrote two years ago that nobody trusted, and they wanted an actual framework — structure, CI integration, a way for their team to keep adding tests after I was gone.
+
+That pattern repeating across completely unrelated clients told me something: most teams don't fail at testing because the tools are hard. They fail because nobody on the team has done the initial setup before, and that first framework decision (folder structure, abstraction layers, how you handle test data, how CI triggers and reports back) is intimidating enough that it keeps getting deprioritized until a freelancer gets hired to just make the decision and build it.
+
+I also picked up stealth scraping work with Patchright for a couple of clients — a genuinely different problem from functional testing, since you're not verifying deterministic behavior, you're working against a system trying to detect you. More on that distinction in a separate post, but it's worth flagging here: freelancing exposed me to adjacent specializations I wouldn't have touched staying inside one company's roadmap.
+
+## What a single job wouldn't have taught me
+
+The real value wasn't any individual client engagement. It was the aggregate pattern-matching across a dozen-plus unrelated codebases. When you see the same category of problem show up at client three, client seven, and client eleven — despite them having nothing else in common — you start to separate "this is a framework design problem" from "this is a this-specific-team problem." That distinction is hard to develop from inside a single company, because you only ever see your own team's version of a problem and it's easy to assume it's universal when it's actually just local.
+
+For example: flaky element locators showed up everywhere, but the underlying cause was different every time — one client had genuine timing issues, another had a test architecture that fought the framework's auto-waiting, another had a flat structure with no abstraction so every test was locator soup. Same symptom, three different root causes, three different fixes. You only learn to tell those apart by seeing enough of them.
+
+## Was it worth it
+
+Mostly yes, with real caveats. It made me a better engineer faster than staying purely full-time would have — the repeated exposure to "set this up from nothing" forced me to get opinionated about what a good test automation framework actually looks like, instead of just inheriting one team's conventions and assuming they were the only way. It also directly fed into the framework and abstraction-layer thinking that shaped how I approached later work.
+
+But I wouldn't recommend doing it indefinitely, and I didn't. A year and a half was enough to get the exposure I wanted without it becoming a permanent second job that quietly eats every evening for years. Know why you're doing it, be honest with the people paying you about your limits, and have a sense of when to stop. Otherwise it's just two jobs wearing one person out, dressed up as ambition.

@@ -1,0 +1,162 @@
+---
+title: 'How I Unified 23 Payer Integrations Into One System in 2 Weeks'
+date: '2026-04-08'
+category: 'Project Breakdown'
+tags: ['architecture', 'automation', 'bots', 'system-design', 'career']
+excerpt: 'I inherited 23 separate bot integrations, each built differently, each with its own way of dying. Here is how I unified them into one system without missing the deadline.'
+featured: true
+---
+
+Twenty-three integrations. Twenty-three different healthcare payer portals. Twenty-three slightly different ways of logging in, slightly different session behaviors, slightly different ways of telling you "no" when something went wrong. And I had two weeks to turn that into one coherent system.
+
+This is the kind of project that sounds simple in a planning meeting — "just unify the integrations" — and then turns into three days of just reading code before you're allowed to write any.
+
+## The Starting Point
+
+Each of the 23 integrations at work had grown independently over time. Different engineers, different eras, different assumptions about how a payer portal behaves. Some used cookie-based sessions. Some re-authenticated on every action. Some held a browser session open for the lifetime of a job; others spun up fresh for every single request. None of them agreed on what a "failure" looked like — one integration would throw on a timeout, another would silently return an empty result set and call it a day.
+
+Individually, each one worked. Together, they were a liability. The moment two integrations ran concurrently and happened to touch a shared resource — a credential pool, a proxy, a rate limiter that wasn't actually shared — things broke in ways that were miserable to debug, because the failure showed up in integration #14 while the actual cause was integration #7 stepping on a session it didn't own.
+
+That was the real ask: not "add a 24th integration," but "make it so adding number 24 doesn't require reading 23 codebases first."
+
+## The Three Real Problems
+
+Once I stopped looking at this as "23 integrations" and started looking at it as one system with 23 targets, three problems fell out immediately.
+
+**Session collision.** Multiple integrations, run concurrently, sharing infrastructure they weren't designed to share. A logged-in session for payer A getting torn down by cleanup logic written for payer B. Race conditions on anything global — a shared browser pool, a shared credential cache — that individual integrations had never been written to guard against, because they'd never been asked to run next to each other.
+
+**Inconsistent failure semantics.** "Failed" meant something different in every integration. Some raised typed exceptions. Some returned `null`. Some just logged a warning and moved on like nothing happened. When you're trying to build one retry policy, one alerting pipeline, one dashboard that a human actually looks at, you cannot have 23 different definitions of what going wrong looks like.
+
+**No shared rate-limit awareness.** Payer portals throttle you, and they don't all throttle you the same way — some cap requests per minute, some watch for concurrent sessions from the same account, some just silently degrade response times until you back off. When 23 integrations don't know about each other, they can't collectively respect a limit. Integration A doesn't know integration B just got rate-limited five seconds ago on the same target.
+
+None of these are exotic problems. They're the standard cost of organic growth — 23 people (or 23 versions of one team, over time) solving the same category of problem in slight isolation from each other.
+
+## The Architecture
+
+The fix was a common adapter interface, with everything integration-specific pushed behind it, and a thin orchestration layer above it that owned concurrency, session isolation, and retries centrally instead of per-integration.
+
+Here's the shape of it, stripped of anything payer-specific:
+
+```typescript
+// core/payer-adapter.ts
+
+export interface PayerSession {
+  readonly payerId: string;
+  readonly sessionId: string;
+  readonly createdAt: Date;
+  isValid(): Promise<boolean>;
+  dispose(): Promise<void>;
+}
+
+export interface PayerAdapter {
+  readonly payerId: string;
+
+  authenticate(credentials: PayerCredentials): Promise<PayerSession>;
+
+  fetchClaimStatus(
+    session: PayerSession,
+    claimRef: ClaimReference
+  ): Promise<ClaimStatusResult>;
+
+  // Every adapter classifies its own errors into one shared vocabulary.
+  // This is the piece that made a unified retry policy possible at all.
+  classifyError(err: unknown): PayerFailure;
+}
+
+export type PayerFailure =
+  | { kind: 'RATE_LIMITED'; retryAfterMs?: number }
+  | { kind: 'SESSION_EXPIRED' }
+  | { kind: 'AUTH_REJECTED'; permanent: boolean }
+  | { kind: 'PORTAL_UNAVAILABLE' }
+  | { kind: 'UNKNOWN'; raw: unknown };
+```
+
+Each payer gets a factory that produces a concrete `PayerAdapter`. Payer-specific weirdness — a two-step login flow, a CAPTCHA that only shows up for one particular portal, a session that dies if you don't touch it for 90 seconds — lives entirely inside that adapter and nowhere else.
+
+```typescript
+// core/payer-registry.ts
+
+const adapterFactories = new Map<string, () => PayerAdapter>();
+
+export function registerPayerAdapter(
+  payerId: string,
+  factory: () => PayerAdapter
+) {
+  adapterFactories.set(payerId, factory);
+}
+
+export function createAdapter(payerId: string): PayerAdapter {
+  const factory = adapterFactories.get(payerId);
+  if (!factory) throw new Error(`No adapter registered for ${payerId}`);
+  return factory();
+}
+```
+
+Above the adapters sits an orchestrator that owns the things that were causing collisions in the first place: session lifecycle, per-payer concurrency limits, and retry policy.
+
+```typescript
+// core/orchestrator.ts
+
+class PayerOrchestrator {
+  private sessionPools = new Map<string, SessionPool>();
+  private rateLimiters = new Map<string, RateLimiter>();
+
+  async run<T>(
+    payerId: string,
+    task: (session: PayerSession) => Promise<T>
+  ): Promise<T> {
+    const limiter = this.rateLimiters.get(payerId);
+    await limiter?.acquire(); // respect per-payer throttling, not global
+
+    const pool = this.sessionPools.get(payerId);
+    const session = await pool!.checkout(); // never a shared session object
+
+    try {
+      return await task(session);
+    } catch (err) {
+      const adapter = createAdapter(payerId);
+      const failure = adapter.classifyError(err);
+      return this.handleFailure(failure, payerId, session, task);
+    } finally {
+      await pool!.checkin(session);
+    }
+  }
+
+  private async handleFailure<T>(
+    failure: PayerFailure,
+    payerId: string,
+    session: PayerSession,
+    task: (s: PayerSession) => Promise<T>
+  ): Promise<T> {
+    switch (failure.kind) {
+      case 'SESSION_EXPIRED':
+        await session.dispose();
+        // re-authenticate and retry once, through the same code path
+        return this.run(payerId, task);
+      case 'RATE_LIMITED':
+        await sleep(failure.retryAfterMs ?? 30_000);
+        return this.run(payerId, task);
+      default:
+        throw failure; // let it surface — no silent swallowing, ever
+    }
+  }
+}
+```
+
+The key decision here is that the *pool*, not the individual integration, owns session identity. A session checked out for payer A's job can never accidentally be the same object another concurrent job for payer A is holding — the pool enforces that structurally, instead of every integration having to remember to be careful about it. That one change killed most of the session-collision bugs on its own, because they were never really about the portals — they were about shared mutable state that nothing owned.
+
+## What the Deadline Made Me Cut
+
+Two weeks is not enough time to write 23 adapters from scratch and make them all beautiful. So I didn't try to.
+
+I ported the existing per-payer logic almost mechanically into the adapter shape — the parsing, the selectors, the payer-specific quirks stayed exactly as they were. The only mandatory rewrite was `classifyError()` for each one, because that was the piece the whole unification depended on. Everything else got a pass on elegance in exchange for a pass on correctness — I wasn't rewriting login flows I didn't have time to fully re-test against 23 live portals in two weeks.
+
+I also didn't build a general-purpose plugin system, even though it was tempting. A registry plus an interface was enough. Anything more abstract than that — dynamic adapter loading, a config-driven DSL for describing payer flows — would have been solving a problem I didn't have yet, at the cost of the problem I did have, which was a deadline.
+
+What I didn't cut: the shared error vocabulary and the session pool. Those were the two things actually responsible for the class of bugs I was hired to eliminate. Everything else was negotiable; those two weren't.
+
+## What Came Out of It
+
+Structured logging came almost for free once every adapter spoke the same `PayerFailure` vocabulary — one dashboard could finally answer "which payers are failing right now, and why" instead of someone grepping 23 different log formats by hand. Concurrency went from "cross your fingers" to bounded and predictable, because the orchestrator — not the integrations — decided how many sessions per payer could run at once.
+
+The lesson that stuck with me: unifying 23 things doesn't mean making them the same. It means finding the three or four seams where their differences were actually causing damage, and being disciplined about leaving everything else alone until you have time to come back to it.

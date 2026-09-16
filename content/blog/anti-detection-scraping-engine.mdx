@@ -1,0 +1,76 @@
+---
+title: 'Building an Anti-Detection Scraping Engine: What Actually Beats Cloudflare and reCAPTCHA'
+date: '2026-07-15'
+category: 'Web Scraping'
+tags: ['web-scraping', 'anti-detection', 'patchright', 'playwright', 'automation']
+excerpt: 'A layer-by-layer breakdown of how modern bot detection actually works — network, browser, and behavioral — and the countermeasures that actually hold up in production.'
+featured: true
+---
+
+I maintain an [open-source stealth automation library](https://github.com/M-Hammad-Faisal/stealth-scraper-playwright) and run production scraping pipelines at work that go up against Cloudflare, DataDome, and reCAPTCHA daily. This post is everything I've learned about how bot detection actually works in 2026, layer by layer, and which countermeasures genuinely hold up versus which ones are cargo-culted advice that does nothing — or actively makes you more detectable.
+
+If you take one thing away from this post, take this: detection isn't one check. It's a stack. Beating it isn't about finding the one trick that gets you through — it's about not tripping any single layer badly enough to get flagged, while the whole stack is scored together.
+
+## How Detection Actually Works, Layer by Layer
+
+### Network layer: your traffic before it even reaches the page
+
+Before a detection script ever runs in the browser, the server has already looked at the TLS handshake. **JA3** (and its successor **JA4**, now the de facto standard — adopted across Cloudflare, AWS WAF, and Akamai) fingerprints the exact set of TLS ciphers, extensions, and their order that your client offers when it connects. A real Chrome browser has a very specific, very consistent TLS fingerprint. `curl`, Python's `requests`, and plenty of naive HTTP clients have a completely different one — and that mismatch is visible before your request headers are even parsed.
+
+This matters more than people think for browser automation specifically, because Chrome 110 introduced TLS extension order randomization, meaning JA3 alone is noisier for real Chrome than it used to be. But JA4 fixes that noise with a structure that's immune to randomization on the parts that matter — and it's still trivially effective at catching anything that *isn't* running an actual, unmodified browser TLS stack.
+
+Layered on top of TLS: **IP reputation**. Every request carries an ASN (which network you're coming from), and detection systems maintain scored lists of datacenter ranges, known proxy providers, and IPs that have already misbehaved on other properties protected by the same vendor. A pristine browser fingerprint from an AWS IP address is still a massive red flag — real users don't browse from EC2.
+
+### Browser layer: what the page can see about how it's being driven
+
+This is the layer most scraping guides focus on, for good reason — it's where automation tooling leaves the most fingerprints.
+
+**CDP protocol leaks.** Playwright, Puppeteer, and most Chromium automation tools talk to the browser over the Chrome DevTools Protocol. To execute your `page.evaluate()` calls, the default mechanism calls `Runtime.enable` — and that call itself is detectable from inside the page. Detection scripts can check for the side effects of `Runtime.enable` having been called, without you ever doing anything else wrong. This is arguably the single most reliable automation signal that exists right now, because it doesn't depend on you making a mistake — it's baked into how the tooling works by default. I wrote about this in detail in [my Patchright post](/blog/what-is-patchright) if you want the full mechanism.
+
+**`navigator.webdriver`.** The oldest trick in the book. Chromium launched with `--enable-automation` sets `navigator.webdriver` to `true`, and every detection script on earth checks it first. Trivial to override with a JS injection — and just as trivially, sophisticated detectors check whether it was overridden *after the fact*, which is itself a signal.
+
+**Canvas, WebGL, and audio fingerprinting.** Rendering a canvas element or a WebGL scene produces output that varies at the pixel level based on your exact GPU, driver, and OS — consistently enough across sessions from the same real machine that it functions as a stable device fingerprint, and inconsistently enough across different machines that anomalies stand out. Headless Chromium's software-rendered canvas and WebGL output looks nothing like a real GPU's output, which is one of the fastest ways headless mode gets caught. Audio fingerprinting does the same thing through the Web Audio API's oscillator output.
+
+**Timing attacks.** Real browsers have measurable, natural jitter in how fast JavaScript executes, how quickly the DOM responds to events, how long a `requestAnimationFrame` cycle actually takes. Automated browsers — especially anything running with reduced rendering or in certain headless configurations — often execute *too consistently*, and that unnatural consistency is its own signal.
+
+### Behavioral layer: how you use the page, not just what the page can see
+
+The last layer is scored over time, not on page load. Mouse movement patterns — real human mouse movement has acceleration curves, overshoot-and-correct behavior, and irregular velocity; a script that moves the cursor in a perfectly straight line from A to B in one tick doesn't. Typing cadence — real typing has irregular inter-keystroke timing with occasional pauses and corrections, not machine-uniform intervals. Request timing — a human can't submit a multi-field form in 40 milliseconds after the page loads, and a bot often does exactly that unless it's deliberately paced.
+
+## The Countermeasures, Layer by Layer
+
+### Fixing the CDP leak
+
+This is the hardest layer to patch from the outside, because it's not a config flag — it's baked into how Playwright and Puppeteer talk to the browser by default. The fix has to happen at the tooling level. [Patchright](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright) is what I use in production — it's a source-level fork of Playwright that replaces the `Runtime.enable` call with execution through isolated `ExecutionContexts`, giving you the exact same API surface with the detection signal removed entirely. `rebrowser-patches` takes a comparable approach (skipping `Runtime.enable` via `Page.createIsolatedWorld`) if you're not on Playwright, and Camoufox does the equivalent job at the C++ level for Firefox if you need a non-Chromium engine for a specific target. Whichever you pick, the principle is the same: you can't inject your way around this one, you need tooling that doesn't make the detectable call in the first place.
+
+### Proxy rotation for IP reputation
+
+Datacenter proxies are cheap and fast, and detection systems have had years to build reputation lists against exactly the ranges they come from. For anything protected by Cloudflare, DataDome, or similar at a serious tier, **residential proxies** matter a lot more — they route through real ISP-assigned IPs attached to real consumer networks, which is a fundamentally different reputation profile than a datacenter block. They're slower and considerably more expensive, and that cost is the actual tradeoff you're making: residential IPs for the targets that need them, datacenter for the ones that don't care, rather than defaulting to the expensive option everywhere.
+
+Rotate per session, not per request — a session that holds one IP for a coherent browsing session looks like a person; an IP that changes on every request looks like exactly what it is.
+
+### Fingerprint spoofing — and the trap inside it
+
+This is the part I want to be blunt about, because it's genuinely counterintuitive: **spoofing done badly is more detectable than doing nothing at all.** A default, unmodified headless Chromium fingerprint is *consistent* — every value matches every other value, because they all really do come from the same unmodified browser. The moment you start overriding individual signals — faking a `navigator.platform` of `Win32` while your `User-Agent` claims macOS, or spoofing a WebGL renderer string for an Nvidia GPU while your canvas fingerprint is still rendering through headless Chromium's actual software renderer — you create an internal inconsistency that's *easier* to catch than the thing you were trying to hide. Detection systems don't need to catch the individual spoofed value; they just need to notice that two signals that should always agree, don't.
+
+The rule that actually matters is **consistency across the entire fingerprint**, not "how many things did I spoof." If you claim to be Chrome on Windows, every downstream signal — the User-Agent, the `navigator` properties, the font list, the WebGL renderer and vendor strings, the screen resolution and color depth, even the number of CPU cores reported — needs to plausibly belong to a real Chrome-on-Windows machine, together. My [stealth-scraper-playwright](https://github.com/M-Hammad-Faisal/stealth-scraper-playwright) library handles this through six coordinated anti-detection techniques built on Patchright, including fingerprint spoofing and WebGL masking — the point of building it as a coordinated set rather than a grab-bag of individual patches is exactly this consistency requirement. A single override applied in isolation is a liability; a matched set applied together is camouflage.
+
+### Headed vs. headless
+
+Even with the CDP leak patched, headless Chromium still renders canvas, WebGL, and font output differently than a real headed GPU-backed browser instance does, and that gap is detectable at the pixel level regardless of what else you've fixed. In production I run headed, full stop — and in CI or on a headless server, `xvfb-run` gives you a real virtual display for the browser to render into rather than running the genuinely headless code path. It costs more resources per session than headless. For any target running serious detection, it's not optional.
+
+## CAPTCHA: reCAPTCHA v2, v3, and What They're Actually Checking
+
+**reCAPTCHA v2** is the "click the checkbox" or "select all traffic lights" flow — it's an explicit challenge, and the thing worth knowing is that by the time you're staring at a v2 challenge, something upstream already decided you looked suspicious enough to interrupt.
+
+**reCAPTCHA v3** is the more interesting one, and it's invisible by design. It runs silently in the background on every page load and returns a continuous score from 0.0 (bot) to 1.0 (human) rather than a pass/fail challenge — the site sets its own threshold for what to do with that score (allow, soft-challenge, hard-block). The score comes from a model weighing browser fingerprint signals, mouse and typing behavior, cookie history (being logged into a Google account nudges the score up), and IP/historical reputation across every other site using reCAPTCHA. Critically: there's nothing to "solve" with v3. There's no checkbox, no challenge UI most of the time. Your entire defense is not triggering a low score in the first place — which just means every layer above (CDP leak, TLS fingerprint, IP reputation, consistent browser fingerprint, natural interaction timing) all rolls up into this one number. A clean v3 score is a side effect of everything else being clean, not a thing you target directly. Worth knowing too: reCAPTCHA v3's fingerprinting is comparatively basic — it catches naive, unpatched automation reliably, but a properly spoofed and consistent fingerprint (the "consistency" point above) genuinely does get past it, which is a big part of why it's considered a weaker defense layer than something like Cloudflare's full stack.
+
+**Amazon/AWS's CAPTCHA** and **Cloudflare's challenge pages** work more like the layered network-plus-browser stack described above than like reCAPTCHA specifically — they're less about a single score and more about the JA4 handshake, request header ordering, and CDP/automation artifacts triggering a challenge before content even loads.
+
+**CAPTCHA-solving services** — the ones that farm challenges out to human solvers or ML solvers and return a token — are a legitimate last resort, and I use them when a target genuinely can't be avoided. But go in knowing the real tradeoffs: they cost real money per solve, they add real latency (anywhere from a few seconds to well over a minute depending on the service and challenge type), and reliability varies a lot by provider and by how aggressively the target is currently tuning its challenges against known solving services. Treat it as the expensive fallback for the fraction of requests your fingerprint hygiene couldn't avoid triggering — not as a substitute for getting the layers above right. If you're leaning on a solving service for the majority of your traffic, that's a sign something upstream is broken, not a sign the service is doing its job.
+
+## The Arms Race Framing
+
+Here's the part I think matters more than any individual technique: there is no permanent fix here. Everything in this post is accurate as of when I wrote it, and some of it will be measurably less accurate in six months. Cloudflare, DataDome, and Google all actively iterate their detection models against exactly the public techniques described in posts like this one — that's not cynicism, it's just how an adversarial system works. Patchright itself exists because the previous generation of stealth plugins stopped working once detection vendors specifically started checking for them.
+
+The right mindset isn't "find the permanent solution," because it doesn't exist. It's **defense-in-depth plus monitoring**: get every layer reasonably clean (network, browser, behavioral) so no single one is the obvious tell, and — just as importantly — actually watch your success rates over time. A pipeline that was working fine last month and is now getting challenged on 30% of requests isn't a bug in your code, it's a signal that a target's detection just got better and your countermeasures need revisiting. Build the monitoring in from day one, not after you've been silently getting blocked for two weeks without noticing. In this line of work, "it worked when I built it" has a shelf life, and pretending otherwise is how pipelines quietly rot.

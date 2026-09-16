@@ -1,0 +1,121 @@
+---
+title: 'Recursive vs. Loop-Based Traversal for Variable-Depth Automation Flows'
+date: '2026-06-17'
+category: 'Project Breakdown'
+tags: ['algorithms', 'automation', 'typescript', 'testing', 'architecture']
+excerpt: 'A fixed-depth loop breaks the moment your flow has variable depth. Here is why recursion fixed it, and the real limits on when recursion is the right call.'
+featured: false
+---
+
+I once inherited an automation script that navigated a multi-step approval chain — think a form that, depending on the data entered, either submits immediately or kicks off another nested approval step, which might itself trigger another one. The original implementation assumed the chain was always exactly three steps deep. It was written for the one test case someone had in front of them at the time, and it broke the first time the data produced a chain of four.
+
+This is a really common trap in UI automation: you look at your test data, count the levels, and hardcode a loop for that count. It works right up until it doesn't.
+
+## The Brittle Version
+
+```typescript
+async function navigateApprovalChain(page: Page) {
+  for (let i = 0; i < 3; i++) {
+    const nextStepButton = await page.$('.next-approval-step');
+    if (!nextStepButton) break;
+    await nextStepButton.click();
+    await page.waitForSelector('.approval-form');
+  }
+}
+```
+
+The `i < 3` is the whole problem. It's not modeling the actual structure of the flow — it's modeling one observed instance of it. The `break` when the button is missing saves you from over-iterating, but nothing saves you from under-iterating: a chain that needs a fourth step just silently stops one level short, and the test either false-passes on incomplete state or fails downstream in a way that has nothing obviously to do with the loop bound.
+
+The deeper issue is that the depth of this flow isn't a constant — it's a property of the data. A fixed loop bakes a data-dependent value into control flow, which is exactly the kind of thing that should never be hardcoded.
+
+## The Fix: Let the Function Ask "Is There More?"
+
+Recursion maps onto this problem naturally because the problem itself is recursive: process the current step, check if there's a next step, and if so, process that one the same way.
+
+```typescript
+async function navigateApprovalChain(page: Page): Promise<void> {
+  const nextStepButton = await page.$('.next-approval-step');
+
+  if (!nextStepButton) {
+    return; // base case: no more steps, chain is done
+  }
+
+  await nextStepButton.click();
+  await page.waitForSelector('.approval-form');
+
+  return navigateApprovalChain(page); // recurse into the next level
+}
+```
+
+No count, no assumption about depth. The function terminates exactly when the DOM tells it there's nothing left to do, at whatever depth that happens to be. If the flow is two steps deep or eight, the same code handles both without modification. This generalizes cleanly to nested menus and wizard flows too — the pattern is the same: process node, find children, recurse into each.
+
+For a menu with branching (not just a linear chain), it looks like this:
+
+```typescript
+interface MenuNode {
+  selector: string;
+  label: string;
+}
+
+async function readSubmenuNodes(page: Page): Promise<MenuNode[]> {
+  const handles = await page.$$('.submenu-item');
+  const nodes: MenuNode[] = [];
+  for (const handle of handles) {
+    const id = await handle.getAttribute('data-id');
+    const label = (await handle.textContent()) ?? '';
+    nodes.push({ selector: `[data-id="${id}"]`, label });
+  }
+  return nodes;
+}
+
+async function expandMenuTree(page: Page, node: MenuNode, depth = 0): Promise<string[]> {
+  const visited = [node.label];
+  await page.click(node.selector);
+
+  const children = await readSubmenuNodes(page);
+
+  for (const child of children) {
+    visited.push(...(await expandMenuTree(page, child, depth + 1)));
+  }
+
+  return visited;
+}
+```
+
+Same idea: no `for (let level = 0; level < maxDepth; level++)` anywhere. The recursion depth is derived from the actual tree, not guessed at.
+
+## The Trade-offs, Verified, Not Hand-Waved
+
+It's tempting to stop here and call recursion strictly better. It isn't — it's better *for this class of problem*, and it's worth being precise about why, and where it stops being true.
+
+**Stack depth is a real limit, but not one you'll hit here.** Node.js (V8) doesn't recurse indefinitely — the default stack is roughly 1MB, and depending on how much each frame holds (local variables, closures), you typically get somewhere in the range of 10,000 to 15,000 stack frames before a `RangeError: Maximum call stack size exceeded`. For a UI automation flow — a wizard, a menu, an approval chain — you are nowhere near that. Nobody has a 500-level-deep approval chain in a real product. If you're navigating a genuinely unbounded structure (a recursive site crawler, a deeply nested JSON tree of unknown provenance, anything driven by external/untrusted input rather than a bounded product flow), stack depth stops being a theoretical concern and becomes a real one.
+
+**JavaScript doesn't reliably optimize tail calls.** Proper tail-call optimization (where a recursive call in tail position reuses the current stack frame instead of growing the stack) is part of the ES2015 spec, but V8 — the engine behind both Node.js and Chrome — never shipped it, and there's no indication it's coming. Safari's JavaScriptCore is the only major engine with any TCO support. So on Node, recursion is *always* bounded by actual stack depth, regardless of whether you write your function in tail-call form. Don't refactor code into a "tail-recursive" shape expecting the runtime to save you — it won't, on the engine you're almost certainly running on.
+
+**When an explicit stack or queue is the safer choice.** If depth is genuinely unbounded or attacker-controlled — say you're writing a generic DOM tree walker for arbitrary pages, not a bounded product flow — convert the recursion into an explicit loop with your own stack or queue:
+
+```typescript
+async function expandMenuTreeIterative(page: Page, root: MenuNode): Promise<string[]> {
+  const visited: string[] = [];
+  const stack: MenuNode[] = [root];
+
+  while (stack.length > 0) {
+    const node = stack.pop()!;
+    visited.push(node.label);
+    await page.click(node.selector);
+
+    const children = await readSubmenuNodes(page);
+    stack.push(...children);
+  }
+
+  return visited;
+}
+```
+
+This trades the elegance of "the call stack is the traversal state" for explicit control over memory — the `stack` array lives on the heap, not the call stack, so it can grow far larger before you hit any hard limit, and it grows predictably instead of throwing a `RangeError` you have to catch.
+
+## When to Reach for Which
+
+Recursion earned its place in that approval-chain script because the depth was small, bounded by real product constraints, and the recursive formulation matched the actual shape of the problem — "this step, then whatever comes after it, however many times that is." That's the honest case for recursion: not that it's elegant (though it is), but that it removes a hardcoded assumption that had no business being hardcoded, without introducing a new risk, because the depth was never going to be large.
+
+If I were writing a crawler over arbitrary, externally-supplied page structures, I'd reach for the iterative version without a second thought — unbounded depth from untrusted input is precisely the case recursion handles badly. For UI automation flows built around actual product wizards, forms, and menus, the depth is a property of your own application's design, which means it's bounded whether you write that down or not. Recursion just stops making you pretend you know the bound in advance.
