@@ -1,0 +1,102 @@
+---
+title: 'Open Source, Freelance, Full-Time: Where wdio-wait-for Came From'
+date: '2026-09-12'
+category: 'Project Breakdown'
+tags: ['webdriverio', 'open-source', 'testing', 'typescript']
+excerpt: 'How chasing the same wait-condition bug across a full-time job and a freelance contract turned into an upstream contribution to a WebdriverIO community package.'
+featured: false
+---
+
+I want to be upfront about something before this post goes anywhere: I didn't invent `wdio-wait-for`. It's an existing package under the `webdriverio` GitHub org — a community-maintained library of expected conditions that other people built and still maintain. What I actually have is a fork I use for day-to-day testing, and one merged PR upstream that fixed a real bug I kept hitting in production test suites. That's a smaller claim than "I built a library," but it's the true one, and honestly it's a better story — it's about the gap that made me reach for the library in the first place, and what it's like to contribute to something you depend on instead of just filing an issue and hoping.
+
+## The gap `wdio-wait-for` fills
+
+WebdriverIO ships a solid set of built-in waits — `waitForDisplayed()`, `waitForExist()`, `waitForEnabled()`, `waitForClickable()`. They cover the common cases: is this thing on the page, is it visible, can I click it. What they don't cover is anything conditional on your application's actual state.
+
+Real test suites need things like:
+
+- "Wait until this list has more than 3 items" (after a paginated fetch)
+- "Wait until this value stops changing" (a debounced input, a live counter)
+- "Wait until this element's text matches a pattern" (a status badge that cycles through states)
+- "Wait until the URL no longer contains `/login`" (redirect after auth)
+
+None of that is in the built-in API, because it can't be — it's app-specific. WDIO's answer is `browser.waitUntil()`, which takes any async function returning a boolean and polls it:
+
+```typescript
+await browser.waitUntil(
+  async () => {
+    const items = await $$('.result-item')
+    return items.length > 3
+  },
+  { timeout: 8000, timeoutMsg: 'List never grew past 3 items' }
+)
+```
+
+That works. The problem shows up at scale. On one project I'd write this exact pattern for "wait for list length," then six months later on a different project write a nearly-identical block for a different list on a different page. Ad-hoc `waitUntil()` calls don't get extracted into anything reusable by default — they just live inline in whatever spec file needed them, slightly different every time, with slightly different bugs every time.
+
+`wdio-wait-for` packages the common shapes of that pattern into named, tested, reusable conditions — `elementToBeEnabled()`, `urlContains()`, `textToBePresentInElement()`, plus logical combinators (`and`, `or`, `not`) to compose them. Instead of writing the polling loop yourself, you write:
+
+```typescript
+import { urlContains, not } from 'wdio-wait-for'
+
+await browser.waitUntil(not(urlContains('login')))
+```
+
+That's the whole point of a library like this: not that `waitUntil()` is bad, but that the *conditions* people write with it are repetitive enough to deserve a shared vocabulary.
+
+## Why I ended up depending on it in two places at once
+
+I started using `wdio-wait-for` on client work at Arbisoft, on a project with enough conditional UI state (progressive loading, async validation, redirect chains) that hand-rolled `waitUntil()` blocks were multiplying across the spec files. Around the same time I was doing freelance test-automation work for a separate client, building out their WDIO suite from scratch, and I found myself reaching for the exact same conditions — different app, same shape of problem.
+
+That's the moment a library earns its keep versus staying a personal snippet folder: when you notice you're solving the identical problem in codebases that share nothing else. Copy-pasting a `waitUntil` helper between an employer's private repo and a freelance client's repo isn't just awkward, it's how helpers rot — you fix a bug in one copy and forget the other three exist.
+
+## The bug I actually fixed
+
+Using something in production is also how you find its edges. I hit one in the logical `not()` combinator. The library's conditions are designed to run either as free functions or bound to `browser` (so a condition can read `this` — the current WebdriverIO session — when it needs browser-level state like the URL). `not()` is supposed to wrap any condition and flip its result. But it was implemented as an arrow function:
+
+```typescript
+// before — arrow function, no `this` binding
+export function not(expectedCondition: () => Promise<boolean>): () => Promise<boolean> {
+  return async (): Promise<boolean> => {
+    const result = await expectedCondition()
+    return !result
+  }
+}
+```
+
+Arrow functions don't have their own `this` — they close over the surrounding scope. So when you called `expectedCondition()` without explicitly passing along the browser context, any browser-level condition wrapped in `not()` (like `not(urlContains('login'))`) silently lost access to `this`, and broke.
+
+The fix is small but the kind of small that's easy to miss: swap the arrow function for a regular `function`, so it can accept and forward `this`, then call the wrapped condition with `.call(this)` instead of invoking it directly:
+
+```typescript
+// after — regular function, explicitly forwards `this`
+export function not(expectedCondition: () => Promise<boolean>): () => Promise<boolean> {
+  return async function (this: WebdriverIO.Browser): Promise<boolean> {
+    const result = await expectedCondition.call(this)
+    return !result
+  }
+}
+```
+
+And a test to lock it in, using a real login/logout flow so the fix is verified against actual browser-level conditions, not a mock:
+
+```typescript
+it('should wait until the user gets redirected from the login page', async () => {
+  await $(submitButton).click()
+  await browser.waitUntil(() => EC.not(EC.urlContains('login')).call(browser))
+  await expect(await EC.urlContains('login').call(browser)).toBe(false)
+})
+```
+
+I opened the PR against `webdriverio/wdio-wait-for` with the issue reference, the diff, and the new test case. It got reviewed and merged. Total change: three lines in the source file, forty-some in the test. That ratio is normal for a good bug fix — most of the work is proving it's fixed, not fixing it.
+
+## What maintaining even a small slice of this actually costs
+
+I'm not the maintainer of `wdio-wait-for` — that's Christian Bromann and the other WebdriverIO org contributors, and they carry the real weight: triaging issues, reviewing PRs from people like me, keeping the package compatible across WDIO major versions, cutting releases. But contributing even one PR taught me what that weight looks like up close:
+
+- **You owe a test, not just a fix.** A one-line change with no test is a fix nobody can trust six months later when someone refactors nearby code.
+- **You're bound by someone else's API contract.** I couldn't just "fix" `not()` however I wanted — it has to keep working for every other condition in the library, bound and unbound, sync-looking and async, because people depend on the existing signature.
+- **Compatibility isn't a one-time cost.** Every WDIO major version bump is a potential breaking change for a package like this — the v9 shift to WebDriver Bidi as the default protocol, for instance, is exactly the kind of underlying change that can quietly break assumptions in a helper library that pokes at `browser` internals.
+- **Freelance and full-time work compound your bug reports.** Hitting the same bug in two unrelated codebases within a few months isn't a coincidence — it's a sign the bug is real and not project-specific, which is exactly the kind of signal that makes a good upstream issue.
+
+If there's a lesson here, it's a boring one: most of what looks like "building an open-source project" from the outside is actually noticing you've solved the same problem twice, then doing the unglamorous work of turning that into a diff someone else has to review. I'd rather ship that one true PR than a blog post about a library I didn't write.

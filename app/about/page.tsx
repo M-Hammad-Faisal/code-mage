@@ -108,22 +108,16 @@ const PROJECTS = [
     title: 'Code Mage',
   },
   {
-    desc: 'Authored the Best Practices file download page for the official WebdriverIO docs.',
-    href: 'https://webdriver.io/docs/best-practices/file-download',
-    stack: ['WebdriverIO', 'Open Source', 'Documentation'],
-    title: 'WebdriverIO Best Practices',
+    desc: '7 merged PRs across webdriverio/webdriverio, wdio-wait-for, and example-recipes — a spec-reporter color option, the file-download Best Practices docs page, and several other docs/bug fixes.',
+    href: 'https://github.com/pulls?q=is%3Apr+author%3AM-Hammad-Faisal+org%3Awebdriverio+is%3Amerged',
+    stack: ['WebdriverIO', 'TypeScript', 'Open Source'],
+    title: 'WebdriverIO Open Source Contributions',
   },
   {
     desc: 'TypeScript library with six anti-detection techniques — fingerprint spoofing, WebGL masking, and more — for stealth Playwright automation.',
     href: 'https://github.com/M-Hammad-Faisal/stealth-scraper-playwright',
     stack: ['TypeScript', 'Patchright', 'Anti-Detection', 'GitHub Actions'],
     title: 'Stealth Scraper (Patchright)',
-  },
-  {
-    desc: 'Open-source library of expected-condition helpers for WebdriverIO.',
-    href: 'https://github.com/M-Hammad-Faisal/wdio-wait-for',
-    stack: ['WebdriverIO', 'TypeScript', 'Open Source'],
-    title: 'wdio-wait-for',
   },
   {
     desc: '50 tests across login, cart, and checkout flows on SauceDemo — Selenium and Playwright with pytest-xdist parallelization.',
@@ -224,7 +218,26 @@ export default function AboutPage() {
                 automates things (or wants to), you&apos;re in the right place.
               </p>
               <p className="text-base text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                I also contribute to open source — I authored the{' '}
+                I also contribute to open source — 7 merged PRs across the WebdriverIO org,
+                including a{' '}
+                <a
+                  href="https://github.com/webdriverio/webdriverio/pull/12092"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-red-600 dark:text-red-400 underline"
+                >
+                  spec-reporter feature
+                </a>
+                , a bug fix merged into{' '}
+                <a
+                  href="https://github.com/webdriverio/wdio-wait-for/pull/800"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-red-600 dark:text-red-400 underline"
+                >
+                  wdio-wait-for
+                </a>
+                , and the{' '}
                 <a
                   href="https://webdriver.io/docs/best-practices/file-download"
                   target="_blank"
@@ -232,8 +245,8 @@ export default function AboutPage() {
                   className="text-red-600 dark:text-red-400 underline"
                 >
                   Best Practices page on webdriver.io
-                </a>{' '}
-                and contributed features and fixes to the WebdriverIO repository.
+                </a>
+                .
               </p>
 
               <div className="flex flex-wrap gap-2">

@@ -1,0 +1,149 @@
+---
+title: 'Page Object Model Is Still Right (Just Not the Way Most Tutorials Teach It)'
+date: '2026-09-14'
+category: 'Test Automation'
+tags: ['page-object-model', 'testing', 'architecture', 'best-practices']
+excerpt: 'The common complaints about POM are real — but they''re usually complaints about three specific anti-patterns, not about POM itself.'
+featured: false
+---
+
+Every few months, someone writes a post declaring Page Object Model dead. Cypress's own team [told people to stop using it in favor of App Actions](https://www.cypress.io/blog/stop-using-page-objects-and-start-using-app-actions). There's a steady stream of "Page Objects: an anti-pattern" posts going back years. And honestly? A lot of the criticism is fair. I've inherited page object suites that were genuinely miserable to work in.
+
+But after building test frameworks across a handful of companies and clients, I don't think the criticism is really about POM. It's about three specific things people do while building page objects, that have nothing to do with the pattern itself. Fix those three things and most of the complaints evaporate.
+
+## The complaint, stated honestly
+
+If you've worked with a mature POM suite, you've seen this shape before: a `CheckoutPage` class with 60 methods, half of them one-liners wrapping a single click, the other half doing three unrelated things because someone needed "one method that does the whole flow." Assertions scattered both inside the page object and in the test. Nobody's sure where to add new code, so they just add it to whatever page object feels closest.
+
+That's a real, painful thing. It's also not what POM, as originally described by Martin Fowler and the Selenium community, was ever supposed to look like. What happened is three anti-patterns crept in gradually, and because they crept in *inside* page object classes, POM took the blame.
+
+## Anti-pattern 1: page objects that know too much
+
+A page object should know how to find and interact with elements. It should not know why a test is doing something, or what "success" means for a particular scenario.
+
+```typescript
+// Anti-pattern: business logic and decision-making baked into the page object
+export class CheckoutPage {
+  async completeCheckoutForUser(user: User) {
+    await this.firstNameInput.fill(user.firstName);
+    await this.lastNameInput.fill(user.lastName);
+    await this.postalCodeInput.fill(user.postalCode);
+    await this.continueButton.click();
+
+    // business logic doesn't belong here
+    if (user.tier === 'premium') {
+      await this.applyPremiumDiscount();
+    }
+
+    await this.finishButton.click();
+
+    if (await this.errorMessage.isVisible()) {
+      throw new Error('Checkout failed for premium user');
+    }
+  }
+}
+```
+
+This method is doing three jobs: filling a form, making a business decision about discount tiers, and deciding what counts as failure. When the discount rule changes, or a new tier gets added, you're editing a page object to change test behavior — which means the "self-contained UI wrapper" promise of POM is already broken.
+
+The fix isn't complicated: the page object exposes small, honest actions. The test (or a higher-level workflow function, more on that below) decides what to call and in what order.
+
+```typescript
+export class CheckoutPage {
+  async fillShippingInfo(user: { firstName: string; lastName: string; postalCode: string }) {
+    await this.firstNameInput.fill(user.firstName);
+    await this.lastNameInput.fill(user.lastName);
+    await this.postalCodeInput.fill(user.postalCode);
+  }
+
+  async continue() {
+    await this.continueButton.click();
+  }
+
+  async finish() {
+    await this.finishButton.click();
+  }
+}
+```
+
+Business logic — tiers, discounts, eligibility — lives in the test or in a workflow helper, not the page object. If you find yourself writing an `if` statement inside a page object that isn't about *how* to interact with an element (like "is this a mobile or desktop nav"), that's usually the business logic sneaking back in.
+
+## Anti-pattern 2: no line between "what a page can do" and "what a test asserts"
+
+This is the one that causes the most long-term pain, and it's subtle because it feels convenient at first. You write a helper like `expectOrderConfirmed()` inside the page object, and it's genuinely useful — until six months later, every page object is half assertions, and a test failure gives you a stack trace pointing into `pages/CheckoutPage.ts` instead of the test that actually encodes the expectation.
+
+The assertion itself isn't the problem. The problem is what it does to the test suite's readability once you have hundreds of them: you can no longer read a test file and know what it's actually verifying, because half the "what" is hidden inside a class named after a URL.
+
+My rule, after getting burned by this more than once: page objects expose **state**, tests make **judgments**.
+
+```typescript
+// Page object exposes state, doesn't judge it
+export class CheckoutPage {
+  readonly confirmationHeader: Locator;
+  readonly orderTotal: Locator;
+
+  async getOrderTotal(): Promise<string> {
+    return this.orderTotal.textContent() ?? '';
+  }
+}
+
+// Test makes the judgment
+test('premium user gets discount applied at checkout', async ({ checkoutPage }) => {
+  await checkoutPage.finish();
+  await expect(checkoutPage.confirmationHeader).toBeVisible();
+  expect(await checkoutPage.getOrderTotal()).toBe('$45.00');
+});
+```
+
+I'll admit this one is a spectrum, not a hard rule. A tiny `expectOnPage()` helper that just asserts a heading is visible, used as a guard clause after navigation, is fine — it's not encoding test intent, it's confirming the page loaded. What I avoid is any assertion that encodes a *scenario-specific* expectation. Those belong where a reader expects to find them: the test.
+
+## Anti-pattern 3: one page, one giant class
+
+The third anti-pattern is the most literal cause of the "God object" complaint. A real e-commerce checkout page has a nav bar, a mini-cart dropdown, a shipping form, a payment form, and a promo code widget. Cram all of that into one `CheckoutPage` class and you get exactly the 60-method monster people are (rightly) complaining about.
+
+The fix, again, isn't abandoning POM — it's applying composition, the same way you would with UI components in application code. Break out anything that appears on more than one page, or that's complex enough to deserve its own boundary, into its own object.
+
+```typescript
+export class NavBar {
+  constructor(private readonly page: Page) {}
+
+  async search(term: string) {
+    await this.page.getByPlaceholder('Search').fill(term);
+    await this.page.getByRole('button', { name: 'Search' }).click();
+  }
+
+  async openCart() {
+    await this.page.getByTestId('cart-icon').click();
+  }
+}
+
+export class CheckoutPage {
+  readonly nav: NavBar;
+  readonly shippingForm: ShippingForm;
+  readonly paymentForm: PaymentForm;
+
+  constructor(private readonly page: Page) {
+    this.nav = new NavBar(page);
+    this.shippingForm = new ShippingForm(page);
+    this.paymentForm = new PaymentForm(page);
+  }
+}
+```
+
+Now `CheckoutPage` is a composition root, not a dumping ground. `NavBar` gets reused on every page that has one — no duplicated locators, no drift when the nav changes. Tests read naturally too: `checkoutPage.nav.search('backpack')` tells you exactly what's happening and where.
+
+This is the fix I've seen pay off the most in practice. Once teammates stop thinking "one page = one class" and start thinking "one reusable UI region = one class," the bloat mostly stops accumulating on its own, because there's an obvious place to put new code that isn't "just add another method to the biggest existing class."
+
+## The honest case for the alternatives
+
+I don't think POM is the only correct answer, and I want to give the alternatives a fair hearing instead of dismissing them, because I've reached for both.
+
+**Screenplay Pattern** (actors, tasks, and questions instead of page classes) is a real improvement when your suite has to model genuinely different user roles doing genuinely different things — think a multi-tenant B2B app where an admin, a billing manager, and an end user each have distinct capabilities on overlapping screens. Screenplay forces you to think in terms of "what can this actor do" rather than "what does this page contain," which scales better when the actor, not the page, is the unit that keeps changing. The cost is real too: it's more ceremony, a steeper learning curve for anyone new to the framework, and for a team that's mostly testing a handful of linear flows, it's often more abstraction than the problem calls for.
+
+**App Actions** (Cypress's recommendation) are right for a narrower but common case: when a large share of your test time is spent re-establishing state through the UI — logging in, adding items to a cart, navigating three screens deep — just to get to the thing you actually want to test. Driving that setup through an API call or a direct app-state mutation instead of clicking through the UI is a legitimate, valuable optimization. But App Actions solve a *setup speed* problem, not a *maintainability* problem. You still need something to encapsulate your UI interactions for the parts of the flow you're actually asserting on, and that something ends up looking a lot like a page object with a different name. I use both together on most projects now: API-driven or app-action-driven setup, and page objects for the actual interactions under test.
+
+What I don't buy is the idea that either alternative replaces the core discipline POM is teaching: don't couple your test's intent to your app's selectors. Screenplay and App Actions both still need that discipline — they just apply it differently. If your page objects are already scoped tightly, free of business logic, and free of assertions, the honest question isn't "POM or something else," it's "does this specific flow benefit from skipping the UI for setup." Sometimes yes. That doesn't mean the pattern underneath was ever the problem.
+
+## What I actually tell teammates now
+
+When I onboard someone new to a framework I've built, I don't start with "here's how to write a page object." I start with the three anti-patterns above, because that's where every bloated suite I've seen actually went wrong — not in the decision to use POM in the first place. Get those three boundaries right — no business logic in page objects, no scenario assertions in page objects, compose instead of cramming — and the pattern holds up fine, even at scale. It's not glamorous advice. But it's the difference between a page object suite that's still pleasant to work in two years later, and one that's turned into the thing people write blog posts complaining about.

@@ -1,0 +1,42 @@
+---
+title: 'What Mentoring Junior Engineers on Test Frameworks Actually Taught Me'
+date: '2026-09-15'
+category: 'Career'
+tags: ['career', 'mentoring', 'testing', 'engineering-culture']
+excerpt: 'Mentoring teammates on a framework I built taught me more about its design flaws than a year of writing tests in it myself.'
+featured: false
+---
+
+During my time as a Test Automation engineer, part of my job was onboarding teammates onto the automation frameworks I'd helped build. I'd like to say I went in with some grand mentoring philosophy. I didn't. I went in assuming it would mostly be a documentation problem — write good docs, point people at them, answer the occasional question. That assumption didn't survive the first week.
+
+What actually happened taught me more about both engineering and mentoring than I expected, and most of it wasn't the flattering kind of lesson.
+
+## The thing that trips people up isn't the syntax
+
+Every framework I onboarded someone onto had a README, some example tests, and a chapter on the page object pattern. None of that was the hard part. The hard part was always the same: a teammate would understand *what* a pattern did — how to call a method, how to add a locator — without understanding *why* it existed. And when you don't know why something exists, you don't work with it. You work around it.
+
+The most common version of this: someone needed a new test quickly, found an existing one that looked similar, and copy-pasted it. Nothing wrong with that instinct on its own — reusing working code is reasonable. The problem showed up a layer down. They'd copy a test that used a fixture for authenticated state, not fully understand what the fixture was doing, and then when their new test needed slightly different setup, they'd bypass the fixture entirely and write the login flow inline, by hand, inside the test body. Now there are two ways to get a logged-in browser in the suite, and only one of them gets updated when the login flow changes.
+
+That's not a skill gap. It's a "the abstraction wasn't explained, so it got treated as optional" gap. Once I started explicitly walking new teammates through *why* the fixture existed — not just how to call it, but what problem it solved and what broke without it — the copy-paste-and-diverge pattern mostly stopped. People don't work around abstractions they understand. They work around abstractions that feel like arbitrary rules.
+
+The second recurring one was flaky tests, and specifically what people did about them. A test fails intermittently, and the instinct — especially early on — is to add a wait. A `sleep(2)`, a retry loop, whatever makes the red go away. I understand the instinct completely; I've done it myself under deadline pressure. But it treats the symptom without asking the actual question, which is: what is racing against what? Is the app not done rendering? Is a network call still in flight? Is the test asserting before an animation finishes? A sleep might mask that for a while, but it doesn't fix it, and it usually just moves the flakiness to a different, harder-to-diagnose spot later. The mentoring version of this wasn't "don't add sleeps" — that's a rule, and rules get ignored under pressure. It was walking through, together, how to actually find the race: reading network logs, checking what the app does before the element appears, using retry-based assertions that wait for a *condition* rather than a *duration*. Once someone's debugged two or three flaky tests that way, they stop reaching for sleep as the first move, because they've built an actual model of what's usually racing.
+
+## Explaining your own framework is a design review you didn't ask for
+
+The part I didn't expect: having to explain a framework I'd built forced me to actually understand my own decisions in a way that just using it every day never had.
+
+There's a specific, slightly uncomfortable moment that happened more than once. A teammate would ask "why does this page object do it this way instead of the more obvious way," and I'd start explaining — and partway through my own explanation, realize the honest answer was "because of a thing that happened six months ago that you weren't here for, and that's no longer even true." The design made sense in the context of a decision or a constraint that had since disappeared, but the code hadn't been revisited, so it just looked arbitrary to someone new.
+
+That's not a documentation gap. I want to be precise about that distinction, because it's tempting to file it under "we should write this down" and move on. If a part of your design only makes sense with historical context that isn't in the code or the comments, better docs help someone *understand* it faster, but they don't fix the actual problem, which is that the design is coupled to history instead of to the current shape of the thing it's solving. The real fix, a few times, was refactoring the thing back to something that made sense on its own merits — not writing a better explanation of why the confusing version was fine.
+
+I started treating "a teammate is confused by this" as a signal worth taking seriously on its own, rather than just a training gap to patch with explanation. Sometimes the explanation really was missing. But often, having to produce the explanation out loud was what surfaced that the design itself had drifted from its own reasoning.
+
+## The part that's genuinely hard: mentoring without being the most senior person in the room
+
+Here's the thing I don't see acknowledged much in how mentoring gets talked about. A lot of writing on it assumes a shape where a senior person, secure in their experience, passes knowledge down to someone earlier in their career. That's not the position I was mentoring from. I was mentoring teammates on a framework I understood deeply — because I'd built parts of it — while still being relatively early in my own career, with plenty of things I didn't have settled opinions on yet.
+
+That's a different job than "senior teaches junior." It's closer to peer-level knowledge transfer where the thing I had authority over was narrow and specific — this framework, these patterns, why we made these calls — and outside that narrow area, I was still figuring things out same as anyone else on the team. It meant I couldn't lean on general seniority to make a point land. If I told someone "trust me, this is the right way," and I wasn't actually the most experienced engineer in the room, that didn't carry much weight, and it shouldn't have. What actually worked was showing my reasoning, not asserting my conclusion — walking through the tradeoff, including the parts I was genuinely unsure about, rather than presenting the framework's design as settled wisdom handed down from above.
+
+It also meant being honest, sometimes in the moment, about "I'm not sure that's the best way to do this, but here's why I did it that way, and I'd take a better idea." That's an uncomfortable thing to say when you're supposed to be the person with answers. But it was more useful than pretending certainty I didn't have, and a couple of times a teammate genuinely did have a better idea, because they were looking at the pattern fresh instead of through the accumulated assumptions I'd built up writing it.
+
+If I had to compress the whole experience into one thing: mentoring on a framework you built is really a forcing function for finding out which parts of your own thinking were actually sound, and which parts you'd just gotten used to. The teaching wasn't the byproduct. It was closer to the main event.

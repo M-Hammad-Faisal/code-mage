@@ -1,0 +1,49 @@
+---
+title: 'JSON Diffing Is Harder Than It Looks: Building a Comparison Tool'
+date: '2026-09-13'
+category: 'Project Breakdown'
+tags: ['javascript', 'tooling', 'open-source', 'developer-tools']
+excerpt: 'What started as "just diff two JSON strings" turned into a small tree-walking algorithm with more edge cases than I expected.'
+featured: false
+---
+
+I built the [JSON Compare Tool](https://m-hammad-faisal.github.io/json-compare) because I kept doing the same manual thing across different jobs: pasting two API responses into some generic online diff tool, only to have it flag a dozen "differences" that were really just keys in a different order. It's a comparison utility with a GitHub-style diff visualization, shipped as both a CLI (`npm start file1.json file2.json`) and a browser tool that runs entirely client-side — no uploads, everything processed locally. It sounds like a small problem. It is not, and figuring out why taught me more than I expected about what "equal" even means for structured data.
+
+## Why String Diffing Breaks Immediately
+
+The naive approach is: `JSON.stringify` both objects, run a text diff (like `diff` or Myers' algorithm on lines), done. This fails almost immediately for reasons that have nothing to do with the diff algorithm and everything to do with what JSON actually guarantees.
+
+**Key order is not semantic.** `{"name": "Alice", "age": 30}` and `{"age": 30, "name": "Alice"}` are the same JSON value. `JSON.parse` doesn't care about key order, and neither should a comparison tool — but `JSON.stringify` on two independently-built objects will absolutely produce different key orders, especially when one payload comes from a database ORM and the other from a hand-written fixture. A string diff sees this as a change on every line. A useful diff needs to see it as nothing at all.
+
+**Nested arrays are the genuinely hard part.** Say the left side has `["a", "b", "c"]` and the right side has `["b", "a", "c"]`. Is that a reorder (no real change) or three separate value changes? The honest answer is: it depends on what the array represents, and a generic tool has no way to know that. An array of tags where order is decorative should probably diff as "unchanged, just reordered." An array of ordered steps in a workflow, or an array where position 0 vs position 1 means something structurally, should diff as real changes. There's no way to infer author intent from the JSON alone — the best a general-purpose tool can do is diff arrays positionally by default (index-for-index) and make it obvious when the *only* difference is ordering, so a human can make the semantic call instead of the tool guessing wrong.
+
+**Type coercion is a trap waiting for a bug report.** Is `1` equal to `1.0`? In JSON's own data model, they're both just "number," full stop — JSON doesn't distinguish integer from float the way some languages do, so `1` and `1.0` are the same value. But is `1` equal to `"1"`? Absolutely not — one is a number, one is a string, and treating them as equal is exactly the kind of silent bug that makes people distrust a diff tool ("it said no changes but the type changed under me"). I ended up with a fourth diff category specifically for this — **type change** — distinct from "changed," so `age: 30` becoming `age: "30"` is flagged differently than `age: 30` becoming `age: 31`. Same-looking value, structurally different problem.
+
+## Building an Actual Tree Diff
+
+Once string diffing is off the table, the only real option is walking both JSON trees together, recursively, comparing node by node and recording what happened at each path. Roughly:
+
+- If both sides have the same key and the values are primitives, compare with strict equality (with the numeric normalization above) — same or **changed**.
+- If a key exists on the left but not the right, that's **removed**.
+- If a key exists on the right but not the left, that's **added**.
+- If both sides have an object at that key, recurse into it.
+- If both sides have an array at that key, diff element-by-element by index, recursing into each pair (so a nested object three levels deep inside an array inside an object still gets a precise diff, not a blunt "array changed" flag).
+- If the two sides have different *types* at the same key (object vs array, number vs string), that's the type-change case — recursing further doesn't make sense once the shapes don't match.
+
+The output isn't a flat list of changes — it's a tree that mirrors the input's shape, where every node is tagged with one of `unchanged` / `added` / `removed` / `changed` / `type-changed`, and container nodes (objects, arrays) also carry that tag if *anything* underneath them changed, so the UI can decide how much to expand. That's the structural piece that makes a GitHub-style visual diff possible at arbitrary nesting depth — the renderer just walks the same tree and asks "what's this node's status" at each level, rather than trying to reconstruct structure from a list of "path X changed" strings after the fact.
+
+Representing "added" and "removed" this way also solves a smaller but annoying problem: showing *where* in a 40-key nested payload something changed. A flat diff of stringified JSON gives you a line number in a stringified blob, which is useless once the blob is reformatted. A tree diff gives you an actual path — `data.user.addresses[2].zip` — which is what you actually want when you're hunting down why two API responses disagree.
+
+## Why Both a CLI and a Web Version
+
+These solve genuinely different problems, and I didn't want to make people choose.
+
+The **CLI** exists for the boring-but-important use case: dropping a JSON comparison into a CI pipeline or a script. Something like `npm start expected.json actual.json` and a non-zero exit code on a real difference is exactly the shape you need for a pre-deploy check ("did this config file drift from what we expect") or a snapshot test in a build step. Nobody wants to open a browser tab for that — it needs to run headless, unattended, and be scriptable.
+
+The **web version** exists for the opposite case: you're debugging something right now, you have two JSON blobs in your clipboard, and you want an answer in five seconds without `npm install`-ing anything or worrying about which machine has Node on it. Paste into two text areas, hit compare, get a color-coded side-by-side view. Since it runs entirely in the browser — no server round-trip, no upload — pasting a real (if sanitized) API response into it doesn't mean sending that data anywhere.
+
+Splitting these into "the algorithm" and "two thin interfaces on top of it" also just came out cleaner: the tree-diff logic is one module, and the CLI and the web UI are both consumers of the same core, which means a fix to how array diffing works benefits both without duplicating logic. That's less a grand design decision and more just what happens when you build the hard part first and add interfaces after.
+
+## What I'd Still Improve
+
+The array-reorder problem is the one place I know the tool is making a judgment call rather than solving the problem outright — positional diffing is the pragmatic default, but it's wrong for the "this array is actually a set" case. A smarter version could offer a per-array toggle (`order-sensitive` vs `order-insensitive`), but that pushes complexity onto the user for every array in a payload, which defeats the point of a tool that's supposed to save time. For now, the honest move was to make the default behavior predictable and let a human eyeball the cases where "reordered" and "changed" genuinely look the same in the diff — better than a tool that confidently guesses wrong and hides it.

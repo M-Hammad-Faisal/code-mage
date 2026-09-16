@@ -1,0 +1,48 @@
+---
+title: 'Seven Merged PRs: My Real WebdriverIO Open Source Footprint'
+date: '2026-09-16'
+category: 'Career'
+tags: ['webdriverio', 'open-source', 'career', 'testing']
+excerpt: 'A full, honest accounting of everything I have actually shipped upstream to the WebdriverIO org — one feature, four docs fixes, one bug fix, one config cleanup — and what each one actually took.'
+featured: false
+---
+
+I've written two other posts on this site about specific WebdriverIO contributions — [the file-download docs page](/blog/contributing-to-webdriverio-docs) and [the `wdio-wait-for` bug fix](/blog/wdio-wait-for-origin-story). Writing those made me go back and actually list out everything I'd merged into the WebdriverIO org, instead of working from memory. The real count is seven pull requests, across three repositories, over about seven weeks in early 2024. That's a smaller and more specific claim than "I'm an open source contributor," and I'd rather write the specific one.
+
+## The full list
+
+In the order I opened them:
+
+1. **[webdriverio/webdriverio#12092](https://github.com/webdriverio/webdriverio/pull/12092)** — added a `color` config option to `@wdio/spec-reporter` so you can disable colored terminal output. Merged Feb 2, 2024. This was my first PR to the project.
+2. **[webdriverio/example-recipes#336](https://github.com/webdriverio/example-recipes/pull/336)** — added download-behavior example recipes covering Safari, Chrome, Firefox, and Edge.
+3. **[webdriverio/example-recipes#345](https://github.com/webdriverio/example-recipes/pull/345)** — a small follow-up fix renaming an environment variable (`EXAMPLE_BROWSER` → `BROWSER`) for consistency with the rest of the repo's conventions. Merged Feb 6, 2024.
+4. **[webdriverio/wdio-wait-for#800](https://github.com/webdriverio/wdio-wait-for/pull/800)** — fixed a bug where the logical `not()` combinator lost its `this`/browser-context binding because it was implemented as an arrow function. Merged Feb 7, 2024.
+5. **[webdriverio/webdriverio#12186](https://github.com/webdriverio/webdriverio/pull/12186)** — the "Best Practices: File Download" docs page, the one I've already written a full post about.
+6. **[webdriverio/webdriverio#12226](https://github.com/webdriverio/webdriverio/pull/12226)** — updated the `moveTo` command docs after a breaking change landed in WebdriverIO 8.21.0, so the examples matched the new behavior.
+7. **[webdriverio/webdriverio#12546](https://github.com/webdriverio/webdriverio/pull/12546)** — added documentation on configuring tests to use the Chromium browser specifically, rather than Chrome. Merged March 25, 2024.
+
+Every one of these was reviewed and merged by Christian Bromann, one of WebdriverIO's core maintainers.
+
+## Why this list looks the way it does
+
+The shape of this list isn't an accident, and it's worth being honest about it: **six of the seven are docs, examples, or small fixes. Exactly one — the spec-reporter color option — is a feature.** That's not a coincidence, and it's not because docs contributions are somehow easier or less valuable. It's because that's genuinely the entry point that worked for me.
+
+The color option (#12092) happened because I hit issue #12051 directly — I wanted plain, uncolored spec-reporter output for a CI pipeline that was piping logs somewhere that didn't render ANSI codes cleanly — and the fix was small and self-contained enough that I could understand the whole relevant slice of the codebase (one reporter package, one config option, a chalk-based color enum) without needing to understand all of WebdriverIO's internals first. That's what made it a viable first PR. Trying to jump straight into a bigger feature as a first contribution to an unfamiliar, mature codebase would have taken far longer and risked going nowhere.
+
+The download-behavior work (#336, #345, #12186) followed the same pattern at a slightly bigger scale: I hit a real gap (issue #12105 — no documented way to test file downloads across browsers) while testing something for work, built the example recipe to work through the problem myself, found and fixed a small inconsistency in the recipe's own environment variable naming while I was in there, and then wrote up what I'd learned as the actual docs page once I understood the problem well enough to explain it to someone else. The docs page didn't come first — the working example did, and the docs were downstream of actually solving the problem.
+
+The remaining two (`moveTo`, Chromium config) were smaller, narrower fixes to existing docs that had drifted out of date — the kind of contribution where you're reading the docs to solve your own problem, notice they're wrong or incomplete, and fix that instead of just moving on.
+
+## What actually made these worth doing
+
+None of these PRs are large by line count. The value wasn't in the size — it was in three things that are easy to undersell:
+
+**They're permanent, unlike an internal fix.** A bug fix in a company codebase helps that one team. A merged upstream fix helps every team using that package, indefinitely, and it's attached to your name in a way a Slack message solving the same problem for a coworker isn't.
+
+**Writing the fix forces you to actually understand the problem, not just work around it.** The download-behavior docs page only exists because I'd already built a working example for myself first — I couldn't have written accurate guidance without having actually solved it end to end, browser by browser.
+
+**Review from a maintainer is a different kind of feedback than a coworker's code review.** Christian Bromann reviewing these wasn't rubber-stamping — a couple of these (the `moveTo` docs, in particular) went through review comments before merging. That's useful pressure-testing you don't get by just shipping something internally and moving on.
+
+## The honest caveat
+
+I'm not going to inflate this into something it isn't. Six docs/small-fix PRs and one modest feature, over seven weeks, is a real but modest open source footprint — not a maintainer role, not a track record of shipping major features. If you're evaluating this as a signal of anything, evaluate it as what it actually is: someone who, a few times, hit a real gap in a tool they used professionally and took the extra step of fixing it upstream instead of just working around it locally. That's a genuinely useful habit to have. It's also not the same claim as "core contributor," and I'd rather undersell it accurately than oversell it vaguely.

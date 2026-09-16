@@ -1,0 +1,46 @@
+---
+title: "What I Learned Contributing to WebdriverIO's Official Docs"
+date: '2026-09-11'
+category: 'Project Breakdown'
+tags: ['webdriverio', 'open-source', 'testing', 'documentation']
+excerpt: 'I wrote the official file-download best-practices page for webdriver.io because I kept hitting the same undocumented problem in production — here''s what I learned about the problem and about contributing docs to a real OSS project.'
+featured: false
+---
+
+I authored the ["Best Practices: File Download"](https://webdriver.io/docs/best-practices/file-download) page on webdriver.io. It's a small page — a few hundred words, a handful of code snippets — but it took me longer to get right than most features I've shipped, because it's answering a question the official docs simply didn't have an answer to: how do you actually test that a file downloaded?
+
+## Why this is a genuinely hard problem
+
+Most of browser automation is querying and asserting against the DOM. Click a button, wait for an element, check its text. File downloads break that model completely, because the moment a download starts, it leaves the page entirely. There's no element to query. No DOM node representing "this PDF is now on disk." The browser hands the file off to its own download manager — a different process, with its own UI, its own storage location, its own completion event — and your test has no visibility into any of it through the normal page-interaction APIs.
+
+This isn't a WebdriverIO-specific limitation. It's true of Selenium, Playwright, Cypress — anything driving a real browser. The download happens outside the automated page's reach by design, because browsers treat "save a file to the user's disk" as something that shouldn't be silently scriptable from web content. That's a reasonable security boundary. It's also exactly the boundary a download test needs to cross.
+
+So when I started writing tests that verified downloads for a project at work, there was nowhere in the official WebdriverIO docs to look. I ended up piecing together a working approach from Stack Overflow threads, old GitHub issues, and Chrome DevTools Protocol documentation that wasn't written with WebdriverIO in mind at all. That gap is what the page exists to close.
+
+## What the page actually recommends
+
+A few things came out of that process that I think matter beyond just "here's a code snippet":
+
+**Don't assert against the download UI — assert against the filesystem.** The download itself isn't observable through the page, but the *result* of the download is: a file lands in a directory on disk. So the pattern the page recommends is to configure a known, predictable download directory up front, and verify the download by checking that directory afterward — not by trying to intercept or watch the browser's download popup.
+
+**Set the download path explicitly instead of relying on default download locations.** Every browser has its own default download directory and its own quirks about how it's configured, which makes a test that relies on the OS default fragile and non-portable across CI environments. The docs recommend resolving a path relative to the test file — something like `path.join(__dirname, 'downloads')` — and configuring the browser to use it explicitly, so the test knows exactly where to look regardless of what machine it's running on.
+
+**For Chromium browsers specifically, use CDP to set the download behavior.** This is the part that's genuinely non-obvious if you haven't gone digging in Chrome DevTools Protocol docs before. WebdriverIO exposes a `getPuppeteer()` bridge that gives you a CDP session, and from there you call `Browser.setDownloadBehavior` with `{ behavior: 'allow', downloadPath }` to force downloads into your chosen directory rather than wherever the browser profile happens to be configured to save them. Without this, headless Chrome in particular can silently refuse or misdirect downloads, and you'll be debugging a "download never appears" failure that has nothing to do with your test logic.
+
+**Wait for the file to exist — don't sleep and hope.** The instinct when a test starts flaking around a download is to throw a `pause(3000)` at it and move on. The docs push back on that directly: instead of an arbitrary fixed wait, poll for the file's existence with `waitUntil`, something like `waitUntil(async () => await fs.existsSync(downloadPath), { timeout: 5000 })`. It's a small change but it's the difference between a test that's fast on a good day and flaky on a loaded CI runner, versus one that waits exactly as long as it needs to and no longer.
+
+**Different browsers need different handling.** Chrome, Firefox, and Edge each have their own download configuration story, and the docs walk through each capability set separately rather than pretending there's one universal snippet that works everywhere. That's the unglamorous reality of cross-browser testing — the abstraction WebdriverIO gives you for clicking and typing doesn't fully paper over browser-specific download plumbing.
+
+**Handling multiple simultaneous downloads.** For suites that trigger several downloads at once, the page distinguishes between verifying them sequentially — trigger, wait, assert, repeat — versus kicking them off in parallel and validating the full set once everything's settled. Sequential is simpler and easier to debug; parallel is faster but means your existence checks need to account for files that haven't necessarily all landed at the same moment.
+
+None of this is exotic. It's the kind of thing that's a five-minute conversation once someone who's hit it explains it to you, and a multi-day debugging session if you haven't.
+
+## Reflecting on the actual contribution process
+
+WebdriverIO has a real maintainer team and a real review bar — it's not a project where a docs PR gets rubber-stamped because it's "just docs." My first draft was more verbose than what ended up merged; the feedback I got was mostly about tightening examples down to the minimum that actually demonstrates the point, and making sure code snippets were runnable as written rather than illustrative pseudo-code. That's a useful discipline to have imposed on you — it's easy, writing docs from your own experience, to over-explain the parts that were hard for *you* specifically and under-explain the parts a first-time reader actually needs.
+
+The review also caught something I'd gotten subtly wrong about CDP session scoping — an easy mistake to make when you've only tested the happy path in your own project and haven't had to think about how the guidance holds up across the full matrix of browsers and CI setups WebdriverIO actually supports. That's the value a maintainer team brings that you don't get writing internal documentation for a codebase only your own team touches: someone whose job is thinking about every user of the library, not just your specific setup.
+
+Is writing docs for a library you already use professionally worth the time investment? For me, unambiguously yes — but not for altruistic reasons alone. I understood this particular gap because I'd hit it myself, spent real hours working around it, and had already built the mental model of what a good answer looks like. Writing it up for the official docs meant that mental model got reviewed by people who know the library's internals better than I do, and the result is something more correct and more broadly useful than what I would've kept in a private gist. The next person who hits this — including, most likely, a future version of me on a different project — gets the answer in the place they'd actually think to look for it, instead of reconstructing it from Stack Overflow fragments the way I had to.
+
+If you use a library seriously enough that you've hit an undocumented rough edge and had to solve it yourself, you've already done the hard part. Writing it up for the project's actual docs is a smaller lift than it looks like, and it's one of the more durable ways to make an open-source project better than you found it.

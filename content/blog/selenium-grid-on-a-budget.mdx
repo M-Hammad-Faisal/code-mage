@@ -1,0 +1,124 @@
+---
+title: 'Selenium Grid on a Budget: Local Distributed Testing Without Cloud Costs'
+date: '2026-09-12'
+category: 'Test Automation'
+tags: ['selenium', 'appium', 'testing', 'infrastructure', 'ci-cd']
+excerpt: 'When a self-hosted Selenium Grid beats BrowserStack or Sauce Labs, when it genuinely doesn''t, and a real Grid 4 setup with Chrome, Firefox, and Appium nodes.'
+featured: false
+---
+
+At Arbisoft, I set up a local Selenium Grid with Appium for parallel distributed testing and cut regression run time by 40%. I want to be precise about what that number means before I say anything else: it came from parallelization, not from the Grid being some magic accelerant. A single machine running Selenium Grid with four nodes runs tests four-at-a-time instead of one-at-a-time — that's the whole trick. You could get the same speedup from a paid cloud grid, or from `fullyParallel` sharding in a modern test runner, without touching Selenium Grid's architecture at all. What the *local* part bought us was cost and control, not speed. Speed was just parallelism, and parallelism is available everywhere.
+
+That distinction matters because the pitch for self-hosting almost always conflates the two, and the honest version of this post has to separate them.
+
+## Why teams default to cloud grids
+
+BrowserStack, Sauce Labs, LambdaTest — they're the default for good reasons:
+
+- **Zero infrastructure ownership.** No nodes to patch, no Docker hosts to keep alive, no 2 a.m. page because a node ran out of disk from unrotated video recordings.
+- **Real device coverage you cannot self-host.** A cloud provider can hand you an actual iPhone 15 running iOS 17.4, or a Samsung Galaxy on a specific Android build. You cannot rack that yourself at any reasonable scale — real Apple hardware for CI is a genuinely hard problem, and cloud vendors have solved it so you don't have to.
+- **Elastic capacity.** Need 200 parallel sessions for an hour before a release? Cloud grids absorb that spike; a self-hosted grid is sized for your steady state, not your worst day.
+- **Someone else owns browser/driver version churn.** New Chrome ships, cloud grid has it within days.
+
+For a lot of teams, especially early-stage ones or ones without a dedicated infra owner, that trade is correct. Paying per-minute is cheaper than paying an engineer's time to babysit infrastructure.
+
+## Where self-hosting actually wins
+
+The case for a local Grid isn't "cloud grids are bad." It's that the trade flips under specific conditions:
+
+**Cost at sustained scale.** Cloud grid pricing is metered per parallel session-minute. A regression suite that runs hundreds of times a month, with enough parallel sessions to keep CI fast, adds up to real monthly spend fast. A self-hosted grid on hardware you already own (or a couple of always-on VMs) has a fixed cost that doesn't scale with test volume once it's built.
+
+**Data residency and internal-app testing.** If the app under test lives inside a VPN, talks to internal-only services, or handles data that isn't supposed to leave your network boundary, routing browser sessions through a third-party cloud grid is a real security conversation, not a nitpick. A local Grid keeps every session, every screenshot, every network request on infrastructure you control.
+
+**Exact browser/OS version control.** Cloud grids give you a menu of versions. A self-hosted Grid gives you *exactly* the Chrome build, exactly the Firefox ESR version, pinned in a Dockerfile, reproducible on every node identically — useful when you need to test against a specific version your users are actually running, not whatever the cloud vendor currently offers.
+
+**No noisy-neighbor variance.** Shared cloud infrastructure means session start times and performance can vary with the vendor's own load. A grid you own behaves the same at 2 p.m. and 2 a.m.
+
+None of that was our motivation for mobile, though — for the iOS side, real hardware coverage is exactly the cloud's strength, and we didn't try to replicate it locally.
+
+## Selenium Grid 4's actual architecture
+
+If your mental model of Selenium Grid is still "Hub talks to Nodes," it's out of date. Grid 4 was a ground-up rewrite, and the Hub/Node monolith is gone in favor of separate, purpose-built components that communicate over an internal event bus:
+
+- **Router** — the single entry point for every request. New session requests go to the queue; commands for an existing session get routed straight to the Node running it.
+- **Distributor** — tracks which Nodes are registered, what capabilities (browser, version, platform) each one offers, and matches queued session requests to available Nodes.
+- **New Session Queue** — holds incoming session requests in order until the Distributor can place them, with configurable request timeouts instead of failing immediately when the Grid is full.
+- **Session Map** — the lookup table from session ID to the Node actually running it, so the Router can send follow-up commands to the right place without asking around.
+- **Node** — runs the actual browser sessions. Deliberately dumb: it executes commands, it doesn't make routing decisions.
+
+For small setups all of these run inside a single `standalone` process — that's the default `selenium/standalone-chrome` style image. Once you're distributing across multiple machines or want each component to scale independently, you split them into separate containers, which is what makes Grid 4 genuinely container-native in a way the old Hub/Node model never was.
+
+## A real docker-compose sketch
+
+This is the shape of what we ran: a Router/Distributor/queue layer via the `hub` image (Grid 4 still ships a bundled "hub" entrypoint that wires up Router + Distributor + Session Map + Queue for you), Chrome and Firefox nodes for web, and an Appium node for mobile.
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  selenium-hub:
+    image: selenium/hub:4.23.0
+    container_name: selenium-hub
+    ports:
+      - '4442:4442' # event bus publish
+      - '4443:4443' # event bus subscribe
+      - '4444:4444' # Grid API / Router
+
+  chrome-node:
+    image: selenium/node-chrome:4.23.0
+    shm_size: 2gb # Chrome dies under load without a real /dev/shm
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_MAX_SESSIONS=2
+    deploy:
+      replicas: 2 # two Chrome nodes = 4 concurrent Chrome sessions
+
+  firefox-node:
+    image: selenium/node-firefox:4.23.0
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_MAX_SESSIONS=2
+
+  appium-node:
+    image: appium/appium:v2.11.2
+    container_name: appium-node
+    ports:
+      - '4723:4723'
+    devices:
+      - /dev/kvm # only needed if running Android emulators in-container
+    environment:
+      - RELAXED_SECURITY=true
+    command: appium --relaxed-security --base-path=/wd/hub
+    # Registered to the Grid separately via `selenium-grid-router` config,
+    # or driven directly for the mobile slice of the suite —
+    # Appium 2's Grid integration is looser than the web nodes' native registration.
+```
+
+A few things that bite people the first time they set this up:
+
+- **`shm_size` is not optional.** Chrome's default shared-memory allocation inside a container is tiny; under real load it crashes with cryptic renderer errors. `2gb` is the commonly recommended floor.
+- **`SE_NODE_MAX_SESSIONS` controls real concurrency**, not the replica count alone — two Chrome nodes at `max_sessions=2` gives you four concurrent Chrome sessions, not two.
+- **Appium's Grid 4 integration is not first-class the way Chrome/Firefox nodes are.** In practice, most teams run Appium as its own endpoint and point mobile-specific test config at it directly, rather than expecting Grid's Router to transparently proxy mobile sessions the way it does browser sessions.
+
+## What "reduces cost" leaves out
+
+The pitch for self-hosting always undersells the ongoing cost, so here's the honest list of what you're signing up for:
+
+- **You own uptime.** If the Grid host goes down at 4 p.m. before a release, that's your team's problem now, not a vendor's SLA.
+- **You own browser/driver version updates.** Chrome auto-updates; your node images don't, until someone bumps the Dockerfile. Stale browser versions in your Grid silently drift from what your users actually run.
+- **You own capacity planning.** Cloud grids absorb traffic spikes by definition. A fixed set of local nodes doesn't — if your team doubles or your test suite doubles, someone has to notice and add nodes before CI queues start backing up.
+- **You own the security surface.** Appium's `--relaxed-security` flag, for instance, is genuinely relaxed — it enables filesystem and shell access from tests, which is fine on an isolated internal CI runner and not fine exposed anywhere else.
+
+None of that makes self-hosting the wrong call — it made sense for us, on that project, for those reasons. But "reduces regression time by 40%" and "reduces cost" are two different claims, and only one of them came from choosing Selenium Grid specifically. The time savings came from running four browsers in parallel instead of one. We could have gotten the same 40% from a cloud grid with four parallel sessions — we just would have paid a recurring bill for it instead of an upfront infrastructure cost, and given up control over exactly which Chrome build our tests ran against in exchange.
+
+The real question isn't "self-hosted or cloud" in the abstract. It's: do you have internal-app data residency requirements, sustained-enough test volume, and someone willing to own node uptime? If yes, self-host the web browsers and let a cloud provider handle whatever real-device mobile coverage you can't replicate yourself. If no, pay the cloud vendor and spend the engineering time on your actual product instead.

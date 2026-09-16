@@ -1,0 +1,73 @@
+---
+title: 'Building a VPN Client From Scratch: A Python ShadowSocks Desktop App'
+date: '2026-09-10'
+category: 'Project Breakdown'
+tags: ['python', 'networking', 'desktop-apps', 'open-source']
+excerpt: 'Why I built ProxyPal, a macOS ShadowSocks client in Python, and what it actually takes to manage a background proxy process without losing your mind.'
+featured: false
+---
+
+I have a recurring problem: some of the things I automate need to look like they're coming from a specific region. Scraping targets that geofence by country, APIs that behave differently depending on where the request originates, services that only make sense to test from outside my own network — the usual grab bag of reasons you end up needing a proxy instead of just your home IP.
+
+ShadowSocks solves the routing part of that problem well. What it doesn't solve is the part where you're editing JSON config files by hand every time you want to switch servers, or squinting at a terminal to figure out if the tunnel is actually up. So I built [ProxyPal](https://github.com/M-Hammad-Faisal/ProxyPal) — a macOS desktop client for managing ShadowSocks connections, in Python.
+
+This isn't a startup. It's a tool I built because the existing GUI clients were either abandoned, Windows-only, or so minimal they didn't do the one thing I actually needed: switch between multiple servers without re-typing config every time.
+
+## What ShadowSocks actually is
+
+If you haven't used it, ShadowSocks is easy to mischaracterize as "just a VPN." It isn't. It's a SOCKS5 proxy protocol with encryption bolted on, originally written in 2012 by a developer going by the handle "clowwindy" specifically to get around China's Great Firewall.
+
+The design goal shapes everything about how it works. A traditional VPN protocol (OpenVPN, WireGuard, IPsec) has a recognizable signature — specific handshakes, specific packet structures — that deep packet inspection (DPI) systems can fingerprint and block outright, even if they can't decrypt the contents. ShadowSocks takes a different approach: it wraps your traffic in a way that's designed to look like ordinary encrypted traffic rather than a known VPN protocol. Modern ShadowSocks implementations use AEAD ciphers — ChaCha20-Poly1305 or AES-256-GCM — which give you both encryption and integrity checking, and which don't have the kind of fixed byte-pattern fingerprint that gets a protocol added to a blocklist.
+
+Practically, that means: you run a `ss-local` process on your machine, which exposes a local SOCKS5 endpoint. You point your browser or system traffic at that local endpoint. `ss-local` encrypts everything and forwards it to a remote `ss-server`, which decrypts it and makes the actual outbound request on your behalf, then relays the response back the same way. To anything watching the wire between you and the ShadowSocks server, it just looks like an encrypted TCP stream to some IP — not obviously a VPN, not obviously anything in particular.
+
+It's lighter than a full VPN stack because there's no virtual network interface, no routing table surgery, no kernel-level tunnel — it's an application-layer proxy. That's also its limitation: it proxies what you point at it (browser, specific apps configured to use a SOCKS5 proxy), not your entire OS's network stack by default. For my use case — automation and scraping tools that already speak HTTP/SOCKS proxies — that's exactly the right level.
+
+## Why not just use a config file and the CLI
+
+The honest answer is I did, for about two months. `ss-local -c config.json` and a shell alias got me 90% of the way there. What broke down was everything *around* that one command:
+
+- **Multiple servers.** I needed to bounce between regions depending on the task — a US endpoint for one thing, a different region for another. That meant maintaining separate config files and remembering which alias pointed at which, or hand-editing the same file repeatedly.
+- **Connection status.** The CLI process either dies silently or hangs on a bad server, and there's no feedback beyond "did my browser traffic stop working." I wanted to *see* — connected, connecting, failed, with which server — without tailing logs.
+- **Credential handling.** Config files with server passwords sitting in plaintext in a git-adjacent directory is exactly the kind of thing I don't want to normalize, even for personal tools.
+
+None of that is hard to solve individually. But solving it with shell scripts and cron-ish babysitting is worse than just building a small app that does it properly once.
+
+## Choosing a GUI toolkit for a macOS Python app
+
+This is the part that's genuinely underdocumented. "Build a desktop app in Python" sounds simple until you try to pick a toolkit and realize the options trade off very differently depending on what you're building.
+
+For a full application window with a status view and server list, the realistic options in the Python ecosystem are **PyQt6** and **PySide6** — both are bindings to the Qt framework, and functionally very similar. PySide6 is the toolkit's official binding (from the Qt Company itself) and ships under LGPL, which is the more permissive license for a project you might want to keep flexible; PyQt6 is the older, GPL-licensed alternative from Riverbank Computing. For ProxyPal I went with PySide6 for the licensing story alone — I didn't want to think about GPL obligations for a personal tool I might open up further later.
+
+But a full Qt window is overkill for something that's meant to live in the background and get out of your way. ShadowSocks isn't an app you "open" — it's a connection you toggle. That's a menu-bar app pattern, not a window pattern. For that I used **rumps** ("Ridiculously Uncomplicated macOS Python Statusbar apps"), which wraps the Cocoa APIs needed to put an icon in the menu bar with a dropdown, without touching Objective-C or PyObjC directly. ProxyPal ended up being mostly a rumps app, with a PySide6 window reserved for the server-management screen — add/edit/delete servers, view connection history — that you open on demand.
+
+That split turned out to be the right shape for this kind of tool: ambient status in the menu bar, deeper interaction in an actual window when you need it.
+
+## The actual engineering problems
+
+Building the UI was the easy 20%. The rest was process and connection management, which is where most of the interesting bugs lived.
+
+**Managing the background proxy process.** `ss-local` runs as a subprocess launched from Python. That means ProxyPal owns its lifecycle: starting it with `subprocess.Popen`, capturing stdout/stderr for diagnostics, and — critically — making sure it actually dies when you switch servers or quit the app. Orphaned `ss-local` processes are an easy trap: if you don't track the PID carefully and clean it up on both normal exit and app crash, you end up with a zombie proxy still bound to a port, and the next connection attempt fails with a confusing "address already in use" error that has nothing to do with the actual problem.
+
+```python
+def start_connection(self, server_config):
+    self.process = subprocess.Popen(
+        ["ss-local", "-c", self._write_temp_config(server_config)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    self._monitor_thread = threading.Thread(target=self._watch_process, daemon=True)
+    self._monitor_thread.start()
+```
+
+That `_watch_process` thread is what makes the difference between "the icon says connected" and "the icon is actually true." It polls process liveness and, more usefully, does a lightweight check against the local SOCKS5 port to confirm something is actually listening and responding — not just that the OS hasn't reaped the PID yet. A process can be alive and still not have successfully established a tunnel (bad credentials, unreachable server, wrong cipher) — `ss-local` will happily sit there having failed to connect. If you only check "is the process running," you'll show a green "connected" indicator for a proxy that's silently not routing anything, which is worse than showing nothing at all.
+
+**Handling connection failures gracefully.** The failure modes are all different and need different handling: server unreachable (timeout, retry with backoff, then surface an error), wrong password/cipher (`ss-local` exits quickly, don't retry, just tell the user), or the port already in use (kill the stale process first, then retry once). Lumping these into one generic "connection failed" toast is technically honest but useless for actually fixing the problem, so ProxyPal differentiates them based on exit codes and stderr patterns from the subprocess.
+
+**Storing server configs and credentials.** This was the one place I refused to cut corners. Server configs — host, port, password, cipher — go into the macOS Keychain via the `keyring` library rather than a plaintext JSON file on disk. It's a few extra lines versus `json.dump`, but it means a server password isn't sitting readable in `~/Library/Application Support` for any other process (or careless `cat`) to pick up. For a tool literally about routing encrypted traffic, storing the credentials in plaintext would have been a bit of an own-goal.
+
+## What I'd change
+
+If I were rebuilding this today I'd probably drop the PySide6 window earlier and lean harder into rumps' native macOS dialogs for server editing — the extra dependency and the two different UI paradigms in one small app is more complexity than the feature set justifies. But it works, it's been running as my daily driver for months, and it solved the actual problem: switching regions without touching a config file or a terminal.
+
+If you're dealing with the same recurring need — geo-specific automation, testing from a specific region, or just wanting a proper client instead of CLI flags — the code's on [GitHub](https://github.com/M-Hammad-Faisal/ProxyPal). It's a personal tool, not a polished product, but the process-management and Keychain-storage pieces are the parts worth stealing if you're building something similar.
