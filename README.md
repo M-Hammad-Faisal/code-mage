@@ -75,7 +75,6 @@ code-mage/
 │   │   └── [slug]/page.tsx     # Post detail + view tracking
 │   ├── tutorial/
 │   │   └── [framework]/        # Framework tutorial pages
-│   ├── learn/                  # Lessons (hidden from nav)
 │   ├── contact/
 │   │   ├── page.tsx
 │   │   └── ContactClient.tsx   # Contact form → Supabase
@@ -94,7 +93,6 @@ code-mage/
 │   └── ViewCounter.tsx
 ├── content/
 │   ├── blog/                   # .mdx blog posts
-│   ├── lessons/                # .md lesson files (6 lessons)
 │   └── tutorials/              # .mdx tutorial chapters
 │       ├── prerequisites/      # 4 chapters
 │       ├── playwright/         # 8 chapters
