@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getAllFrameworks } from '@/lib/tutorials';
 import { BookOpen, ChevronRight, Clock, Users } from 'lucide-react';
 import { SITE, SITE_OG_IMAGE } from '@/lib/site.config';
+import { StartHereQuiz } from '@/components/StartHereQuiz';
 
 const tutorialDescription =
   'Hands-on test automation tutorials for Playwright, WebdriverIO, and Cypress. Real projects, real examples.';
@@ -60,6 +61,8 @@ export default function TutorialsPage() {
               and other test sites.
             </p>
           </div>
+
+          <StartHereQuiz />
 
           {/* Prerequisites — Start Here */}
           {prerequisites &&
