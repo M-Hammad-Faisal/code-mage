@@ -32,11 +32,33 @@ export async function createClient() {
   );
 }
 
-// Service client — bypasses RLS via secret key, use only in trusted API routes
+// Service client — bypasses RLS via secret key. Only use where a route
+// genuinely needs to act outside RLS (e.g. admin operations); every
+// public-facing route in this project uses createAnonClient() instead
+// so a leaked key or a routing bug can't grant more than RLS already
+// allows anonymous users to do.
 export function createServiceClient() {
   return createSupabaseClient<Database>(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SECRET_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
+}
+
+// Publishable-key client — respects RLS as the `anon` role. Use in
+// API routes where the table's RLS policy already allows the
+// operation (public INSERT on contact_messages/newsletter_subscribers,
+// public SELECT + the increment_view/increment_reaction RPCs on
+// blog_views/blog_reactions — see supabase/migrations/).
+export function createAnonClient() {
+  return createSupabaseClient<Database>(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
     {
       auth: {
         autoRefreshToken: false,

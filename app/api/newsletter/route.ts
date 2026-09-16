@@ -1,10 +1,10 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createAnonClient } from '@/lib/supabase/server';
 import { rateLimitGuard, isValidEmail } from '@/lib/api-guard';
 
 export async function POST(req: NextRequest) {
-  const limited = rateLimitGuard(req, 3, 10 * 60_000); // 3 req per 10 min per IP
+  const limited = await rateLimitGuard(req, 3, 10 * 60_000); // 3 req per 10 min per IP
   if (limited) return limited;
 
   try {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Please enter a valid email address.' }, { status: 400 });
     }
 
-    const supabase = createServiceClient();
+    const supabase = createAnonClient();
 
     const { error } = await supabase
       .from('newsletter_subscribers')

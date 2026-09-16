@@ -1,13 +1,13 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createAnonClient } from '@/lib/supabase/server';
 import { rateLimitGuard } from '@/lib/api-guard';
 
 // Must match the emoji set offered in components/ReactionBar.tsx
 const VALID_REACTIONS = new Set(['🔥', '💡', '👏', '🤯', '❤️']);
 
 async function readCounts(slug: string) {
-  const supabase = createServiceClient();
+  const supabase = createAnonClient();
   const [viewsRes, reactionsRes] = await Promise.all([
     supabase.from('blog_views').select('views').eq('slug', slug).maybeSingle(),
     supabase.from('blog_reactions').select('emoji, count').eq('slug', slug),
@@ -30,11 +30,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 
 // POST — increment view or reaction
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
-  const limited = rateLimitGuard(req, 30, 60_000); // 30 req/min per IP
+  const limited = await rateLimitGuard(req, 30, 60_000); // 30 req/min per IP
   if (limited) return limited;
 
   const { slug } = await params;
-  const supabase = createServiceClient();
+  const supabase = createAnonClient();
 
   let body: { reaction?: string } = {};
   try {

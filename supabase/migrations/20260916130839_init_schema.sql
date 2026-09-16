@@ -1,9 +1,13 @@
 -- ============================================================
--- Code Mage — Supabase Schema
--- Run this in your Supabase SQL Editor
+-- Code Mage — baseline schema
+--
+-- This reconstructs the schema that was previously applied by hand
+-- via the Supabase SQL Editor (see git history of
+-- lib/supabase/migrations.sql). Written idempotently so it can run
+-- safely against a database that already has this schema, which
+-- brings Supabase's tracked migration history in line with reality.
 -- ============================================================
 
--- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
 -- ── newsletter_subscribers ──────────────────────────────────
@@ -17,7 +21,7 @@ create table if not exists public.newsletter_subscribers (
 
 alter table public.newsletter_subscribers enable row level security;
 
--- Anyone can insert (subscribe), nobody can read (privacy)
+drop policy if exists "Anyone can subscribe" on public.newsletter_subscribers;
 create policy "Anyone can subscribe"
   on public.newsletter_subscribers for insert
   with check (true);
@@ -35,7 +39,7 @@ create table if not exists public.contact_messages (
 
 alter table public.contact_messages enable row level security;
 
--- Anyone can submit a message
+drop policy if exists "Anyone can submit contact" on public.contact_messages;
 create policy "Anyone can submit contact"
   on public.contact_messages for insert
   with check (true);
@@ -50,19 +54,15 @@ create table if not exists public.blog_views (
 
 alter table public.blog_views enable row level security;
 
--- Public read
+drop policy if exists "Anyone can view counts" on public.blog_views;
 create policy "Anyone can view counts"
   on public.blog_views for select
   using (true);
 
--- Public upsert (via function below — no direct write)
-create policy "Anyone can upsert views"
-  on public.blog_views for insert
-  with check (true);
-
-create policy "Anyone can update views"
-  on public.blog_views for update
-  using (true);
+-- NOTE: the original hand-applied schema also granted public INSERT/UPDATE
+-- on this table directly (bypassing the RPC below). That's removed in
+-- 20260916130853_harden_rls_and_search_path.sql — writes should only
+-- happen through increment_view(), not raw REST calls.
 
 -- ── blog_reactions ───────────────────────────────────────────
 create table if not exists public.blog_reactions (
@@ -76,19 +76,19 @@ create table if not exists public.blog_reactions (
 
 alter table public.blog_reactions enable row level security;
 
+drop policy if exists "Anyone can view reactions" on public.blog_reactions;
 create policy "Anyone can view reactions"
   on public.blog_reactions for select
   using (true);
 
-create policy "Anyone can upsert reactions"
-  on public.blog_reactions for insert
-  with check (true);
+-- Same note as blog_views above — direct public INSERT/UPDATE existed
+-- historically and is removed by the hardening migration.
 
-create policy "Anyone can update reactions"
-  on public.blog_reactions for update
-  using (true);
-
--- ── Increment view helper function ──────────────────────────
+-- ── Increment helper functions ──────────────────────────────
+-- SECURITY DEFINER so they can upsert blog_views/blog_reactions on
+-- behalf of anonymous callers without those tables needing a public
+-- write policy (see 20260916130853_harden_rls_and_search_path.sql,
+-- which is what actually restricts writes to these functions only).
 create or replace function public.increment_view(post_slug text)
 returns void
 language plpgsql
@@ -104,7 +104,6 @@ begin
 end;
 $$;
 
--- ── Increment reaction helper ────────────────────────────────
 create or replace function public.increment_reaction(post_slug text, reaction_emoji text)
 returns void
 language plpgsql

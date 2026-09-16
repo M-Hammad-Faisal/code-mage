@@ -1,74 +1,55 @@
 /**
- * Simple in-memory rate limiter for Next.js API routes.
- * Works on a per-Lambda instance basis — adequate for a personal site.
- * For persistent rate limiting across instances, swap the Map for Upstash Redis.
+ * Rate limiter for Next.js API routes, backed by Postgres so the
+ * counter is shared across every serverless instance — a purely
+ * in-memory counter (a plain Map) only holds state per Lambda
+ * instance, so under real traffic a client can land on multiple
+ * cold-started instances and see a materially higher effective limit
+ * than configured. See supabase/migrations/20260916140000_shared_rate_limiter.sql
+ * for the atomic sliding-window implementation this calls into.
  */
 
-interface RateLimitEntry {
-  windowIndex: number;
-  currCount: number;
-  prevCount: number;
-  lastSeen: number;
-}
-
-const store = new Map<string, RateLimitEntry>();
-
-// Clean up entries untouched for 10 minutes to prevent memory leaks
-const STALE_MS = 10 * 60 * 1000;
-if (typeof setInterval !== 'undefined') {
-  setInterval(
-    () => {
-      const now = Date.now();
-      for (const [key, entry] of store) {
-        if (now - entry.lastSeen > STALE_MS) store.delete(key);
-      }
-    },
-    5 * 60 * 1000
-  );
-}
+import { createAnonClient } from '@/lib/supabase/server';
 
 /**
- * Check if an IP has exceeded the rate limit using a sliding-window counter
- * (weights the previous window's count by how much of it still overlaps the
- * current window), so a client can't double their effective throughput by
- * bursting right at a fixed-window boundary.
- * @param ip      - The client IP address
- * @param limit   - Maximum allowed requests in the window
+ * Check if a key (typically `${ip}:${route}`) has exceeded the rate
+ * limit using a sliding-window counter (weights the previous window's
+ * count by how much of it still overlaps the current window), so a
+ * client can't double their effective throughput by bursting right at
+ * a fixed-window boundary. The check-and-increment happens atomically
+ * in a single Postgres statement, so concurrent requests from the same
+ * client can't race past the limit.
+ *
+ * Fails closed: if the database call itself fails (network blip,
+ * outage), the request is rejected rather than silently let through —
+ * a broken rate limiter should not become "no rate limiting."
+ *
+ * @param key      - Identifies the caller, e.g. `${ip}:${route}`
+ * @param limit    - Maximum allowed requests in the window
  * @param windowMs - Window duration in milliseconds
- * @returns `{ allowed: boolean, remaining: number, resetAt: number }`
  */
-export function checkRateLimit(
-  ip: string,
+export async function checkRateLimit(
+  key: string,
   limit: number,
   windowMs: number
-): { allowed: boolean; remaining: number; resetAt: number } {
-  const now = Date.now();
-  const windowIndex = Math.floor(now / windowMs);
-  const key = `${ip}:${windowMs}`;
+): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
+  const supabase = createAnonClient();
 
-  const entry = store.get(key);
-  let currCount: number;
-  let prevCount: number;
+  const { data, error } = await supabase.rpc('check_rate_limit', {
+    p_key: key,
+    p_window_ms: windowMs,
+    p_limit: limit,
+  });
 
-  if (!entry || entry.windowIndex !== windowIndex) {
-    prevCount = entry?.windowIndex === windowIndex - 1 ? entry.currCount : 0;
-    currCount = 0;
-  } else {
-    prevCount = entry.prevCount;
-    currCount = entry.currCount;
+  if (error || !data || data.length === 0) {
+    console.error('[rate-limit] check_rate_limit failed, failing closed:', error);
+    return { allowed: false, remaining: 0, resetAt: Date.now() + windowMs };
   }
 
-  currCount += 1;
-  store.set(key, { windowIndex, currCount, prevCount, lastSeen: now });
-
-  const elapsedInWindow = now - windowIndex * windowMs;
-  const prevWeight = Math.max(0, (windowMs - elapsedInWindow) / windowMs);
-  const estimated = currCount + prevCount * prevWeight;
-
+  const row = data[0];
   return {
-    allowed: estimated <= limit,
-    remaining: Math.max(0, Math.floor(limit - estimated)),
-    resetAt: (windowIndex + 1) * windowMs,
+    allowed: row.allowed,
+    remaining: row.remaining,
+    resetAt: Number(row.reset_at),
   };
 }
 
