@@ -9,7 +9,7 @@
   "version": "2.0.0",
   "private": true,
   "license": "MIT",
-  "homepage": "https://code-mage.vercel.app",
+  "homepage": "https://code-mage.dev",
   "repository": {
     "type": "git",
     "url": "https://github.com/M-Hammad-Faisal/code-mage.git"
@@ -40,8 +40,8 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.9.0",
-    "@supabase/supabase-js": "^2.99.3",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "framer-motion": "^12.38.0",

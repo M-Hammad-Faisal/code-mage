@@ -1,6 +1,7 @@
 import fs from 'fs';
 import matter from 'gray-matter';
 import path from 'path';
+import { SAFE_SLUG, estimateReadTime } from '@/lib/content-utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,13 +47,6 @@ export function getBlogSlugs(): string[] {
     .filter((f) => f.endsWith('.mdx') || f.endsWith('.md'))
     .map((f) => f.replace(/\.(mdx|md)$/, ''));
 }
-
-function estimateReadTime(content: string): number {
-  const words = content.trim().split(/\s+/).length;
-  return Math.max(1, Math.round(words / 200));
-}
-
-const SAFE_SLUG = /^[a-z0-9-]+$/;
 
 export function getBlogPost(slug: string): BlogPost | null {
   if (!SAFE_SLUG.test(slug)) return null;

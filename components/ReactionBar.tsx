@@ -23,13 +23,13 @@ export function ReactionBar({ slug }: { slug: string }) {
       .catch(() => null);
 
     const saved = localStorage.getItem(`reactions-${slug}`);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- slug-dependent localStorage init requires effect
     if (saved) setReacted(new Set(JSON.parse(saved)));
   }, [slug]);
 
   const react = async (emoji: string) => {
     if (reacted.has(emoji)) return;
 
+    const prevReacted = reacted;
     const next = new Set(reacted);
     next.add(emoji);
     setReacted(next);
@@ -41,11 +41,23 @@ export function ReactionBar({ slug }: { slug: string }) {
       return [...prev, { emoji, count: 1 }];
     });
 
-    await fetch(`/api/views/${slug}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reaction: emoji }),
-    });
+    try {
+      const res = await fetch(`/api/views/${slug}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reaction: emoji }),
+      });
+      if (!res.ok) throw new Error('reaction request failed');
+    } catch {
+      // Roll back the optimistic update so local state matches the server.
+      setReacted(prevReacted);
+      localStorage.setItem(`reactions-${slug}`, JSON.stringify([...prevReacted]));
+      setReactions((prev) =>
+        prev
+          .map((r) => (r.emoji === emoji ? { ...r, count: Math.max(0, r.count - 1) } : r))
+          .filter((r) => r.count > 0)
+      );
+    }
   };
 
   const getCount = (emoji: string) => reactions.find((r) => r.emoji === emoji)?.count ?? 0;

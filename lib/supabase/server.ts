@@ -4,6 +4,8 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { Database } from './types';
 
+type NextCookieOptions = Parameters<Awaited<ReturnType<typeof cookies>>['set']>[2];
+
 // Standard server client — respects RLS, use for user-scoped operations
 export async function createClient() {
   const cookieStore = await cookies();
@@ -19,7 +21,7 @@ export async function createClient() {
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options as any);
+              cookieStore.set(name, value, options as NextCookieOptions);
             });
           } catch {
             // Called from a Server Component — cookie mutation safe to ignore
