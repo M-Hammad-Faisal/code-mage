@@ -12,7 +12,7 @@ WebdriverIO (WDIO) is a browser and mobile automation framework for Node.js. It'
 
 At its core, WDIO is a JavaScript/TypeScript test runner that:
 
-- Talks to browsers via WebDriver protocol (or Chrome DevTools Protocol for Chrome/Edge)
+- Talks to browsers via the WebDriver BiDi protocol by default since v9 (falls back to classic WebDriver, or CDP for Chrome/Edge, when needed)
 - Provides a clean, chainable API for browser interaction
 - Has a built-in test runner with parallelism, retries, and reporters
 - Supports web, native iOS, and native Android testing through Appium
@@ -27,7 +27,7 @@ All three are legitimate choices. Here's the honest comparison:
 | Feature | WebdriverIO | Playwright | Cypress |
 |---|---|---|---|
 | Language | JS/TS only | JS/TS, Python, Java, C# | JS/TS only |
-| Protocol | WebDriver + CDP | CDP (proprietary) | In-browser |
+| Protocol | WebDriver BiDi (v9+), classic WebDriver, or CDP | CDP (proprietary) | In-browser |
 | Mobile testing | ✅ (Appium) | ❌ | ❌ |
 | Multi-tab | ✅ | ✅ | ⚠️ Limited |
 | Cross-origin | ✅ | ✅ (via `cy.origin()`) | ⚠️ Limited |
@@ -62,7 +62,7 @@ WDIO Test Runner  ← orchestrates workers, retries, reports
       ↓
 WebdriverIO API   ← browser.$(), browser.url(), etc.
       ↓
-WebDriver Protocol / CDP
+WebDriver BiDi (default) / classic WebDriver / CDP
       ↓
 Browser Driver    ← chromedriver, geckodriver, safaridriver
       ↓
@@ -70,6 +70,23 @@ Browser           ← Chrome, Firefox, Safari, Edge
 ```
 
 For mobile testing, Appium sits between WDIO and the mobile device, translating WebDriver commands to native gestures.
+
+### Why the protocol matters, not just which one is used
+
+Since v9, WDIO automatically negotiates the WebDriver BiDi protocol for every new session instead of classic WebDriver. The difference isn't cosmetic: classic WebDriver is request-response only — your test asks, the browser answers — while BiDi is WebSocket-based and lets the browser push events to your session as they happen. That's what makes several newer WDIO features possible at all, including cross-browser request mocking (not just Chromium), fake timers for testing time-dependent code, and automatic dialog suppression instead of a hanging test waiting for you to manually accept a popup.
+
+If you need to force classic WebDriver — an older Selenium Grid, a corporate proxy, a driver that hasn't caught up — there's an explicit opt-out capability:
+
+```typescript
+capabilities: [
+  {
+    browserName: 'chrome',
+    'wdio:enforceWebDriverClassic': true,
+  },
+],
+```
+
+You won't need this for anything in this tutorial, but it's worth knowing it exists if you're upgrading an older test suite.
 
 ## Synchronous-Style Code
 

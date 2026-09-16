@@ -305,6 +305,41 @@ afterEach(async function() {
 })
 ```
 
+## Shadow DOM (v9+)
+
+If a page you're testing uses web components, elements can live inside a shadow root. In older WDIO versions you needed a dedicated method to reach inside one:
+
+```typescript
+// pre-v9 pattern — still works, but no longer required
+const shadowHost = await $('my-custom-element')
+const shadowRoot = await shadowHost.shadow$('button')
+await shadowRoot.click()
+```
+
+Since v9, standard selectors — including accessibility-based ones — automatically pierce open and closed shadow roots, so this works without any shadow-specific syntax:
+
+```typescript
+await $('button=Submit').click()
+```
+
+Your selector doesn't need to know or care whether the element happens to sit inside a web component's shadow tree.
+
+### A note on auto-wait
+
+Since v9, WDIO also waits for an element to be interactable — present, visible, and enabled — before running a command like `.click()`, without you calling `waitForDisplayed()`/`waitForEnabled()` first. You'll still see `waitForDisplayed()` used deliberately throughout this tutorial — for example waiting on a loading spinner to disappear, or an error message to appear after a failed submit — because those are genuine "wait for a state change" checks, not "wait before I'm allowed to interact" checks. The auto-wait only covers the latter.
+
+### Reading element internals: getElement()
+
+One more v9 change worth knowing if you're reading older WDIO code or migrating an inherited suite: reading a property directly off an element (like `.selector`) used to return the value synchronously. In v9 it returns a `Promise` instead, and you need `getElement()` to resolve it first:
+
+```typescript
+// v9 — resolve the element before reading its properties
+const elem = await $('[data-test="add-to-cart-sauce-labs-backpack"]').getElement()
+console.log(elem.selector) // '[data-test="add-to-cart-sauce-labs-backpack"]'
+```
+
+You won't hit this often — calling methods like `.click()` or `.getText()` works exactly the same as before — but it's the kind of thing that only surfaces as a confusing `Promise { <pending> }` value in a debug log, not a clear error, so it's worth recognizing on sight.
+
 ## Executing JavaScript
 
 `browser.execute()` runs synchronously in the browser context. Use it when WDIO has no native command for what you need:

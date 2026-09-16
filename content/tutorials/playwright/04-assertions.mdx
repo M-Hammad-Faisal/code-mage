@@ -232,6 +232,32 @@ test('order confirmation page shows correct content', async ({ page }) => {
 });
 ```
 
+## ARIA Snapshots — One Assertion Instead of Many
+
+Confirming that a whole section of a page rendered correctly usually means a pile of separate assertions, one per element. `toMatchAriaSnapshot()` checks a locator's entire accessible structure — roles, names, and hierarchy — in a single assertion:
+
+```typescript
+test('inventory item card has the right structure', async ({ page }) => {
+  const card = page.locator('[data-test="inventory-item"]').first();
+
+  await expect(card).toMatchAriaSnapshot(`
+    - img
+    - heading "Sauce Labs Backpack"
+    - text "$29.99"
+    - button "Add to cart"
+  `);
+});
+```
+
+You don't hand-write the YAML — generate it from the real page and use it as your baseline:
+
+```typescript
+const snapshot = await card.ariaSnapshot();
+console.log(snapshot); // paste this into your toMatchAriaSnapshot() call
+```
+
+Use snapshots for broad structural regression coverage — catching that a section's shape changed at all, even in ways you didn't specifically write an assertion for. Keep targeted assertions like `toBeVisible()` or `toHaveText()` for the specific behavior a test actually exists to verify; a failing snapshot tells you *something* in the tree changed, while a failing `toBeVisible()` tells you exactly what didn't show up.
+
 ## Timeouts
 
 Every web-first assertion retries until a timeout. The default is 5 seconds. You can override it:

@@ -64,6 +64,8 @@ await button.click(); // auto-waits until button is clickable
 
 **Codegen** — Run `npx playwright codegen https://saucedemo.com` and Playwright records your browser interactions into test code. Useful for bootstrapping, not for production tests — but you'll use it.
 
+**Playwright MCP** — Playwright also ships as a Model Context Protocol server, letting an AI coding agent drive a real browser directly through structured accessibility data instead of screenshots. You won't need it to follow this tutorial, but it's worth knowing about if you're already working with an AI agent day to day — `npx @playwright/mcp@latest` is the whole install.
+
 ## What We're Building in This Tutorial
 
 Every chapter in this tutorial uses **SauceDemo** (`https://www.saucedemo.com`) — a purpose-built e-commerce test site with intentional bugs, different user types, and real user flows.

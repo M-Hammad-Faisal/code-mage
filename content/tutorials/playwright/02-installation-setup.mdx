@@ -208,6 +208,9 @@ npx playwright test tests/auth/login.spec.ts
 # Run in headed mode (see the browser)
 npx playwright test --headed
 
+# Open UI Mode — the recommended way to author and debug tests
+npx playwright test --ui
+
 # Run a specific test by name
 npx playwright test -g "successful login"
 
@@ -220,6 +223,18 @@ npx playwright codegen https://www.saucedemo.com
 # Open last trace
 npx playwright show-trace trace.zip
 ```
+
+### UI Mode: your default way to run and debug tests
+
+`npx playwright test --ui` opens a full test-running interface with watch mode, a step-by-step timeline, and a locator picker built in. Toggle the watch icon next to a test and it reruns automatically every time you save the file — no more alt-tabbing back to the terminal. The timeline lets you hover any action to see the exact DOM snapshot at that moment, which is faster than scrolling through terminal output or slowing a headed run down with `--slow-mo` to catch a moment visually.
+
+If you're working inside Docker or a remote dev environment and still want UI Mode, bind it to all interfaces and forward the port:
+
+```bash
+npx playwright test --ui-host=0.0.0.0
+```
+
+`--headed` and `--debug` still have their place for quick, one-off checks, but for day-to-day authoring and debugging, reach for UI Mode first.
 
 ## What Just Happened
 

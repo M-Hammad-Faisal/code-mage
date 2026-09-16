@@ -88,6 +88,17 @@ test.describe.configure({ mode: 'parallel' });
 
 Only do this if the tests are genuinely independent.
 
+If a small number of tests genuinely can't be independent — they mutate one shared seed account, or hit a rate-limited third-party sandbox API — don't reach for a homemade lockfile to keep them from running concurrently. Playwright has named locks built in:
+
+```typescript
+test('update global site settings', { lock: 'site-settings' }, async ({ page }) => {
+  // any other test tagged with the 'site-settings' lock waits its turn,
+  // across every worker and every file
+});
+```
+
+The runner acquires the lock before the test starts and releases it when the test finishes, even if it crashes — which is exactly the failure mode a hand-rolled file-based lock usually gets wrong. Use this sparingly: locks serialize whatever carries them, which works against the whole point of running tests in parallel. It's for the handful of tests that truly can't tolerate concurrent access, not a general fix for shared state — the better fix for most shared-state flakiness is giving each test its own isolated data instead of locking access to shared data.
+
 ### 6. Environment-Specific Failures
 
 Tests pass locally, fail in CI. Common reasons:
