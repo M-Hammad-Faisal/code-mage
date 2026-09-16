@@ -2,11 +2,26 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getAllFrameworks } from '@/lib/tutorials';
 import { BookOpen, ChevronRight, Clock, Users } from 'lucide-react';
+import { SITE } from '@/lib/site.config';
+
+const tutorialDescription =
+  'Hands-on test automation tutorials for Playwright, WebdriverIO, and Cypress. Real projects, real examples.';
 
 export const metadata: Metadata = {
   title: 'Tutorials — Code Mage',
-  description:
-    'Hands-on test automation tutorials for Playwright, WebdriverIO, and Cypress. Real projects, real examples.',
+  description: tutorialDescription,
+  alternates: { canonical: `${SITE.url}/tutorial` },
+  openGraph: {
+    url: `${SITE.url}/tutorial`,
+    title: 'Tutorials — Code Mage',
+    description: tutorialDescription,
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Tutorials — Code Mage',
+    description: tutorialDescription,
+  },
 };
 
 export default function TutorialsPage() {

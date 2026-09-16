@@ -9,6 +9,7 @@ import { SITE } from '@/lib/site.config';
 import { BackToTop } from '@/components/BackToTop';
 import { ReadingProgress } from '@/components/ReadingProgress';
 import { NewsletterCTA } from '@/components/NewsletterCTA';
+import { breadcrumbJsonLd } from '@/lib/json-ld';
 
 interface Props {
   params: Promise<{ framework: string; chapter: string }>;
@@ -31,14 +32,19 @@ export const dynamicParams = false;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { framework, chapter } = await params;
   const ch = getChapter(framework, chapter);
-  if (!ch) return { title: 'Not Found' };
+  if (!ch) return { title: 'Not Found', robots: { index: false, follow: false } };
   const fw = FRAMEWORKS[framework];
   const url = `${SITE.url}/tutorial/${framework}/${chapter}`;
   return {
     title: `${ch.title} — ${fw?.title} Tutorial — Code Mage`,
     description: ch.description,
     alternates: { canonical: url },
-    openGraph: { url, title: ch.title, description: ch.description },
+    openGraph: { url, title: ch.title, description: ch.description, type: 'article' },
+    twitter: {
+      card: 'summary_large_image',
+      title: ch.title,
+      description: ch.description,
+    },
   };
 }
 
@@ -84,9 +90,18 @@ export default async function ChapterPage({ params }: Props) {
   const prev = chapters[idx - 1] ?? null;
   const next = chapters[idx + 1] ?? null;
   const isLastPrerequisites = framework === 'prerequisites' && !next;
+  const breadcrumb = breadcrumbJsonLd([
+    { name: 'Tutorials', url: `${SITE.url}/tutorial` },
+    { name: fw.title, url: `${SITE.url}/tutorial/${framework}` },
+    { name: ch.title, url: `${SITE.url}/tutorial/${framework}/${chapter}` },
+  ]);
 
   return (
     <div className="min-h-screen py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+      />
       <ReadingProgress />
       <div className="container-max">
         <div className="max-w-3xl mx-auto">

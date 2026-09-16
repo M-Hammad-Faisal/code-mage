@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import { Calendar, Clock, ArrowLeft, Tag } from 'lucide-react';
 import Link from 'next/link';
-import { getAllBlogPosts, getBlogPost } from '@/lib/mdx';
+import { getAllBlogPosts, getBlogPost, getRelatedPosts } from '@/lib/mdx';
+import { PostCard } from '@/components/PostCard';
 import { getMDXComponents } from '@/lib/mdx-components';
 import { SITE, CATEGORY_COLORS } from '@/lib/site.config';
 import { extractHeadings } from '@/lib/extract-headings';
@@ -16,6 +17,7 @@ import { ReadingProgress } from '@/components/ReadingProgress';
 import { NewsletterCTA } from '@/components/NewsletterCTA';
 import { ShareButtons } from '@/components/ShareButtons';
 import { TableOfContents } from '@/components/TableOfContents';
+import { blogPostingJsonLd } from '@/lib/json-ld';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -32,7 +34,7 @@ export const dynamicParams = false;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = getBlogPost(slug);
-  if (!post) return { title: 'Post Not Found' };
+  if (!post) return { title: 'Post Not Found', robots: { index: false, follow: false } };
   const url = `${SITE.url}/blog/${slug}`;
   return {
     title: post.title,
@@ -69,9 +71,14 @@ export default async function BlogPostPage({ params }: Props) {
   const postUrl = `${SITE.url}/blog/${slug}`;
   const headings = extractHeadings(post.content);
   const showToc = headings.length > 0;
+  const relatedPosts = getRelatedPosts(slug);
 
   return (
     <div className="min-h-screen py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingJsonLd(post)) }}
+      />
       <ReadingProgress />
       <div className="container-max">
         {/* Back */}
@@ -184,6 +191,20 @@ export default async function BlogPostPage({ params }: Props) {
                 </div>
               </div>
             </div>
+
+            {/* Related posts */}
+            {relatedPosts.length > 0 && (
+              <div className="mt-10 pt-8 border-t border-gray-200 dark:border-gray-800">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                  Related posts
+                </p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {relatedPosts.map((related) => (
+                    <PostCard key={related.slug} post={related} />
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Prev / Next */}
             {(prev || next) && (

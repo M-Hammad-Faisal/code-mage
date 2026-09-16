@@ -1,8 +1,28 @@
 import type { MDXComponents } from 'mdx/types';
 import type { ComponentPropsWithoutRef } from 'react';
+import Image from 'next/image';
 import { DownloadCard } from '@/components/DownloadCard';
 import { CodeBlock } from '@/components/CodeBlock';
 import { slugify } from '@/lib/extract-headings';
+
+function MDXImage({ src, alt }: ComponentPropsWithoutRef<'img'>) {
+  if (!src || typeof src !== 'string') return null;
+  // Content images come from arbitrary MDX authors with unknown intrinsic
+  // dimensions, so `fill` + `object-contain` in a fixed-ratio box avoids
+  // guessing a width/height that would stretch/distort a differently-shaped
+  // image.
+  return (
+    <span className="relative block w-full aspect-video my-6 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+      <Image
+        src={src}
+        alt={alt ?? ''}
+        fill
+        className="object-contain"
+        sizes="(max-width: 768px) 100vw, 768px"
+      />
+    </span>
+  );
+}
 
 function HeadingWithId({
   level,
@@ -42,6 +62,7 @@ export function getMDXComponents(overrides?: MDXComponents): MDXComponents {
     pre: CodeBlock,
     h2: (props) => <HeadingWithId level={2} {...props} />,
     h3: (props) => <HeadingWithId level={3} {...props} />,
+    img: MDXImage,
 
     // ── Spread any caller overrides last so they win ───────────────────────
     ...overrides,
