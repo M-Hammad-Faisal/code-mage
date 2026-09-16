@@ -1,14 +1,14 @@
 import { ArrowRight, BookOpen, Code2, Youtube, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { getAllCategories, getAllPosts } from '@/lib/mdx';
+import { getAllBlogCategories, getAllBlogPosts } from '@/lib/mdx';
 import { SITE, CATEGORY_COLORS } from '@/lib/site.config';
 import { NewsletterForm } from '@/components/NewsletterForm';
 import { PostCard } from '@/components/PostCard';
 import { HeroAnimation } from '@/components/HeroAnimation';
 
 export default function HomePage() {
-  const recentPosts = getAllPosts().slice(0, 3);
-  const categories = getAllCategories();
+  const recentPosts = getAllBlogPosts().slice(0, 3);
+  const categories = getAllBlogCategories();
 
   return (
     <div className="min-h-screen">
@@ -69,7 +69,7 @@ export default function HomePage() {
             {/* Stats */}
             <div className="flex flex-wrap gap-8">
               {[
-                { label: 'Blog Posts', value: `${getAllPosts().length}+` },
+                { label: 'Blog Posts', value: `${getAllBlogPosts().length}+` },
                 { label: 'Tutorial Chapters', value: '28+' },
                 { label: 'Frameworks Covered', value: '3' },
               ].map((s) => (

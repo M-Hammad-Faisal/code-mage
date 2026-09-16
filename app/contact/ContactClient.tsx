@@ -72,7 +72,7 @@ export function ContactClient() {
       const data = await res.json();
       if (res.ok) {
         setStatus('success');
-        setMsg(data.message);
+        setMsg(data.message ?? "Message sent! I'll get back to you soon 🚀");
         setForm({ name: '', email: '', subject: '', message: '', company: '' });
       } else {
         setStatus('error');
@@ -209,10 +209,14 @@ export function ContactClient() {
                       },
                     ].map((f) => (
                       <div key={f.name}>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                        <label
+                          htmlFor={f.name}
+                          className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5"
+                        >
                           {f.label}
                         </label>
                         <input
+                          id={f.name}
                           type={f.type}
                           name={f.name}
                           required={f.required}
@@ -226,10 +230,14 @@ export function ContactClient() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                    <label
+                      htmlFor="subject"
+                      className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5"
+                    >
                       Subject
                     </label>
                     <input
+                      id="subject"
                       type="text"
                       name="subject"
                       value={form.subject}
@@ -240,10 +248,14 @@ export function ContactClient() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                    <label
+                      htmlFor="message"
+                      className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5"
+                    >
                       Message *
                     </label>
                     <textarea
+                      id="message"
                       name="message"
                       value={form.message}
                       onChange={handleChange}

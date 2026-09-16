@@ -13,11 +13,8 @@ export function TableOfContents({ headings }: Props) {
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id);
-          }
-        }
+        const intersecting = entries.find((entry) => entry.isIntersecting);
+        if (intersecting) setActiveId(intersecting.target.id);
       },
       { rootMargin: '0% 0% -80% 0%', threshold: 0 }
     );
