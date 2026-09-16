@@ -5,19 +5,22 @@
  */
 
 interface RateLimitEntry {
-  count: number;
-  resetAt: number;
+  windowIndex: number;
+  currCount: number;
+  prevCount: number;
+  lastSeen: number;
 }
 
 const store = new Map<string, RateLimitEntry>();
 
-// Clean up expired entries every 5 minutes to prevent memory leaks
+// Clean up entries untouched for 10 minutes to prevent memory leaks
+const STALE_MS = 10 * 60 * 1000;
 if (typeof setInterval !== 'undefined') {
   setInterval(
     () => {
       const now = Date.now();
       for (const [key, entry] of store) {
-        if (entry.resetAt < now) store.delete(key);
+        if (now - entry.lastSeen > STALE_MS) store.delete(key);
       }
     },
     5 * 60 * 1000
@@ -25,7 +28,10 @@ if (typeof setInterval !== 'undefined') {
 }
 
 /**
- * Check if an IP has exceeded the rate limit.
+ * Check if an IP has exceeded the rate limit using a sliding-window counter
+ * (weights the previous window's count by how much of it still overlaps the
+ * current window), so a client can't double their effective throughput by
+ * bursting right at a fixed-window boundary.
  * @param ip      - The client IP address
  * @param limit   - Maximum allowed requests in the window
  * @param windowMs - Window duration in milliseconds
@@ -37,23 +43,52 @@ export function checkRateLimit(
   windowMs: number
 ): { allowed: boolean; remaining: number; resetAt: number } {
   const now = Date.now();
-  const key = `${ip}:${Math.floor(now / windowMs)}`;
+  const windowIndex = Math.floor(now / windowMs);
+  const key = `${ip}:${windowMs}`;
 
-  const entry = store.get(key) ?? { count: 0, resetAt: now + windowMs };
-  entry.count += 1;
-  store.set(key, entry);
+  const entry = store.get(key);
+  let currCount: number;
+  let prevCount: number;
 
-  const remaining = Math.max(0, limit - entry.count);
+  if (!entry || entry.windowIndex !== windowIndex) {
+    prevCount = entry?.windowIndex === windowIndex - 1 ? entry.currCount : 0;
+    currCount = 0;
+  } else {
+    prevCount = entry.prevCount;
+    currCount = entry.currCount;
+  }
+
+  currCount += 1;
+  store.set(key, { windowIndex, currCount, prevCount, lastSeen: now });
+
+  const elapsedInWindow = now - windowIndex * windowMs;
+  const prevWeight = Math.max(0, (windowMs - elapsedInWindow) / windowMs);
+  const estimated = currCount + prevCount * prevWeight;
+
   return {
-    allowed: entry.count <= limit,
-    remaining,
-    resetAt: entry.resetAt,
+    allowed: estimated <= limit,
+    remaining: Math.max(0, Math.floor(limit - estimated)),
+    resetAt: (windowIndex + 1) * windowMs,
   };
 }
 
-/** Extract a best-effort client IP from a Next.js request */
+/**
+ * Extract a best-effort client IP from a Next.js request.
+ * Prefers headers Vercel's edge sets itself (not attacker-controllable) over
+ * raw `x-forwarded-for`, which a client can freely set and which Vercel
+ * appends the true client IP to rather than replacing.
+ */
 export function getClientIp(req: Request): string {
+  const vercelIp = req.headers.get('x-vercel-forwarded-for') ?? req.headers.get('x-real-ip');
+  if (vercelIp) return vercelIp.split(',')[0].trim();
+
+  // Fallback for non-Vercel environments: the proxy nearest the app appends
+  // the real client IP last, so trust the last entry, not the first.
   const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return req.headers.get('x-real-ip') ?? 'unknown';
+  if (forwarded) {
+    const parts = forwarded.split(',').map((p) => p.trim());
+    return parts[parts.length - 1] || 'unknown';
+  }
+
+  return 'unknown';
 }

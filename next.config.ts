@@ -37,9 +37,6 @@ const nextConfig: NextConfig = {
       { hostname: 'm-hammad-faisal.github.io', protocol: 'https' },
     ],
   },
-  experimental: {
-    mdxRs: false,
-  },
   async headers() {
     return [
       {

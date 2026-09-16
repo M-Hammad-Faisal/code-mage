@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import { Calendar, Clock, ArrowLeft, Tag } from 'lucide-react';
 import Link from 'next/link';
-import { getAllPosts, getPostBySlug } from '@/lib/mdx';
+import { getAllBlogPosts, getBlogPost } from '@/lib/mdx';
 import { getMDXComponents } from '@/lib/mdx-components';
 import { SITE, CATEGORY_COLORS } from '@/lib/site.config';
 import { extractHeadings } from '@/lib/extract-headings';
@@ -22,16 +22,16 @@ interface Props {
 }
 
 export async function generateStaticParams() {
-  return getAllPosts().map((p) => ({ slug: p.slug }));
+  return getAllBlogPosts().map((p) => ({ slug: p.slug }));
 }
 
 // Only slugs returned by generateStaticParams are servable — an unknown slug
-// 404s instead of hitting getPostBySlug with attacker-controlled input.
+// 404s instead of hitting getBlogPost with attacker-controlled input.
 export const dynamicParams = false;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = getBlogPost(slug);
   if (!post) return { title: 'Post Not Found' };
   const url = `${SITE.url}/blog/${slug}`;
   return {
@@ -57,11 +57,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = getBlogPost(slug);
   if (!post) notFound();
 
   const catColor = CATEGORY_COLORS[post.category] ?? CATEGORY_COLORS['Uncategorized'];
-  const allPosts = getAllPosts();
+  const allPosts = getAllBlogPosts();
   const idx = allPosts.findIndex((p) => p.slug === slug);
   const prev = allPosts[idx + 1] ?? null;
   const next = allPosts[idx - 1] ?? null;

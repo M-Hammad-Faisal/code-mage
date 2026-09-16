@@ -28,6 +28,11 @@ export function BackToTop({ prev, next }: Props) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const scrollToTop = () => {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+  };
+
   if (!visible) return null;
 
   return (
@@ -49,7 +54,7 @@ export function BackToTop({ prev, next }: Props) {
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
         {/* Back to top arrow sits above Next */}
         <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onClick={scrollToTop}
           className={`${btnBase} ${btnTop}`}
           aria-label="Back to top"
           title="Back to top"

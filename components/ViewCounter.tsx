@@ -9,8 +9,8 @@ export function ViewCounter({ slug }: { slug: string }) {
   useEffect(() => {
     // Fire view increment + fetch updated count
     fetch(`/api/views/${slug}`, { method: 'POST' })
-      .then((r) => r.json())
-      .then((d) => setViews(d.views ?? null))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setViews(d?.views ?? null))
       .catch(() => null);
   }, [slug]);
 

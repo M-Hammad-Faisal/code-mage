@@ -116,8 +116,8 @@ export function Footer() {
             © {new Date().getFullYear()} {SITE.author.name}. All rights reserved.
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
-            Made with <Heart aria-hidden="true" className="w-4 h-4 text-red-500 fill-red-500" /> in
-            Lahore, Pakistan
+            Made with <Heart aria-hidden="true" className="w-4 h-4 text-red-500 fill-red-500" /> in{' '}
+            {SITE.author.location}
           </p>
         </div>
       </div>

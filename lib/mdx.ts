@@ -1,6 +1,7 @@
 import fs from 'fs';
 import matter from 'gray-matter';
 import path from 'path';
+import { SAFE_SLUG, estimateReadTime } from '@/lib/content-utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,13 +47,6 @@ export function getBlogSlugs(): string[] {
     .filter((f) => f.endsWith('.mdx') || f.endsWith('.md'))
     .map((f) => f.replace(/\.(mdx|md)$/, ''));
 }
-
-function estimateReadTime(content: string): number {
-  const words = content.trim().split(/\s+/).length;
-  return Math.max(1, Math.round(words / 200));
-}
-
-const SAFE_SLUG = /^[a-z0-9-]+$/;
 
 export function getBlogPost(slug: string): BlogPost | null {
   if (!SAFE_SLUG.test(slug)) return null;
@@ -137,21 +131,6 @@ export function getAllLessons(): Lesson[] {
 }
 
 export function getLessonById(id: string): Lesson | null {
+  if (!SAFE_SLUG.test(id)) return null;
   return getAllLessons().find((l) => l.id === id) ?? null;
 }
-
-// ---------------------------------------------------------------------------
-// Legacy aliases — keeps old names so existing pages don't need to change
-// ---------------------------------------------------------------------------
-
-/** @deprecated use getAllBlogPosts */
-export const getAllPosts = getAllBlogPosts;
-
-/** @deprecated use getBlogPost */
-export const getPostBySlug = getBlogPost;
-
-/** @deprecated use getFeaturedBlogPosts */
-export const getFeaturedPosts = getFeaturedBlogPosts;
-
-/** @deprecated use getAllBlogCategories */
-export const getAllCategories = getAllBlogCategories;

@@ -41,7 +41,7 @@ Which is exactly what Patchright does.
 
 Patchright is a fork of Playwright that fixes the detection leaks directly at the source code level. Not a plugin you add on top. Not a stealth script you inject at launch. The actual, literal Playwright codebase, patched.
 
-The biggest change: instead of calling `Runtime.enable` (which is highly detectable), Patchright executes JavaScript through isolated `ExecutionContexts`. You get the exact same result for your code — `page.evaluate()`, locators, everything works the identically. But the detection signal is entirely gone.
+The biggest change: instead of calling `Runtime.enable` (which is highly detectable), Patchright executes JavaScript through isolated `ExecutionContexts`. You get the exact same result for your code — `page.evaluate()`, locators, everything works identically. But the detection signal is entirely gone.
 
 It also cleans up all the command flag problems — it actively removes the automation flags, adds `--disable-blink-features=AutomationControlled`, and re-enables extensions and default apps so the browser actually looks like a normal Chrome installation.
 

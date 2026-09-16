@@ -1,6 +1,7 @@
 import fs from 'fs';
 import matter from 'gray-matter';
 import path from 'path';
+import { SAFE_SLUG as SAFE_SEGMENT, estimateReadTime } from '@/lib/content-utils';
 
 export interface TutorialChapter {
   framework: string;
@@ -65,12 +66,9 @@ export const FRAMEWORKS: Record<string, Omit<TutorialFramework, 'chapters'>> = {
 
 const TUTORIALS_DIR = path.join(process.cwd(), 'content/tutorials');
 
-function estimateReadTime(content: string): number {
-  const words = content.trim().split(/\s+/).length;
-  return Math.max(1, Math.round(words / 200));
-}
-
 export function getFrameworkChapters(framework: string): TutorialChapter[] {
+  if (!SAFE_SEGMENT.test(framework)) return [];
+
   const dir = path.join(TUTORIALS_DIR, framework);
   if (!fs.existsSync(dir)) return [];
 
@@ -97,6 +95,8 @@ export function getFrameworkChapters(framework: string): TutorialChapter[] {
 }
 
 export function getChapter(framework: string, chapter: string): TutorialChapter | null {
+  if (!SAFE_SEGMENT.test(framework) || !SAFE_SEGMENT.test(chapter)) return null;
+
   const dir = path.join(TUTORIALS_DIR, framework);
   if (!fs.existsSync(dir)) return null;
 
