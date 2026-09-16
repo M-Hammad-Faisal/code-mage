@@ -19,6 +19,14 @@ export const SITE = {
     careerStartYear: 2023,
   },
 
+  education: {
+    degree: 'Bachelor of Engineering — Computer Engineering',
+    school: 'University of Engineering and Technology, Lahore',
+    date: 'Oct 2019 – May 2023',
+    detail: 'GPA 3.60 / 4.0',
+    leadership: 'Board of Governor & Director of Graphic Design, ACM UET Lahore (2020 – 2023)',
+  },
+
   socials: {
     github: 'https://github.com/M-Hammad-Faisal',
     linkedin: 'https://linkedin.com/in/m-hammad-faisal',

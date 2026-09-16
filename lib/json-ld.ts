@@ -23,6 +23,7 @@ export function personJsonLd() {
     url: SITE.author.portfolio,
     jobTitle: SITE.author.role,
     image: `${SITE.url}${SITE.author.avatar}`,
+    alumniOf: { '@type': 'CollegeOrUniversity', name: SITE.education.school },
     sameAs: [SITE.socials.github, SITE.socials.linkedin, SITE.socials.youtube],
   };
 }

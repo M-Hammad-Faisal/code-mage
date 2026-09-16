@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import {
+  Award,
   ArrowRight,
   BookOpen,
   Briefcase,
   Code2,
   ExternalLink,
+  GraduationCap,
   Github,
   Linkedin,
   Mail,
@@ -70,14 +72,20 @@ const TIMELINE = [
   {
     company: 'Arbisoft',
     date: 'Jun 2024 – Present',
-    desc: 'Production scraping pipelines with Puppeteer/Playwright/Patchright, anti-detection systems, credential management at scale, Cloud Functions & Cloud Run deployments.',
+    desc: 'Production scraping pipelines with Puppeteer/Playwright/Patchright, anti-detection systems, and credential management at scale. Unified 23 payer integrations into one system within a 2-week deadline and architected a FastAPI microservice for PDF data extraction.',
     title: 'Software Engineer',
   },
   {
     company: 'Arbisoft',
     date: 'May 2023 – Jun 2024',
-    desc: 'WebdriverIO E2E test suites for web and mobile (Android/iOS). Built Selenium Grid for parallel distributed testing with Appium.',
-    title: 'Jr. Software Engineer',
+    desc: 'WebdriverIO E2E test suites for web and mobile (Android/iOS). Built Selenium Grid for parallel distributed testing with Appium, and refactored a 100+ file WebdriverIO suite down to 60 — cutting runtime from 8 hours to 2.',
+    title: 'Jr. Software Engineer — Test Automation',
+  },
+  {
+    company: 'Upwork',
+    date: 'Apr 2023 – Dec 2024',
+    desc: 'Freelance test automation across Playwright, WebdriverIO, Cypress, and Selenium for various clients. Built stealth scraping infrastructure with Patchright and set up CI/CD pipelines and test architecture from the ground up.',
+    title: 'Freelance Software Engineer',
   },
   {
     company: 'Ginkgo Retail',
@@ -85,6 +93,11 @@ const TIMELINE = [
     desc: 'Full-stack web apps with React + Django. Built a complete Learning Management System.',
     title: 'Jr. Software Engineer',
   },
+];
+
+const CERTIFICATIONS = [
+  { name: 'Python for Everybody Specialization', issuer: 'University of Michigan / Coursera' },
+  { name: 'TypeScript Variables and Data Types', issuer: 'LinkedIn Learning' },
 ];
 
 const PROJECTS = [
@@ -101,22 +114,34 @@ const PROJECTS = [
     title: 'WebdriverIO Best Practices',
   },
   {
-    desc: 'Full Playwright + 2Captcha integration with retry logic, custom exceptions, pytest tests.',
-    href: SITE.socials.github,
-    stack: ['Python', 'Playwright', 'pytest', '2Captcha'],
-    title: 'Captcha Solver Library',
+    desc: 'TypeScript library with six anti-detection techniques — fingerprint spoofing, WebGL masking, and more — for stealth Playwright automation.',
+    href: 'https://github.com/M-Hammad-Faisal/stealth-scraper-playwright',
+    stack: ['TypeScript', 'Patchright', 'Anti-Detection', 'GitHub Actions'],
+    title: 'Stealth Scraper (Patchright)',
   },
   {
-    desc: 'Enterprise WebdriverIO framework with TypeScript, parallel execution, Allure reports, CI/CD.',
-    href: SITE.socials.github,
-    stack: ['WebdriverIO', 'TypeScript', 'Mocha', 'Allure'],
-    title: 'WD Automation Framework',
+    desc: 'Open-source library of expected-condition helpers for WebdriverIO.',
+    href: 'https://github.com/M-Hammad-Faisal/wdio-wait-for',
+    stack: ['WebdriverIO', 'TypeScript', 'Open Source'],
+    title: 'wdio-wait-for',
+  },
+  {
+    desc: '50 tests across login, cart, and checkout flows on SauceDemo — Selenium and Playwright with pytest-xdist parallelization.',
+    href: 'https://github.com/M-Hammad-Faisal/Website-Tester',
+    stack: ['Python', 'Selenium', 'Playwright', 'pytest-xdist'],
+    title: 'SwagLabs Automation Framework',
   },
   {
     desc: 'Write messages to your future self, delivered at any date. Next.js + Supabase + Resend.',
     href: 'https://timecapsula.website',
     stack: ['Next.js', 'Supabase', 'Resend', 'Vercel'],
     title: 'TimeCapsula',
+  },
+  {
+    desc: 'macOS desktop client for ShadowSocks connection management with multi-server support.',
+    href: 'https://github.com/M-Hammad-Faisal/ProxyPal',
+    stack: ['Python', 'macOS', 'ShadowSocks'],
+    title: 'ProxyPal',
   },
 ];
 
@@ -177,8 +202,7 @@ export default function AboutPage() {
               </h1>
 
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
-                <Briefcase className="w-3.5 h-3.5 text-red-400" /> Software Engineer (Test
-                Automation) @ Arbisoft
+                <Briefcase className="w-3.5 h-3.5 text-red-400" /> {SITE.author.role}
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-5">
                 <MapPin className="w-3.5 h-3.5 text-red-400" /> Lahore, Punjab, Pakistan
@@ -334,6 +358,62 @@ export default function AboutPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* EDUCATION & CERTIFICATIONS */}
+      <section className="py-16 border-b border-gray-200 dark:border-gray-800">
+        <div className="container-max">
+          <div className="grid md:grid-cols-2 gap-10">
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                  <GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                <h2 className="text-2xl font-heading font-bold text-gray-900 dark:text-white">
+                  Education
+                </h2>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+                <h3 className="text-sm font-heading font-semibold text-gray-900 dark:text-white mb-1">
+                  {SITE.education.degree}
+                </h3>
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium mb-2">
+                  {SITE.education.school}
+                </p>
+                <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mb-3">
+                  {SITE.education.date} · {SITE.education.detail}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                  {SITE.education.leadership}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                  <Award className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <h2 className="text-2xl font-heading font-bold text-gray-900 dark:text-white">
+                  Certifications
+                </h2>
+              </div>
+              <div className="space-y-3">
+                {CERTIFICATIONS.map((cert) => (
+                  <div
+                    key={cert.name}
+                    className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4"
+                  >
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {cert.name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{cert.issuer}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
