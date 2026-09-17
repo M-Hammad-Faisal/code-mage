@@ -120,6 +120,73 @@ const formData = mapResponseToFormData<OrderApiResponse, CheckoutFormData>(
 
 `TResponse` and `TFormData` are independent placeholders — the function doesn't need to know or care what either concrete type is, only that a `mapper` function exists that can turn one into the other, and TypeScript verifies the whole chain lines up correctly at every call site.
 
+## Utility Types: Generics You Use Constantly Without Writing `<T>` Yourself
+
+TypeScript ships a set of built-in generic types — `Partial`, `Pick`, `Omit` — that are themselves ordinary generics, just ones the language provides so you don't write them by hand. Seeing their actual definitions demystifies them, because they're built from exactly the same mapped-type mechanics as anything you'd write yourself:
+
+```typescript
+type Partial<T> = {
+  [P in keyof T]?: T[P];
+};
+```
+
+`[P in keyof T]` loops over every property key `T` has; `?:` marks each one optional. That's the entire mechanism behind the `Partial<T>` used in the Factory pattern covered elsewhere on this blog — a test-data builder's `overrides` parameter is typed `Partial<ShippingInfo>` specifically because "every field, but all optional" is exactly what `Partial` computes:
+
+```typescript
+function buildShippingInfo(overrides: Partial<ShippingInfo> = {}): ShippingInfo {
+  return { firstName: 'John', lastName: 'Doe', postalCode: '12345', ...overrides };
+}
+```
+
+`Pick<T, K>` and `Omit<T, K>` are the same idea, narrower or subtractive instead of optional:
+
+```typescript
+type Pick<T, K extends keyof T> = { [P in K]: T[P] };   // only the listed keys
+type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;  // every key EXCEPT the listed ones
+```
+
+```typescript
+type OrderSummary = Pick<Order, 'id' | 'total' | 'status'>;   // just these 3 fields
+type OrderWithoutInternalFields = Omit<Order, 'internalNotes' | 'auditTrail'>;  // everything but these 2
+```
+
+A concrete test use: asserting on an API response without repeating every field the full type has, when the test only actually cares about a subset:
+
+```typescript
+function assertOrderSummary(actual: Pick<Order, 'id' | 'total' | 'status'>, expected: Pick<Order, 'id' | 'total' | 'status'>) {
+  expect(actual.id).toBe(expected.id);
+  expect(actual.total).toBeCloseTo(expected.total);
+  expect(actual.status).toBe(expected.status);
+}
+```
+
+If `Order` grows a dozen more fields later, this function's signature doesn't need to change — it was never typed against the whole shape, only the three fields it actually checks.
+
+## Conditional Types: A Type That Depends on Another Type
+
+One step further than a plain generic: a **conditional type** picks between two different types based on a check, using the same `extends` keyword generic constraints use, but as a branch instead of a restriction:
+
+```typescript
+type SomeType extends OtherType ? TrueType : FalseType;
+```
+
+A real testing use: a helper that returns a different shape depending on whether it was called for a single item or a list.
+
+```typescript
+type ResultFor<T> = T extends unknown[] ? T[number][] : T;
+
+function normalize<T>(value: T): ResultFor<T> {
+  return (Array.isArray(value) ? value : [value]) as ResultFor<T>;
+}
+```
+
+```typescript
+const one = normalize(product);    // ResultFor<Product> → Product
+const many = normalize(products);  // ResultFor<Product[]> → Product[]
+```
+
+This is genuinely advanced, and worth knowing exists rather than reaching for by default — most test helpers don't need a type that branches based on another type. It's the right tool specifically when a function's return shape *actually, meaningfully* depends on which type it was called with, not as a general-purpose way to make a function look more sophisticated than the problem calls for.
+
 ## The Actual Skill
 
 You don't need generics for a one-off helper used in a single test file. The signal worth watching for is the same one that motivates the Factory and Strategy patterns covered elsewhere on this blog: the moment you're about to copy-paste a function and change only the type it operates on, that's the exact shape of problem a type parameter solves. Reaching for `any` instead trades away the actual benefit of using TypeScript in the first place — catching a mismatched type before the test runs, rather than discovering it as a runtime failure with a confusing stack trace.

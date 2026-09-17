@@ -16,7 +16,29 @@ In the order I opened them:
 1. **[webdriverio/webdriverio#12092](https://github.com/webdriverio/webdriverio/pull/12092)** — added a `color` config option to `@wdio/spec-reporter` so you can disable colored terminal output. Merged Feb 2, 2024. This was my first PR to the project.
 2. **[webdriverio/example-recipes#336](https://github.com/webdriverio/example-recipes/pull/336)** — added download-behavior example recipes covering Safari, Chrome, Firefox, and Edge.
 3. **[webdriverio/example-recipes#345](https://github.com/webdriverio/example-recipes/pull/345)** — a small follow-up fix renaming an environment variable (`EXAMPLE_BROWSER` → `BROWSER`) for consistency with the rest of the repo's conventions. Merged Feb 6, 2024.
-4. **[webdriverio/wdio-wait-for#800](https://github.com/webdriverio/wdio-wait-for/pull/800)** — fixed a bug where the logical `not()` combinator lost its `this`/browser-context binding because it was implemented as an arrow function. Merged Feb 7, 2024.
+4. **[webdriverio/wdio-wait-for#800](https://github.com/webdriverio/wdio-wait-for/pull/800)** — fixed a bug where the logical `not()` combinator lost its `this`/browser-context binding because it was implemented as an arrow function. Merged Feb 7, 2024. The actual fix, for anyone who wants to see exactly what one line of real bug can look like:
+
+   ```typescript
+   // Before — arrow functions don't have their own `this`; whatever `this`
+   // was in scope when the arrow was DEFINED is what it keeps, permanently
+   export function not(expectedCondition: () => Promise<boolean>): () => Promise<boolean> {
+     return async (): Promise<boolean> => {
+       const result = await expectedCondition()
+       return !result
+     }
+   }
+
+   // After — a real `function` gets its own `this`, bound at CALL time,
+   // and .call(this) explicitly forwards the browser context through
+   export function not(expectedCondition: () => Promise<boolean>): () => Promise<boolean> {
+     return async function (this: WebdriverIO.Browser): Promise<boolean> {
+       const result = await expectedCondition.call(this)
+       return !result
+     }
+   }
+   ```
+
+   `wdio-wait-for`'s other condition helpers (`urlContains`, `titleIs`, and the rest) expect to be called as `EC.urlContains('login').call(browser)`, relying on WebdriverIO's convention of passing the browser instance in as `this` rather than an explicit argument. `not()` wrapped one of those conditions and called it as `expectedCondition()` — no `this` forwarded at all — which worked by accident whenever the wrapped condition didn't actually need `this`, and silently broke the moment it did. The PR added a real regression test (`logicalWithBrowser.test.ts`, using a live browser session against a login form) specifically so this couldn't quietly regress again once fixed.
 5. **[webdriverio/webdriverio#12186](https://github.com/webdriverio/webdriverio/pull/12186)** — the "Best Practices: File Download" docs page, the one I've already written a full post about.
 6. **[webdriverio/webdriverio#12226](https://github.com/webdriverio/webdriverio/pull/12226)** — updated the `moveTo` command docs after a breaking change landed in WebdriverIO 8.21.0, so the examples matched the new behavior.
 7. **[webdriverio/webdriverio#12546](https://github.com/webdriverio/webdriverio/pull/12546)** — added documentation on configuring tests to use the Chromium browser specifically, rather than Chrome. Merged March 25, 2024.
@@ -27,7 +49,17 @@ Every one of these was reviewed and merged by Christian Bromann, one of Webdrive
 
 The shape of this list isn't an accident, and it's worth being honest about it: **six of the seven are docs, examples, or small fixes. Exactly one — the spec-reporter color option — is a feature.** That's not a coincidence, and it's not because docs contributions are somehow easier or less valuable. It's because that's genuinely the entry point that worked for me.
 
-The color option (#12092) happened because I hit issue #12051 directly — I wanted plain, uncolored spec-reporter output for a CI pipeline that was piping logs somewhere that didn't render ANSI codes cleanly — and the fix was small and self-contained enough that I could understand the whole relevant slice of the codebase (one reporter package, one config option, a chalk-based color enum) without needing to understand all of WebdriverIO's internals first. That's what made it a viable first PR. Trying to jump straight into a bigger feature as a first contribution to an unfamiliar, mature codebase would have taken far longer and risked going nowhere.
+The color option (#12092) happened because I hit issue #12051 directly — I wanted plain, uncolored spec-reporter output for a CI pipeline that was piping logs somewhere that didn't render ANSI codes cleanly. It looked, from the outside, like it should be a one-line flag. It wasn't, and the actual diff — 212 additions, 136 deletions, across 10 files — reflects why: the reporter used `chalk`'s chained API everywhere (`chalk.bold.cyan('RUNNING')`), which has no clean way to conditionally disable at a single point. Making colors actually toggleable meant replacing every chained call with a nested one against a reporter-owned `_chalk` instance instead of the global import:
+
+```typescript
+// Before — chained, global chalk import, no way to disable centrally
+this.onJobComplete(rid, job, retries, chalk.bold.green('PASSED'))
+
+// After — nested calls against this._chalk, which can be a no-op instance when color: false
+this.onJobComplete(rid, job, retries, this._chalk.bold(this._chalk.green('PASSED')))
+```
+
+Every single colored log line in the reporter needed the same mechanical change, plus the test mocks needed updating to match the new call shape. That's what made it a real, if small, feature rather than a one-line PR — and it's also exactly the kind of scope you only discover once you're actually in the code, not from reading the issue description. Understanding that whole slice (one reporter package, one config option, a chalk-based logging convention used consistently throughout) without needing to understand all of WebdriverIO's internals first is what made it a viable first PR. Trying to jump straight into a bigger, more architecturally central feature as a first contribution to an unfamiliar, mature codebase would have taken far longer and risked going nowhere.
 
 The download-behavior work (#336, #345, #12186) followed the same pattern at a slightly bigger scale: I hit a real gap (issue #12105 — no documented way to test file downloads across browsers) while testing something for work, built the example recipe to work through the problem myself, found and fixed a small inconsistency in the recipe's own environment variable naming while I was in there, and then wrote up what I'd learned as the actual docs page once I understood the problem well enough to explain it to someone else. The docs page didn't come first — the working example did, and the docs were downstream of actually solving the problem.
 
