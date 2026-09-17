@@ -3,3 +3,4 @@
  * Tutorial: code-mage.dev/tutorial/cypress (chapter 6, Network Requests & Advanced Interactions)
  */
 import './commands';
+import 'allure-cypress';

@@ -1,6 +1,7 @@
 import { defineConfig } from 'cypress';
 import fs from 'fs';
 import path from 'path';
+import { allureCypress } from 'allure-cypress/reporter';
 
 /**
  * Cypress config for the code-mage.dev Cypress tutorial example project.
@@ -35,6 +36,7 @@ export default defineConfig({
           return null;
         },
       });
+      allureCypress(on, config);
       return config;
     },
   },

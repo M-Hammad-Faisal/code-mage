@@ -44,10 +44,24 @@ describe('File downloads', () => {
     cy.get('[data-test="generate-pdf-order"]').click();
 
     // The filename is timestamped (swag-labs-order-<timestamp>.pdf), so we
-    // find it by prefix via a task instead of asserting an exact name.
-    cy.wait(1000); // give the download a moment to land on disk
-    cy.task('findDownload', 'swag-labs-order-').then((filename) => {
-      expect(filename, 'a PDF matching swag-labs-order-* should exist').to.be.a('string');
+    // find it by prefix via a task instead of asserting an exact name. The
+    // download isn't instant — a fixed 1s wait was flaky in practice (the
+    // PDF sometimes takes longer to land), so this polls with retries
+    // instead of trusting one fixed delay.
+    function findDownloadWithRetry(attemptsLeft: number): Cypress.Chainable<string> {
+      return cy.task('findDownload', 'swag-labs-order-').then((filename) => {
+        if (filename) return cy.wrap(filename as string);
+        if (attemptsLeft <= 0) {
+          throw new Error(
+            'a PDF matching swag-labs-order-* never appeared within the retry window'
+          );
+        }
+        cy.wait(500);
+        return findDownloadWithRetry(attemptsLeft - 1);
+      });
+    }
+
+    findDownloadWithRetry(10).then((filename) => {
       cy.readFile(`cypress/downloads/${filename}`, 'binary', { timeout: 10000 }).then(
         (contents) => {
           expect(contents.length).to.be.greaterThan(100);
