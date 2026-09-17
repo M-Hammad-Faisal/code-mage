@@ -142,6 +142,14 @@ I don't want to make this sound free, because it isn't. Adding Channels to Task 
 - **A new deployment dependency.** Redis isn't optional once you have more than one process, and now local development needs Redis running too, or your WebSocket features silently stop working while everything else looks fine.
 - **A different debugging mental model.** A stuck WebSocket connection doesn't show up in your normal request logs the way a slow view does. You're debugging long-lived state instead of one-shot request/response.
 
+## The Part I Glossed Over: What Actually Runs This in Production
+
+Writing the consumer and running `manage.py runserver` locally is deceptively easy — Django's dev server happily serves ASGI too. Production is where the "just add Channels" pitch gets more honest about its cost, because `gunicorn`, the WSGI server most Django deployments already run, cannot serve an ASGI application at all. You need an actual ASGI server in front of it.
+
+The two real options are Daphne — the reference server maintained by the Channels project itself, built to speak HTTP, HTTP/2, and WebSocket — and Uvicorn, the faster, more general-purpose ASGI server with a broader ecosystem outside the Django world. If you're using Channels specifically, Daphne is the safer default, since it's the one the project tests against; Uvicorn works too and is commonly run as a Gunicorn worker class (`gunicorn tasknest.asgi:application -k uvicorn.workers.UvicornWorker`) to get Gunicorn's process management with Uvicorn's speed. Either way, this is a real infrastructure decision, not a config flag — you're choosing and operating a second kind of server process that didn't exist in the plain-WSGI version of the app, on top of adding Redis. Nginx (or whatever reverse proxy you're already running) sits in front of it as usual, terminating TLS and proxying the `/ws/` path to the ASGI server instead of the WSGI one.
+
+I'm flagging this explicitly because it's the part of the "just switch to ASGI" pitch that tutorials tend to skate past. Adding Channels to Task Nest wasn't one dependency (Redis) — it was a second server process to deploy, monitor, and keep alive, on top of Redis being a hard requirement instead of an optional cache. That's the real complexity tax, and it's worth pricing in before committing to WebSockets for a feature that might not need them.
+
 ## When Polling Is Just Better
 
 Here's the thing I'd tell past-me before starting: not every "live-ish" feature needs WebSockets. If I were adding a "new comment count" badge that's fine to be 10-15 seconds stale, a plain `setInterval` fetch every 10 seconds is less code, no Redis dependency, no new protocol, and no reconnection logic to get wrong. Polling degrades gracefully — worst case it's a bit slow — where a broken WebSocket setup degrades to "silently broken."

@@ -128,6 +128,20 @@ Cypress has been shipping AI-assisted tooling across the 15.x and 16.x line: `cy
 
 My honest take: `cy.prompt()` is a "worth watching, not yet load-bearing" beta. `cypress tap` is more immediately useful if you're already working with an AI coding agent day to day, since it removes a real amount of manual context-passing. Neither is something I'd point a team at as a primary workflow today.
 
+## 16.1.0: The Point Release That Fixes 16.0.0's Own Regressions
+
+If you're reading this after mid-September 2026, don't install 16.0.0 — go straight to 16.1.0, released September 15th. It's not a feature release, it's a "we broke some things in 16.0.0 and here's the fix" release, and two of the three fixes are the kind that would've cost you a debugging afternoon if you hit them blind.
+
+The scary one: in Chrome, Chromium, and Edge, a run in `cypress open` testing a site that registers an origin-wide service worker could render the site's own content in place of the Cypress app itself — the service worker answering for Cypress's own pages and assets instead of the actual page under test. If your app under test registers a service worker at all (a lot of production apps do, for offline support or push notifications), this wasn't a rare edge case, it was a landmine sitting in the default path for any modern PWA-style app.
+
+The second: runs in Chrome, Chromium, and Edge could hang indefinitely mid-execution — no error, no failing test, no timeout, the process just stops producing output and sits there. This is the worst kind of CI failure, the one that doesn't fail loudly, it just eats your job's timeout budget silently. It came from memory growth caused by service workers holding onto state after the browser closed.
+
+The third is smaller but worth knowing if you customize browser launch flags: adding your own `--disable-features` argument in a `before:browser:launch` hook used to silently drop every feature Cypress itself disables in Chromium-based browsers — your override didn't merge with Cypress's defaults, it replaced them outright. 16.1.0 merges your values with Cypress's instead of clobbering them.
+
+On the feature side, 16.1.0 also adds `trustedCertificates` — self-signed or internal-CA certificates you declare now get cached for static assets across navigations, which matters if you're testing against an internal service behind a corporate CA and were previously eating a fresh TLS handshake cost on every navigation.
+
+Practical takeaway: if you're planning the 16.x upgrade covered above, target `16.1.0` specifically in your `package.json`, not a loose `^16.0.0` that could resolve to the broken point release in a fresh install.
+
 ## Upgrade Checklist
 
 If you're planning the jump, do it roughly in this order:
