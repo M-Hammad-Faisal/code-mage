@@ -41,6 +41,18 @@ The real value wasn't any individual client engagement. It was the aggregate pat
 
 For example: flaky element locators showed up everywhere, but the underlying cause was different every time — one client had genuine timing issues, another had a test architecture that fought the framework's auto-waiting, another had a flat structure with no abstraction so every test was locator soup. Same symptom, three different root causes, three different fixes. You only learn to tell those apart by seeing enough of them.
 
+## What "Same Symptom, Different Root Cause" Actually Looked Like
+
+That flaky-locator pattern is worth making concrete instead of leaving as an abstract claim, because the actual diagnostic differences are the real evidence for why seeing a dozen-plus codebases teaches something a single one can't.
+
+The client with genuine timing issues had a backend that was, itself, inconsistent — an API that sometimes returned in 200 milliseconds and sometimes took four seconds under real load, with no caching or consistent response-time contract in place. No amount of better selector strategy fixes that; the actual fix was waiting on a specific signal the app itself exposed (a loading spinner's disappearance, a specific DOM attribute flipping) rather than a fixed timeout, and being honest with the client that the root instability was on their backend, not in the tests reporting it.
+
+The client whose architecture fought the framework's auto-waiting had, ironically, over-engineered their own explicit wait helpers on top of a framework — Playwright, in this case — that already auto-waits before every action. Their custom waits were sometimes shorter than what the actual page needed, silently undercutting the framework's own more generous default, and the fix there was almost entirely subtractive: delete the custom wait layer, let the framework do what it was already built to do.
+
+The client with the flat, no-abstraction structure had a different problem entirely — the actual selectors were fine, but there was no single place any given selector was defined, so the same button got a slightly different, individually-typo-prone selector string in eleven different test files. That one wasn't a timing problem or a framework-fighting problem at all; it was a missing Page Object Model, the same encapsulation problem covered in more depth elsewhere on this blog, and the fix was structural, not a single line of test code.
+
+Three clients, the same surface complaint ("our tests are flaky, selectors keep breaking"), three genuinely different diagnoses, three genuinely different fixes — and the pattern-matching skill of telling which one you're looking at, quickly, is specifically what repeated exposure across unrelated codebases builds that staying inside one team's single, familiar codebase doesn't.
+
 ## Was it worth it
 
 Mostly yes, with real caveats. It made me a better engineer faster than staying purely full-time would have — the repeated exposure to "set this up from nothing" forced me to get opinionated about what a good test automation framework actually looks like, instead of just inheriting one team's conventions and assuming they were the only way. It also directly fed into the framework and abstraction-layer thinking that shaped how I approached later work.

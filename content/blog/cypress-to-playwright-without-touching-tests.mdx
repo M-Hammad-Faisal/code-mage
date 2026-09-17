@@ -115,7 +115,15 @@ export const automation: AutomationAdapter = process.env.TEST_RUNNER === 'playwr
   : new CypressAdapter();
 ```
 
-That `getText` method in the Cypress adapter is worth pausing on — it's already a smell. Cypress's command queue doesn't return values synchronously the way `async/await` implies; you're faking a synchronous-looking interface over a queued, callback-driven system. It works, but it's the first crack in the abstraction, and it won't be the last.
+That `getText` method in the Cypress adapter is worth pausing on, and being precise about, rather than just gesturing at it as "a smell" — as written, it doesn't actually work. Cypress commands are queued, not genuinely awaited; `cy.get(selector).then(...)` schedules a callback to run *later*, once Cypress's command queue reaches it, but the function returns `text` immediately, before that callback has had any chance to run. `return text` executes while `text` is still `''`, every single time, regardless of what's actually on the page. Fixing it for real means returning the Cypress chain itself and letting the caller resolve it, which breaks the illusion of a clean `async/await`-shaped interface the whole adapter is trying to present:
+
+```typescript
+async getText(selector: string): Promise<string> {
+  return cy.get(selector).then(($el) => $el.text()) as unknown as Promise<string>;
+}
+```
+
+Even this "fixed" version needs a cast to paper over the fact that a Cypress chainable isn't really a `Promise`, just something that happens to support `.then()`. This is the actual, concrete shape of the abstraction leaking — not a vague warning sign, but a specific, demonstrable place where the interface's contract (`Promise<string>`) and Cypress's real execution model (a queued command chain) don't genuinely line up, no matter how the adapter code is dressed up to look like they do.
 
 ## What This Actually Buys You
 
@@ -132,6 +140,29 @@ This is the part people skip when they write up "we migrated with zero test chan
 **Multi-tab, iframes, and shadow DOM handling diverge.** Playwright has first-class multi-tab and multi-context support; Cypress historically doesn't (`cy.origin()` narrowed the gap but it's not the same model). If your adapter's `click()` needs to work identically against both, you either restrict yourself to the lowest common denominator of both tools' capabilities, or you start adding tool-specific escape hatches into your "abstraction" — at which point you have to ask what the abstraction bought you.
 
 **Network mocking and component testing are basically not portable.** Playwright's `page.route()` and Cypress's `cy.intercept()` have different interception models (Playwright can intercept at the browser network layer more flexibly; Cypress operates through its own proxy). Trying to wrap this in a generic adapter method usually means implementing the intersection of both APIs, which is smaller than either one alone.
+
+## This Is the Same Idea as Two Other Posts on This Blog, Applied at a Larger Scale
+
+`AutomationAdapter` is a textbook instance of "program to an interface, not an implementation," covered from a smaller, single-class example elsewhere on this blog — the only difference here is scale. That earlier post's `PaymentProcessor` interface let one `CheckoutFlow` class swap Stripe for a test double without changing its own code. `AutomationAdapter` does the identical thing, just with "an entire test framework" standing in for "one payment provider," and hundreds of test files standing in for one `CheckoutFlow` class. The `TEST_RUNNER` environment variable choosing which concrete adapter gets instantiated is dependency injection too, in the same sense covered in a separate post about Playwright's fixture system — a single decision point, external to the code that consumes the result, determining which concrete implementation gets wired in. Recognizing that this migration strategy is "just" those two general principles applied at the scale of an entire test suite, rather than a bespoke Cypress-to-Playwright trick, is what makes it obvious the same pattern would work for a future migration to a fourth framework, or for isolating any other large, expensive-to-swap dependency a test suite has.
+
+## Testing the Adapter Itself, Not Just Trusting It
+
+One gap worth naming honestly: the adapter layer is real production-adjacent code — it has its own logic, its own edge cases (the `getText` bug above being exhibit A), and its own opportunity to be subtly wrong in a way that makes every single test using it wrong the same way, silently. It's worth a small, dedicated suite that exercises both adapters against the same real page and asserts they produce identical results for the same actions — not testing the application through the adapter, but testing the adapter's own behavior directly:
+
+```typescript
+for (const adapterName of ['cypress', 'playwright'] as const) {
+  describe(`AutomationAdapter (${adapterName})`, () => {
+    it('fill() actually sets the field value', async () => {
+      const adapter = createAdapter(adapterName);
+      await adapter.navigate('/');
+      await adapter.fill('#username', 'standard_user');
+      expect(await adapter.getText('#username')).toBe('standard_user'); // would have caught the getText bug
+    });
+  });
+}
+```
+
+This is a small, one-time investment relative to the hundreds of tests depending on the adapter being correct, and it's exactly the kind of test that would have caught the broken `getText` implementation above immediately, rather than leaving it to surface as a mysteriously empty string somewhere deep in an unrelated test's assertion.
 
 ## Is This Worth Building?
 
