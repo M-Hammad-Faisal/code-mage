@@ -8,6 +8,8 @@ chapter: "tabs-windows-multi-origin"
 
 If you're coming from Playwright or WebdriverIO, this is the chapter where Cypress's architecture stops being a minor syntax difference and becomes a real constraint you have to design tests around.
 
+The href/target test below is real, passing code — verified against the live site, downloadable at the bottom of this chapter.
+
 ## Why Cypress Can't Do What the Other Two Can
 
 Cypress runs your test code inside the same browser, in the same run loop as the application under test — that's the architectural choice behind its speed and its automatic waiting. The tradeoff is that Cypress has no separate out-of-process browser driver it can hand control to when a second tab or window opens. There's no `context.waitForEvent('page')` equivalent, because there's no external process orchestrating multiple pages in the first place — everything happens inside one browser tab that the test runner is itself embedded in.
@@ -17,15 +19,26 @@ Concretely, this means:
 - **A link that opens `target="_blank"` cannot be followed and driven directly.** Cypress can assert the link *exists* and has the right `href`, but it can't switch focus into whatever tab that link would open.
 - **`window.open()` popups are the same problem.** You can stub `window.open` to prevent the popup from opening at all and assert it was called correctly, but you can't drive the popup's contents.
 
-The practical fix for the first case, in most real test suites, is simpler than it sounds: don't test that clicking a link opens a new tab (that's the browser's job, not your app's) — instead, assert the link has the correct `href` and target attribute, and separately test the destination page in its own test if it's part of your app.
+The practical fix for the first case, in most real test suites, is simpler than it sounds: don't test that clicking a link opens a new tab (that's the browser's job, not your app's) — instead, assert the link has the correct `href` and target attribute, and separately test the destination page in its own test if it's part of your app. SauceDemo's footer has a real `target="_blank"` link (the social icons), which is what this actually looks like against a real page:
 
 ```typescript
-cy.get('[data-test="view-terms"]')
-  .should('have.attr', 'href', '/terms')
-  .and('have.attr', 'target', '_blank')
+it('the X (Twitter) footer link has the correct href and target', () => {
+  cy.visit('/')
+  cy.get('[data-test="username"]').type('standard_user')
+  cy.get('[data-test="password"]').type('secret_sauce')
+  cy.get('[data-test="login-button"]').click()
+
+  cy.get('[data-test="social-x"]')
+    .should('have.attr', 'href', 'https://x.com/saucelabs')
+    .and('have.attr', 'target', '_blank')
+})
 ```
 
+This is a real, passing test — verified against the live site, not a hypothetical `/terms` link. It's genuinely as far as Cypress can take you here: you can confirm the link is correctly configured, but you can't follow it and assert on whatever `x.com` renders.
+
 ## `cy.origin()` — For Cross-Domain Flows Within One Test
+
+*SauceDemo has no SSO or cross-domain login flow, so there's nothing to run this against on this tutorial's practice site — the syntax below is correct and verified against Cypress's own docs, but it's illustrative. If your own app has a real cross-origin flow, the pattern is exactly this.*
 
 Cypress does have a real, supported way to test a flow that crosses domains — a third-party login page, an OAuth redirect, a payment provider — without opening a second tab. `cy.origin()` lets a single test step into a different origin's context and run commands there, as long as it stays within the same browser tab (the third-party page replaces the current tab's content rather than opening a new one):
 
@@ -56,3 +69,14 @@ cy.origin('https://accounts.example-idp.com', { args: { username: 'test-user' } 
 ## What This Actually Means for Test Design
 
 If your application relies heavily on multi-tab workflows — comparing two documents side by side, a "open in new tab" power-user feature, anything where the test's whole point is verifying behavior *across* two simultaneously open tabs — that's a real, structural reason to reach for Playwright or WebdriverIO for that specific suite instead of forcing it through Cypress. This isn't a gap you work around with a plugin; it's a direct consequence of the same in-browser architecture that makes Cypress fast and its automatic retries reliable everywhere else. Know it going in, rather than discovering it three tests deep into a suite that assumed otherwise.
+
+## Download the Working Test
+
+<DownloadCard
+  filename="tabs-and-downloads.cy.ts"
+  href="/downloads/cypress/tabs-and-downloads.cy.ts"
+  description="The href/target test above, verified passing against the live site — plus the PDF download test from the next chapter"
+  tests={2}
+/>
+
+Real, passing code, not a snippet assembled for the page — also part of the full downloadable example project covered in the CI/CD chapter.

@@ -170,22 +170,39 @@ capabilities: [
 ],
 ```
 
-Then, after clicking whatever triggers the download, poll for the file's existence instead of assuming it landed instantly — a download isn't synchronous with the click that started it:
+SauceDemo has a real download to verify this against — a "Generate PDF" button on the order confirmation page, after completing checkout. Its filename is timestamped (`swag-labs-order-<timestamp>.pdf`), so this polls for *any* PDF landing rather than a fixed name — which is realistic, since a lot of real downloads (invoices, exports, generated reports) are timestamped the same way:
 
 ```typescript
 import fs from 'fs'
 import path from 'path'
 
-await $('[data-test="download-invoice"]').click()
+const downloadDir = path.join(process.cwd(), 'test-downloads')
 
-const filePath = path.join(process.cwd(), 'test-downloads', 'invoice.pdf')
-await browser.waitUntil(() => fs.existsSync(filePath), {
-  timeout: 10000,
-  timeoutMsg: 'expected invoice.pdf to be downloaded within 10s',
-})
+// ... complete login, add to cart, and checkout ...
+await expect(await checkoutPage.getConfirmationMessage()).toBe('Thank you for your order!')
+
+await $('[data-test="generate-pdf-order"]').click()
+
+await browser.waitUntil(
+  () => fs.existsSync(downloadDir) && fs.readdirSync(downloadDir).some((f) => f.endsWith('.pdf')),
+  { timeout: 10000, timeoutMsg: 'expected a PDF to be downloaded within 10s' },
+)
+
+const downloaded = fs.readdirSync(downloadDir).find((f) => f.endsWith('.pdf'))
+const size = fs.statSync(path.join(downloadDir, downloaded!)).size
+expect(size).toBeGreaterThan(100) // sanity check it's not an empty/broken file
 ```
 
-For a text-based format, read the file directly afterward to assert on its actual contents, the same as you would for any other file your test needs to inspect.
+For a text-based format with a fixed filename, read the file directly afterward to assert on its actual contents, the same as you would for any other file your test needs to inspect.
+
+### Download the Working Test
+
+<DownloadCard
+  filename="tabs-and-downloads.e2e.ts"
+  href="/downloads/webdriverio/tabs-and-downloads.e2e.ts"
+  description="The download test above, plus a real new-tab test (below) — both verified passing against the live site"
+  tests={2}
+/>
 
 ## iframes
 
@@ -238,28 +255,31 @@ await expect(browser).toHaveUrl(expect.stringContaining('saucedemo.com'))
 await browser.switchToWindow(handles[0])
 ```
 
-For links that open a new tab (`target="_blank"`), capture the handle before clicking:
+For links that open a new tab (`target="_blank"`), capture the handle before clicking. SauceDemo's footer social icons are real `target="_blank"` links — here's the X (Twitter) one, verified against the live site:
 
 ```typescript
-const handlesBefore = await browser.getWindowHandles()
-await $('[data-test="terms-link"]').click()
+const originalHandle = await browser.getWindowHandle()
+await $('[data-test="social-x"]').click()
 
 // Wait for the new tab to open
-await browser.waitUntil(async () => {
-  const handles = await browser.getWindowHandles()
-  return handles.length > handlesBefore.length
+await browser.waitUntil(async () => (await browser.getWindowHandles()).length === 2, {
+  timeout: 5000,
+  timeoutMsg: 'expected a second tab to open',
 })
 
-const handlesAfter = await browser.getWindowHandles()
-const newTab = handlesAfter.find(h => !handlesBefore.includes(h))!
-await browser.switchToWindow(newTab)
+// switchWindow matches by URL or title substring — no handle bookkeeping needed
+await browser.switchWindow('x.com')
+await expect(browser).toHaveUrl(expect.stringContaining('x.com/saucelabs'))
 
-await expect(browser).toHaveUrl(expect.stringContaining('terms'))
-
-// Close the tab and return
+// Close the tab and return to the original one
 await browser.closeWindow()
-await browser.switchToWindow(handlesBefore[0])
+await browser.switchToWindow(originalHandle)
+
+// the original tab is untouched
+await expect(browser).toHaveUrl(expect.stringContaining('inventory.html'))
 ```
+
+`browser.switchWindow()` is the more convenient variant used above — it matches a window by URL or title substring directly, instead of the manual handle-diffing shown in the first example. Reach for `switchWindow()` when you know something identifiable about the destination tab; fall back to manual handle tracking when you don't.
 
 ## Cookies and Local Storage
 

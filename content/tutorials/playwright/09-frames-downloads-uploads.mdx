@@ -8,7 +8,11 @@ chapter: "frames-downloads-uploads"
 
 Three separate scenarios grouped together here because they share one thing in common: each one involves content or a file crossing a boundary — into an iframe, out of the browser as a download, or into the browser as an upload.
 
+A note on what's actually runnable: SauceDemo, this tutorial's practice site, has a real file download (the PDF button on the order confirmation page) but no iframe and no file upload input anywhere in the app. The File Downloads section below is backed by a real, passing test in the [downloadable example project](/tutorial/playwright/tabs-windows-dialogs) — iframes and uploads show correct, verified-against-the-docs Playwright syntax, but there's nothing on SauceDemo to run them against.
+
 ## Working With iframes
+
+*SauceDemo has no iframe anywhere in the app — this section is reference syntax, not something you can run against this tutorial's site.*
 
 An iframe is a separate document embedded in the page, and Playwright's `page.locator()` doesn't reach inside one automatically — you need `frameLocator()` to scope into it first:
 
@@ -32,16 +36,19 @@ const frame = page.frameLocator('#checkout-iframe'); // by CSS selector on the <
 
 ## File Downloads
 
-Like new tabs, downloads fire an event you have to be listening for before the action that triggers them:
+Like new tabs, downloads fire an event you have to be listening for before the action that triggers them. SauceDemo's order confirmation page has a real download — a "Generate PDF Order" button — after completing checkout:
 
 ```typescript
-test('downloads the invoice PDF', async ({ page }) => {
+test('downloads the order confirmation PDF', async ({ page }) => {
+  // ... complete login, add to cart, and checkout ...
+  await expect(page.getByRole('heading', { name: 'Thank you for your order!' })).toBeVisible();
+
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('link', { name: 'Download Invoice' }).click(),
+    page.locator('[data-test="generate-pdf-order"]').click(),
   ]);
 
-  expect(download.suggestedFilename()).toBe('invoice.pdf');
+  expect(download.suggestedFilename()).toMatch(/\.pdf$/);
 
   // Save it somewhere you can inspect, or just confirm it happened
   await download.saveAs(`./test-results/${download.suggestedFilename()}`);
@@ -51,6 +58,8 @@ test('downloads the invoice PDF', async ({ page }) => {
 Playwright doesn't render or open the downloaded file — your test's job here is usually just confirming that a download *happened* and, optionally, that its filename or size matches expectations. If you need to verify the file's actual contents (a generated PDF report, a CSV export), read it from disk after `saveAs()` with Node's own `fs` module — Playwright's role ends at "the browser produced this file."
 
 ## File Uploads
+
+*SauceDemo has no file upload input anywhere in the app — this section is reference syntax, not something you can run against this tutorial's site.*
 
 `setInputFiles()` handles the common case — a real `<input type="file">` element — directly, without needing a native OS file picker dialog at all:
 
@@ -75,3 +84,7 @@ For a drag-and-drop upload zone that has no real `<input type="file">` backing i
 ## The Thread Connecting All Three
 
 Frames, downloads, and uploads each require Playwright to reach across a boundary the normal locator API doesn't cross automatically — an iframe's document boundary, the browser-to-filesystem boundary for a download, and the filesystem-to-browser boundary for an upload. None of the three is conceptually hard once you know which specific API exists for crossing that particular boundary; the actual skill is recognizing which boundary you're dealing with before you go looking for a locator-based solution that was never going to work for it.
+
+## Download the Working Test
+
+The download test above is real, passing code, part of the same [tabs-and-downloads.spec.ts](/tutorial/playwright/tabs-windows-dialogs) covered in the previous chapter — download it there.

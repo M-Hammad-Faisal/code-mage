@@ -8,30 +8,37 @@ chapter: "tabs-windows-dialogs"
 
 Most tests stay inside a single tab from start to finish. This chapter covers the moment that stops being true — a link opens in a new tab, a third-party auth flow pops a new window, or the app under test throws up a native `confirm()` dialog you weren't expecting.
 
+A note on what's actually runnable here: SauceDemo — the practice site this whole tutorial uses — has a real `target="_blank"` link (the footer social icons), so the New Tabs section below is backed by a real, passing test you can download at the bottom of this chapter. It has no popup windows and no native dialogs anywhere in the app, so those two sections show correct, working Playwright syntax, but there's nothing on SauceDemo to actually trigger them against — you won't find a matching test for those in the example project, and you'll need your own app's popup/dialog to verify the pattern yourself.
+
 ## New Tabs
 
-A `BrowserContext` can hold multiple pages. When something in your app opens a new tab — a link with `target="_blank"`, or a `window.open()` call — you catch it with the context's `page` event:
+A `BrowserContext` can hold multiple pages. When something in your app opens a new tab — a link with `target="_blank"`, or a `window.open()` call — you catch it with the context's `page` event. SauceDemo's footer has three social icons with real `target="_blank"` links; here's the X (Twitter) one:
 
 ```typescript
-test('opens product documentation in a new tab', async ({ page, context }) => {
+test('the X (Twitter) footer link opens in a new tab', async ({ page, context }) => {
+  await loginPage.login('standard_user', 'secret_sauce');
+
   const [newPage] = await Promise.all([
     context.waitForEvent('page'),
-    page.getByRole('link', { name: 'View full spec sheet' }).click(),
+    page.locator('[data-test="social-x"]').click(),
   ]);
 
   await newPage.waitForLoadState();
-  await expect(newPage).toHaveURL(/spec-sheet/);
-  await expect(newPage.getByRole('heading')).toBeVisible();
-
+  await expect(newPage).toHaveURL(/x\.com\/saucelabs/);
   await newPage.close();
+
+  // the original tab is untouched — still on the inventory page
+  await expect(page).toHaveURL(/inventory\.html/);
 });
 ```
 
 The `Promise.all()` pairing here isn't optional stylistic preference — you have to start listening for the `page` event *before* the click that triggers it, or there's a real chance the new page opens and finishes loading before your listener attaches, and you miss it entirely.
 
-Once you have `newPage`, it's a completely independent `Page` object — it has its own lifecycle, its own locators, and needs its own `waitForLoadState()` before you interact with it. The original `page` variable still points at the original tab; switching your attention to the new one doesn't change what `page` refers to.
+Once you have `newPage`, it's a completely independent `Page` object — it has its own lifecycle, its own locators, and needs its own `waitForLoadState()` before you interact with it. The original `page` variable still points at the original tab; switching your attention to the new one doesn't change what `page` refers to — the assertion at the end above confirms the original tab's URL never changed just because a second tab opened.
 
 ## Popup Windows
+
+*SauceDemo doesn't have a popup anywhere in the app, so there's no matching test for this section — the syntax below is correct and verified against Playwright's own API, but it's illustrative rather than something you can run against this tutorial's practice site.*
 
 Popups (opened via `window.open()` with specific size/feature flags, common in older payment or auth flows) work identically to new tabs from Playwright's perspective — they're both just additional `Page` objects on the same `BrowserContext`:
 
@@ -48,6 +55,8 @@ await popup.getByRole('button', { name: 'Log In' }).click();
 `popup` and `page` (as an event name) are aliases for the same underlying mechanism — use whichever reads more clearly for what's actually happening in your test.
 
 ## Native Dialogs: alert, confirm, prompt
+
+*Same caveat as popups — SauceDemo never triggers a native dialog, so this is reference syntax, not a runnable example against this tutorial's site.*
 
 Native browser dialogs block JavaScript execution until dismissed, which means they'd hang your test forever if you didn't handle them. Playwright auto-dismisses dialogs by default — but you'll usually want to control that behavior explicitly, especially for `confirm()`, where accept vs. dismiss changes what happens next in the app:
 
@@ -82,3 +91,14 @@ await inventoryTab?.bringToFront();
 ```
 
 `bringToFront()` doesn't affect Playwright's ability to interact with a page — you can act on any page in the context regardless of which one is visually focused — but it's useful when you're taking a screenshot or running something that depends on actual browser focus state, like a `document.hasFocus()` check inside the app itself.
+
+## Download the Working Test
+
+<DownloadCard
+  filename="tabs-and-downloads.spec.ts"
+  href="/downloads/playwright/tabs-and-downloads.spec.ts"
+  description="The new-tab test above, verified passing against the live site — plus the file download test from the next chapter"
+  tests={2}
+/>
+
+This is real, passing code — not a snippet assembled for the page. It's also part of the [full downloadable example project](/tutorial/playwright/ci-cd) covered in the CI/CD chapter.

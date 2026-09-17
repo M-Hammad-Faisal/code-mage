@@ -8,6 +8,8 @@ chapter: "file-downloads"
 
 File uploads have their own section in the [network and advanced interactions chapter](/tutorial/cypress/network-and-advanced) — this one covers the opposite direction, which works completely differently in Cypress than it does in Playwright or WebdriverIO.
 
+SauceDemo has a real download to test against: after completing checkout, the order confirmation page has a "Generate PDF" button. Every example below is verified, passing code against that real button — downloadable at the bottom of this chapter.
+
 ## Why This Isn't an Event You Listen For
 
 Playwright and WebdriverIO both expose a `download` event you can await, because they control the browser through an external protocol that can observe browser-level events like a download starting and finishing. Cypress, running inside the browser itself, doesn't have that same hook — there's no `cy.waitForDownload()` command built in.
@@ -27,50 +29,82 @@ export default defineConfig({
 })
 ```
 
-## Verifying a Download Happened
+## The Complication: SauceDemo's Filename Isn't Fixed
 
-The straightforward case: trigger the download, then check the file exists using `cy.readFile()`, which Cypress retries automatically the same way it retries any other assertion — useful because a download isn't instantaneous, and the file may not exist yet the moment the click resolves.
+The straightforward case — trigger the download, then check a known filename exists with `cy.readFile()` — doesn't actually work here, and running into that is a useful lesson on its own. SauceDemo's PDF is named `swag-labs-order-<timestamp>.pdf`, a fresh timestamp on every single download. There is no fixed filename to assert against, which means `cy.readFile('cypress/downloads/order.pdf')` would never find anything, no matter how long you set the timeout.
+
+This is common enough with real downloads — invoices, exports, and generated reports are frequently timestamped or otherwise unique per download — that it's worth solving properly rather than treating this one case as a one-off. The fix is a small Node task in `setupNodeEvents` that finds the newest file matching a known prefix, since `cy.readFile()` itself has no glob or wildcard support:
 
 ```typescript
-it('downloads the order receipt as a PDF', () => {
-  cy.visit('/orders/1024')
-  cy.get('[data-test="download-receipt"]').click()
+// cypress.config.ts
+import { defineConfig } from 'cypress'
+import fs from 'fs'
+import path from 'path'
 
-  cy.readFile('cypress/downloads/receipt-1024.pdf', { timeout: 10000 }).should('exist')
+export default defineConfig({
+  e2e: {
+    baseUrl: 'https://www.saucedemo.com',
+    setupNodeEvents(on, config) {
+      on('task', {
+        findDownload(prefix: string) {
+          const dir = path.join(config.projectRoot, 'cypress', 'downloads')
+          if (!fs.existsSync(dir)) return null
+          const matches = fs
+            .readdirSync(dir)
+            .filter((f) => f.startsWith(prefix))
+            .map((f) => ({ name: f, mtime: fs.statSync(path.join(dir, f)).mtimeMs }))
+            .sort((a, b) => b.mtime - a.mtime)
+          return matches.length > 0 ? matches[0].name : null
+        },
+      })
+      return config
+    },
+  },
 })
 ```
 
-The `timeout` option is doing real work here — `cy.readFile()`'s default timeout may not be long enough for a download that takes a couple of seconds to actually land on disk, and without an explicit event to await, this retry-until-timeout is the closest Cypress gets to "waiting for the download to finish."
+## Verifying the Download
 
-## Verifying Contents, Not Just Existence
-
-For a CSV export or a generated report where the actual content matters, read past just confirming the file exists:
+With the task in place, a test finds the actual file by prefix instead of guessing at an exact name, then reads it the same way you would any other file:
 
 ```typescript
-it('exports the correct order data as CSV', () => {
-  cy.get('[data-test="export-csv"]').click()
+it('downloads the order confirmation PDF', () => {
+  // ... complete login, add an item to cart, and checkout ...
+  checkoutPage.completeHeader.should('have.text', 'Thank you for your order!')
 
-  cy.readFile('cypress/downloads/orders-export.csv', { timeout: 10000 }).then((contents) => {
-    expect(contents).to.include('Order ID,Total,Status')
-    expect(contents).to.include('1024,29.99,Shipped')
+  cy.get('[data-test="generate-pdf-order"]').click()
+
+  cy.wait(1000) // give the download a moment to land on disk
+  cy.task('findDownload', 'swag-labs-order-').then((filename) => {
+    expect(filename, 'a PDF matching swag-labs-order-* should exist').to.be.a('string')
+
+    cy.readFile(`cypress/downloads/${filename}`, 'binary', { timeout: 10000 }).then((contents) => {
+      // a binary PDF isn't meaningfully assertable as text — a size sanity
+      // check confirms it's a real file, not an empty or broken download
+      expect(contents.length).to.be.greaterThan(100)
+    })
   })
 })
 ```
 
-For a binary format like PDF where you can't meaningfully assert on raw content as a string, checking existence and file size is usually the more realistic bar — verifying that a PDF was generated and isn't suspiciously empty, rather than trying to assert on the PDF's internal structure from a test.
+For a text-based download (CSV, JSON) where the filename *is* fixed and the content matters, the same `cy.readFile()` pattern works without the task — just read the file directly and assert on its contents:
 
 ```typescript
-cy.readFile('cypress/downloads/receipt-1024.pdf', 'binary', { timeout: 10000 }).then((contents) => {
-  expect(contents.length).to.be.greaterThan(1000) // sanity check it's not an empty/broken file
+cy.readFile('cypress/downloads/orders-export.csv', { timeout: 10000 }).then((contents) => {
+  expect(contents).to.include('Order ID,Total,Status')
 })
 ```
 
 ## Cleaning Up Between Test Runs
 
-Downloaded files persist in the downloads folder across test runs unless you clean them up, which can cause a later test to pass against a stale file left over from a previous run instead of the one it actually just downloaded. A `before` hook that clears the downloads directory at the start of a run is worth having in any suite that tests downloads at all:
+Downloaded files persist in the downloads folder across test runs unless you clean them up, which matters more than usual here — since the filename check above matches by *prefix*, a stale file from a previous run would satisfy the assertion even if the current run's download silently failed. Clear the folder at the start of a run that tests downloads:
 
 ```typescript
 before(() => {
-  cy.task('clearDownloads') // implement via a Node task in cypress.config.ts using fs
+  cy.task('clearDownloads') // a second task, same pattern as findDownload — deletes the folder's contents
 })
 ```
+
+## Download the Working Test
+
+The download test above is real, passing code — part of the same [tabs-and-downloads.cy.ts](/tutorial/cypress/tabs-windows-multi-origin) covered in the previous chapter — download it there.

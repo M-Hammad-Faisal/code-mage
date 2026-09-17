@@ -1,4 +1,5 @@
 import type { Options } from '@wdio/types';
+import path from 'path';
 
 // ---------------------------------------------------------------------------
 // WDIO Configuration — SauceDemo Example Project
@@ -36,6 +37,12 @@ export const config: Options.Testrunner = {
               '--window-size=1280,800',
             ]
           : [],
+        // Needed for tests/tabs-and-downloads.e2e.ts — points Chrome's real
+        // download behavior at a known folder instead of prompting.
+        prefs: {
+          'download.default_directory': path.join(process.cwd(), 'test-downloads'),
+          'download.prompt_for_download': false,
+        },
       },
     },
   ],
