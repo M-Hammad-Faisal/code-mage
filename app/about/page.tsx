@@ -102,14 +102,14 @@ const CERTIFICATIONS = [
 
 const PROJECTS = [
   {
-    desc: 'Technical content platform. 28 tutorial chapters, blog, newsletter.',
+    desc: 'Technical content platform. 39 tutorial chapters, blog, newsletter.',
     href: 'https://code-mage.dev',
     stack: ['Next.js', 'Supabase', 'MDX', 'Vercel'],
     title: 'Code Mage',
   },
   {
     desc: '7 merged PRs across webdriverio/webdriverio, wdio-wait-for, and example-recipes — a spec-reporter color option, the file-download Best Practices docs page, and several other docs/bug fixes.',
-    href: 'https://github.com/pulls?q=is%3Apr+author%3AM-Hammad-Faisal+org%3Awebdriverio+is%3Amerged',
+    href: 'https://github.com/search?q=is%3Apr+author%3AM-Hammad-Faisal+org%3Awebdriverio+is%3Amerged&type=pullrequests',
     stack: ['WebdriverIO', 'TypeScript', 'Open Source'],
     title: 'WebdriverIO Open Source Contributions',
   },

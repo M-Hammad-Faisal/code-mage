@@ -16,31 +16,31 @@ The recommended way to install Node.js is through **nvm** (Node Version Manager)
 
 ```bash
 # Install nvm
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.7/install.sh | bash
 
-# Restart your terminal, then install Node 20 (current LTS)
-nvm install 20
-nvm use 20
-nvm alias default 20
+# Restart your terminal, then install Node 22 (current LTS)
+nvm install 22
+nvm use 22
+nvm alias default 22
 ```
 
 **Windows:** Use [nvm-windows](https://github.com/coreybutler/nvm-windows) — download and run the installer, then:
 
 ```bash
-nvm install 20
-nvm use 20
+nvm install 22
+nvm use 22
 ```
 
 **Verify the installation:**
 
 ```bash
-node --version   # should print v20.x.x or higher
+node --version   # should print v22.x.x or higher
 npm --version    # should print 10.x.x or higher
 ```
 
 If `node --version` returns "command not found", your shell hasn't picked up nvm yet. Close and reopen your terminal, or run `source ~/.bashrc` (Linux) / `source ~/.zshrc` (Mac).
 
-You need Node 18 or higher for modern test frameworks. Node 20 LTS is the safe choice.
+Install Node 22, not just "18 or higher" — this tutorial covers all three frameworks, and Cypress 16 dropped support for Node 20 entirely. Node 22 is the one version that works across every track ahead, so it's worth installing now rather than discovering the mismatch later when you get to the Cypress chapter.
 
 ## What npm Is
 
@@ -199,7 +199,7 @@ Tab completion works in most terminals — type `npm run t` and press Tab to aut
 ## Common Errors
 
 **`node: command not found`**
-Node isn't installed or your shell can't find it. Try reopening the terminal. If using nvm, run `nvm use 20`.
+Node isn't installed or your shell can't find it. Try reopening the terminal. If using nvm, run `nvm use 22`.
 
 **`npm ERR! code EACCES` (permission denied)**
 You're trying to install globally with `sudo` or the directory permissions are wrong. Never use `sudo npm install`. The fix is to always install locally (`npm install --save-dev`) or fix nvm so it owns the Node directory.
@@ -208,7 +208,7 @@ You're trying to install globally with `sudo` or the directory permissions are w
 You cloned a repo but didn't run `npm install`. Fix: run `npm install` in the project root.
 
 **`npx: command not found`**
-Your Node installation is old (pre-5.2). Update Node: `nvm install 20 && nvm use 20`.
+Your Node installation is old (pre-5.2). Update Node: `nvm install 22 && nvm use 22`.
 
 **`ENOENT: no such file or directory, open 'package.json'`**
 You're running an npm command outside a Node project directory. Run `pwd` to check where you are, then `cd` into the right folder.
