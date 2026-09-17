@@ -1,0 +1,58 @@
+---
+title: "Tabs, Windows & Multi-Origin"
+description: "Why Cypress can't drive a second tab the way Playwright and WebdriverIO can, and what cy.origin() actually gives you instead"
+order: 8
+framework: "cypress"
+chapter: "tabs-windows-multi-origin"
+---
+
+If you're coming from Playwright or WebdriverIO, this is the chapter where Cypress's architecture stops being a minor syntax difference and becomes a real constraint you have to design tests around.
+
+## Why Cypress Can't Do What the Other Two Can
+
+Cypress runs your test code inside the same browser, in the same run loop as the application under test — that's the architectural choice behind its speed and its automatic waiting. The tradeoff is that Cypress has no separate out-of-process browser driver it can hand control to when a second tab or window opens. There's no `context.waitForEvent('page')` equivalent, because there's no external process orchestrating multiple pages in the first place — everything happens inside one browser tab that the test runner is itself embedded in.
+
+Concretely, this means:
+
+- **A link that opens `target="_blank"` cannot be followed and driven directly.** Cypress can assert the link *exists* and has the right `href`, but it can't switch focus into whatever tab that link would open.
+- **`window.open()` popups are the same problem.** You can stub `window.open` to prevent the popup from opening at all and assert it was called correctly, but you can't drive the popup's contents.
+
+The practical fix for the first case, in most real test suites, is simpler than it sounds: don't test that clicking a link opens a new tab (that's the browser's job, not your app's) — instead, assert the link has the correct `href` and target attribute, and separately test the destination page in its own test if it's part of your app.
+
+```typescript
+cy.get('[data-test="view-terms"]')
+  .should('have.attr', 'href', '/terms')
+  .and('have.attr', 'target', '_blank')
+```
+
+## `cy.origin()` — For Cross-Domain Flows Within One Test
+
+Cypress does have a real, supported way to test a flow that crosses domains — a third-party login page, an OAuth redirect, a payment provider — without opening a second tab. `cy.origin()` lets a single test step into a different origin's context and run commands there, as long as it stays within the same browser tab (the third-party page replaces the current tab's content rather than opening a new one):
+
+```typescript
+it('logs in through an external identity provider', () => {
+  cy.visit('/login')
+  cy.get('[data-test="sso-login"]').click()
+
+  cy.origin('https://accounts.example-idp.com', () => {
+    cy.get('#username').type('test-user')
+    cy.get('#password').type('secret')
+    cy.get('#submit').click()
+  })
+
+  // back on your app's origin after the redirect completes
+  cy.url().should('include', '/dashboard')
+})
+```
+
+The callback passed to `cy.origin()` runs in an isolated context — it can't close over variables from outside it the way a normal Cypress chain can, since it's genuinely executing against a different origin under the hood. Anything you need to pass in has to go through `cy.origin()`'s second argument explicitly:
+
+```typescript
+cy.origin('https://accounts.example-idp.com', { args: { username: 'test-user' } }, ({ username }) => {
+  cy.get('#username').type(username)
+})
+```
+
+## What This Actually Means for Test Design
+
+If your application relies heavily on multi-tab workflows — comparing two documents side by side, a "open in new tab" power-user feature, anything where the test's whole point is verifying behavior *across* two simultaneously open tabs — that's a real, structural reason to reach for Playwright or WebdriverIO for that specific suite instead of forcing it through Cypress. This isn't a gap you work around with a plugin; it's a direct consequence of the same in-browser architecture that makes Cypress fast and its automatic retries reliable everywhere else. Know it going in, rather than discovering it three tests deep into a suite that assumed otherwise.

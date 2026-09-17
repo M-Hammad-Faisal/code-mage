@@ -1,7 +1,7 @@
 ---
 title: "CI/CD — Running Tests on Every Push"
 description: "Set up GitHub Actions to run your Playwright tests automatically with reports, artifacts, and smart failure handling"
-order: 8
+order: 12
 framework: "playwright"
 chapter: "ci-cd"
 ---
@@ -274,6 +274,27 @@ on:
   schedule:
     - cron: '0 2 * * *'  # 2 AM UTC every day
 ```
+
+## Notifications: Getting Failures Seen
+
+A red build nobody looks at is worse than not running the tests at all — it just becomes noise the team learns to ignore. A Slack notification on failure is a small addition to the workflow that makes a CI failure something a human actually sees, without anyone needing to go check the Actions tab:
+
+```yaml
+- name: Notify Slack on failure
+  if: failure()
+  uses: slackapi/slack-github-action@v2
+  with:
+    webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+    webhook-type: incoming-webhook
+    payload: |
+      {
+        "text": "🔴 Playwright suite failed on ${{ github.ref_name }} — <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|view run>"
+      }
+```
+
+`if: failure()` keeps this quiet on every passing run — you only want a notification for the state change that actually requires attention. Store the webhook URL as a repository secret (`SLACK_WEBHOOK_URL`), never inline in the workflow file.
+
+For a smaller team or side project without a dedicated Slack channel, a GitHub-native alternative that needs zero extra setup is enabling email notifications on workflow failure in your own GitHub notification settings — not part of the workflow file at all, but worth mentioning since it's genuinely the right choice for a team of one.
 
 ## The Final Workflow
 

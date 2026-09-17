@@ -1,0 +1,77 @@
+---
+title: "Frames, Downloads & Uploads"
+description: "Interacting with iframe content, capturing file downloads, and uploading files in Playwright"
+order: 9
+framework: "playwright"
+chapter: "frames-downloads-uploads"
+---
+
+Three separate scenarios grouped together here because they share one thing in common: each one involves content or a file crossing a boundary — into an iframe, out of the browser as a download, or into the browser as an upload.
+
+## Working With iframes
+
+An iframe is a separate document embedded in the page, and Playwright's `page.locator()` doesn't reach inside one automatically — you need `frameLocator()` to scope into it first:
+
+```typescript
+test('interacts with an embedded payment iframe', async ({ page }) => {
+  const paymentFrame = page.frameLocator('iframe[title="Secure Payment"]');
+
+  await paymentFrame.getByLabel('Card Number').fill('4242 4242 4242 4242');
+  await paymentFrame.getByLabel('Expiry').fill('12/28');
+  await paymentFrame.getByRole('button', { name: 'Pay' }).click();
+});
+```
+
+`frameLocator()` returns something that behaves like a `Page` for locator purposes — `getByRole`, `getByLabel`, and the rest of the selector API all work the same way inside it. The one thing to watch for: if the iframe's `src` points to a different origin than the parent page, you can only interact with elements inside it — you cannot read values or run `page.evaluate()` scripts that reach across that origin boundary from outside the frame, which is a browser security restriction, not a Playwright limitation.
+
+For a frame without a stable `title` attribute, you can also locate it by name or by its position among frames on the page:
+
+```typescript
+const frame = page.frameLocator('#checkout-iframe'); // by CSS selector on the <iframe> element itself
+```
+
+## File Downloads
+
+Like new tabs, downloads fire an event you have to be listening for before the action that triggers them:
+
+```typescript
+test('downloads the invoice PDF', async ({ page }) => {
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('link', { name: 'Download Invoice' }).click(),
+  ]);
+
+  expect(download.suggestedFilename()).toBe('invoice.pdf');
+
+  // Save it somewhere you can inspect, or just confirm it happened
+  await download.saveAs(`./test-results/${download.suggestedFilename()}`);
+});
+```
+
+Playwright doesn't render or open the downloaded file — your test's job here is usually just confirming that a download *happened* and, optionally, that its filename or size matches expectations. If you need to verify the file's actual contents (a generated PDF report, a CSV export), read it from disk after `saveAs()` with Node's own `fs` module — Playwright's role ends at "the browser produced this file."
+
+## File Uploads
+
+`setInputFiles()` handles the common case — a real `<input type="file">` element — directly, without needing a native OS file picker dialog at all:
+
+```typescript
+test('uploads a profile photo', async ({ page }) => {
+  await page.getByLabel('Upload Photo').setInputFiles('./fixtures/avatar.png');
+  await expect(page.getByAltText('Profile preview')).toBeVisible();
+});
+```
+
+Multiple files at once, or clearing a selection entirely:
+
+```typescript
+await page.getByLabel('Attach Files').setInputFiles(['./fixtures/doc1.pdf', './fixtures/doc2.pdf']);
+
+// Clear a previous selection
+await page.getByLabel('Attach Files').setInputFiles([]);
+```
+
+For a drag-and-drop upload zone that has no real `<input type="file">` backing it directly — some custom-built upload components render one but keep it visually hidden — `setInputFiles()` still works on the hidden input itself; you just need the right selector to reach it, which is usually the actual `<input>` element even when the visible drop zone is a styled `<div>` layered on top of it.
+
+## The Thread Connecting All Three
+
+Frames, downloads, and uploads each require Playwright to reach across a boundary the normal locator API doesn't cross automatically — an iframe's document boundary, the browser-to-filesystem boundary for a download, and the filesystem-to-browser boundary for an upload. None of the three is conceptually hard once you know which specific API exists for crossing that particular boundary; the actual skill is recognizing which boundary you're dealing with before you go looking for a locator-based solution that was never going to work for it.

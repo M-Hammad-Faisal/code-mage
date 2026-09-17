@@ -1,0 +1,90 @@
+---
+title: "Debugging & Selector Tools"
+description: "browser.debug()'s REPL, the standalone wdio repl command, and the CLI flags that matter when a test won't cooperate"
+order: 3
+framework: "webdriverio"
+chapter: "debugging-and-selector-tools"
+---
+
+WebdriverIO doesn't ship a dedicated visual selector picker or a separate inspector window the way Playwright and Cypress do. What it gives you instead is a real Node.js REPL dropped directly into your test's execution context — which turns out to be a genuinely different, and in some ways more powerful, way to debug.
+
+## `browser.debug()` — A REPL Inside Your Test
+
+Drop this anywhere in a test and execution pauses there, opening an interactive Node REPL in your terminal with the live `browser` object and every variable in scope available to query:
+
+```typescript
+it('should add item to cart', async () => {
+  await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+  await browser.debug()  // execution pauses here
+  await expect($('[data-test="shopping-cart-badge"]')).toHaveText('1')
+})
+```
+
+Once paused, you can run arbitrary WebdriverIO commands directly in the terminal to explore the actual state of the page at that exact moment:
+
+```
+> await $('[data-test="shopping-cart-badge"]').getText()
+'1'
+> await $('[data-test="shopping-cart-badge"]').isDisplayed()
+true
+> await browser.getUrl()
+'https://www.saucedemo.com/inventory.html'
+```
+
+This is a meaningfully different debugging experience than stepping through a visual inspector — you're not just watching, you're interactively querying the live page with real commands, which is often faster for answering a specific question ("is this element actually visible right now, or just present in the DOM") than reading through a trace or a snapshot.
+
+Type `.exit` in the REPL to resume test execution from where it paused.
+
+## The Standalone `wdio repl` Command
+
+You don't need a running test to get a REPL against a real browser — `wdio repl` launches one directly:
+
+```bash
+npx wdio repl chrome
+```
+
+This opens a Chrome window and drops you straight into a REPL against it, with no spec file, no test runner config, nothing but the raw `browser` object. It's the fastest way to try out a selector against a real page before writing it into a test at all — navigate manually, then query:
+
+```
+> await browser.url('https://www.saucedemo.com')
+> await $('[data-test="username"]').isExisting()
+true
+```
+
+## Verifying a Selector Match Count
+
+WebdriverIO doesn't have a Playwright- or Cypress-style visual "this selector matches N elements" indicator, but the same check is one line in the REPL:
+
+```
+> (await $$('[data-test="inventory-item"]')).length
+6
+```
+
+Get in the habit of checking this whenever a selector feels ambiguous — the same problem that shows up as a highlighted match count in the other two frameworks' tools shows up here as a length you have to explicitly ask for, which is easy to skip if you're not deliberate about it.
+
+## CLI Flags Worth Knowing
+
+```bash
+# Run one specific spec file
+npx wdio run wdio.conf.ts --spec ./test/specs/checkout.e2e.ts
+
+# Run only specs matching a suite name defined in your config
+npx wdio run wdio.conf.ts --suite smoke
+
+# Increase log verbosity to see every WebDriver command and response
+npx wdio run wdio.conf.ts --logLevel debug
+```
+
+`--logLevel debug` is the one worth reaching for first when a test fails in CI and you can't reproduce it locally — it prints every command WDIO sent and every response it got back, which is often enough to spot a timing or protocol-level issue without needing to touch the test code at all.
+
+## Screenshots on Demand, Not Just on Failure
+
+You already have `browser.saveScreenshot()` available from the `afterTest` hook covered earlier in this tutorial, but it's just as useful mid-debugging-session, called manually right before or after the line you suspect is the problem:
+
+```typescript
+await browser.saveScreenshot('./debug-before-click.png')
+await $('[data-test="checkout"]').click()
+await browser.saveScreenshot('./debug-after-click.png')
+```
+
+Comparing the two side by side is often faster than reasoning about what should have happened from the code alone, especially for layout or visibility issues that are hard to describe precisely in a REPL query.

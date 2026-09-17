@@ -1,7 +1,7 @@
 ---
 title: "Advanced Interactions & Browser Control"
 description: "Handle dropdowns, file uploads, iframes, multi-tab, and direct JavaScript execution in WDIO"
-order: 6
+order: 7
 framework: "webdriverio"
 chapter: "advanced-interactions"
 ---
@@ -151,6 +151,41 @@ await browser.execute((el) => {
 
 await $('input[type="file"]').setValue(filePath)
 ```
+
+## File Downloads
+
+WebdriverIO has no dedicated "download" event to await — verify a download the same way you'd verify any other file-system side effect, by checking the downloads directory on disk after triggering it. First, point Chrome's download behavior at a known folder in your capabilities:
+
+```typescript
+capabilities: [
+  {
+    browserName: 'chrome',
+    'goog:chromeOptions': {
+      prefs: {
+        'download.default_directory': path.join(process.cwd(), 'test-downloads'),
+        'download.prompt_for_download': false,
+      },
+    },
+  },
+],
+```
+
+Then, after clicking whatever triggers the download, poll for the file's existence instead of assuming it landed instantly — a download isn't synchronous with the click that started it:
+
+```typescript
+import fs from 'fs'
+import path from 'path'
+
+await $('[data-test="download-invoice"]').click()
+
+const filePath = path.join(process.cwd(), 'test-downloads', 'invoice.pdf')
+await browser.waitUntil(() => fs.existsSync(filePath), {
+  timeout: 10000,
+  timeoutMsg: 'expected invoice.pdf to be downloaded within 10s',
+})
+```
+
+For a text-based format, read the file directly afterward to assert on its actual contents, the same as you would for any other file your test needs to inspect.
 
 ## iframes
 
@@ -401,6 +436,42 @@ await browser.cdp('Emulation', 'setDeviceMetricsOverride', {
   mobile: true
 })
 ```
+
+## Multi-Touch Actions (Mobile / Appium)
+
+This is genuinely a WebdriverIO-specific topic — neither Playwright nor Cypress automate native multi-touch gestures, since neither drives real mobile devices through Appium. If you're testing a native or hybrid mobile app, WDIO's action API lets you script multi-finger gestures directly:
+
+```typescript
+// A two-finger pinch-to-zoom gesture
+await browser.performActions([
+  {
+    type: 'pointer',
+    id: 'finger1',
+    parameters: { pointerType: 'touch' },
+    actions: [
+      { type: 'pointerMove', duration: 0, x: 100, y: 300 },
+      { type: 'pointerDown', button: 0 },
+      { type: 'pointerMove', duration: 500, x: 50, y: 300 },
+      { type: 'pointerUp', button: 0 },
+    ],
+  },
+  {
+    type: 'pointer',
+    id: 'finger2',
+    parameters: { pointerType: 'touch' },
+    actions: [
+      { type: 'pointerMove', duration: 0, x: 200, y: 300 },
+      { type: 'pointerDown', button: 0 },
+      { type: 'pointerMove', duration: 500, x: 250, y: 300 },
+      { type: 'pointerUp', button: 0 },
+    ],
+  },
+])
+
+await browser.releaseActions()
+```
+
+This is the W3C WebDriver Actions API, not something WDIO-specific — each `pointer` entry is an independent finger, and the coordinates describe where it starts and ends. For common gestures like swipe or pinch, most real-world suites wrap this in a small helper rather than writing the raw action sequence inline every time. This is genuinely an Appium/mobile concern rather than something you'll reach for testing a desktop browser — if you're only testing web in Chrome or Firefox, you're unlikely to need this at all.
 
 ## Complete Example: File Upload with iframe Interaction
 

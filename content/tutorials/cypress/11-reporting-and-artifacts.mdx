@@ -1,0 +1,104 @@
+---
+title: "Reporting & Artifacts"
+description: "Allure integration for Cypress, controlling video and screenshot behavior deliberately, and a real logging strategy beyond console.log"
+order: 11
+framework: "cypress"
+chapter: "reporting-and-artifacts"
+---
+
+You've already seen `cypress-mochawesome-reporter` for shareable HTML reports in the CI/CD chapter. This chapter covers what that one doesn't: Allure for teams standardized on it, taking deliberate control of video and screenshot behavior instead of leaving it on defaults, and a logging strategy that actually helps when a test fails in CI.
+
+## Allure Integration
+
+If your organization already has Allure tooling around other test suites (a shared Allure server, existing dashboards, trend tracking across builds), Cypress has a maintained plugin rather than a built-in integration:
+
+```bash
+npm install --save-dev @shelex/cypress-allure-plugin
+```
+
+```typescript
+// cypress.config.ts
+import { defineConfig } from 'cypress'
+import allureWriter from '@shelex/cypress-allure-plugin/writer'
+
+export default defineConfig({
+  e2e: {
+    baseUrl: 'https://www.saucedemo.com',
+    setupNodeEvents(on, config) {
+      allureWriter(on, config)
+      return config
+    },
+    env: {
+      allure: true,
+    },
+  },
+})
+```
+
+```typescript
+// cypress/support/e2e.ts
+import '@shelex/cypress-allure-plugin'
+```
+
+Run tests as normal, then generate the report the same way you would for any other Allure-producing tool:
+
+```bash
+npx cypress run
+npx allure generate allure-results --clean -o allure-report
+npx allure open allure-report
+```
+
+The plugin also lets you attach custom labels and steps directly from test code — useful if your team categorizes failures (by feature area, by severity) inside Allure's own dashboard rather than just by spec file name:
+
+```typescript
+it('adds item to cart', () => {
+  cy.allure().label('feature', 'Cart')
+  cy.allure().label('severity', 'critical')
+  // ...
+})
+```
+
+## Taking Deliberate Control of Video and Screenshots
+
+Cypress records video by default in run mode and takes a screenshot automatically on any failure. Both are useful defaults, but the defaults aren't free — video recording adds real time and disk usage to every CI run, whether or not anything failed:
+
+```typescript
+// cypress.config.ts
+export default defineConfig({
+  video: true, // keep for now — see the note below
+  videoCompression: 32, // CRF value; higher = smaller file, lower quality. Cypress default is 32.
+  screenshotOnRunFailure: true, // default; rarely worth turning off
+  trashAssetsBeforeRuns: true, // clear old videos/screenshots before each run
+  e2e: {
+    // ...
+  },
+})
+```
+
+A common, deliberate optimization once a suite gets large: only keep video for failed specs, deleting passing-run video after the fact to save CI storage without losing anything useful. Cypress doesn't do this natively, but the `cypress-terminal-report` community pattern of deleting `cypress/videos/*` for specs that appear in the passed list — driven from a `setupNodeEvents` `after:run` hook — is the standard approach:
+
+```typescript
+setupNodeEvents(on, config) {
+  on('after:run', (results) => {
+    if ('runs' in results) {
+      results.runs
+        .filter((run) => run.stats.failures === 0)
+        .forEach((run) => {
+          // delete run.video here via fs, if it exists
+        })
+    }
+  })
+}
+```
+
+## A Logging Strategy Beyond console.log
+
+`console.log` inside a Cypress test writes to the browser console, which the Command Log doesn't surface directly — it's easy to lose track of. `cy.log()` is the Cypress-aware equivalent, and it shows up directly in the Command Log timeline alongside every other command, which matters specifically because it means a `cy.log()` call appears in the exact chronological position it ran, right next to the DOM snapshot from that moment:
+
+```typescript
+cy.log('Starting checkout flow for standard_user')
+cy.get('[data-test="checkout"]').click()
+cy.log(`Cart total before discount: ${cartTotal}`)
+```
+
+For CI runs specifically, `cypress-terminal-report` is worth installing on any suite you actually debug from CI logs rather than the HTML report — it mirrors browser console output, network requests, and command logs directly into your CI's stdout, which means you can often diagnose a CI-only failure from the raw job log without downloading any artifact at all.

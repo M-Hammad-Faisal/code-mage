@@ -1,0 +1,103 @@
+---
+title: "Reporting & Artifacts"
+description: "Video recording, custom Allure steps, writing your own reporter, and a logging strategy that survives a CI-only failure"
+order: 9
+framework: "webdriverio"
+chapter: "reporting-and-artifacts"
+---
+
+The CI/CD chapter covered the spec, dot, and Allure reporters for day-to-day output. This chapter goes further into artifacts and reporting depth: recording video of a run, adding structured steps to Allure instead of relying on raw command logs, writing a custom reporter, and a logging approach that holds up when a failure only reproduces in CI.
+
+## Video Recording
+
+Unlike Playwright and Cypress, WebdriverIO doesn't record video natively — it's added through a dedicated reporter that captures screenshots during the run and stitches them into a video file:
+
+```bash
+npm install --save-dev wdio-video-reporter
+```
+
+```typescript
+// wdio.conf.ts
+reporters: [
+  'spec',
+  ['video', {
+    saveAllVideos: false,       // only keep video for failed specs
+    videoSlowdownMultiplier: 3, // slow down playback for easier reading
+    outputDir: './test-results/videos',
+  }],
+]
+```
+
+`saveAllVideos: false` is worth setting deliberately rather than leaving on the default — the same storage-cost argument applies here as it does for Playwright and Cypress: video for every passing run adds up fast and rarely gets opened.
+
+## Structured Steps in Allure
+
+The basic Allure setup from the CI/CD chapter reports commands as WebdriverIO logs them, which can be noisy — every individual `$()` call and `.click()` shows up as its own line. For a report that reads like the actual test's logic instead of a raw command trace, wrap meaningful chunks of a test in `allure.step()`:
+
+```typescript
+import allure from '@wdio/allure-reporter'
+
+it('completes checkout for a standard user', async () => {
+  await allure.step('Add item to cart', async () => {
+    await $('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+  })
+
+  await allure.step('Complete checkout form', async () => {
+    await $('[data-test="firstName"]').setValue('John')
+    await $('[data-test="lastName"]').setValue('Doe')
+    await $('[data-test="postalCode"]').setValue('12345')
+    await $('[data-test="continue"]').click()
+  })
+
+  await allure.step('Verify order confirmation', async () => {
+    await expect($('[data-test="complete-header"]')).toHaveText('Thank you for your order!')
+  })
+})
+```
+
+The resulting report shows three collapsible steps instead of a dozen individual command entries — someone reviewing a failed run can immediately see which *phase* of the test failed without reading raw selector calls.
+
+## Writing a Custom Reporter
+
+WDIO's reporter interface extends Node's `EventEmitter` — a minimal one that posts a summary somewhere on completion:
+
+```typescript
+// reporters/summary-reporter.ts
+import WDIOReporter from '@wdio/reporter'
+
+class SummaryReporter extends WDIOReporter {
+  private failures: string[] = []
+
+  onTestFail(test: any) {
+    this.failures.push(`${test.fullTitle} — ${test.error?.message}`)
+  }
+
+  onRunnerEnd() {
+    if (this.failures.length > 0) {
+      console.log(`\n${this.failures.length} test(s) failed:`)
+      this.failures.forEach((f) => console.log(`  - ${f}`))
+    }
+  }
+}
+
+export default SummaryReporter
+```
+
+```typescript
+// wdio.conf.ts
+reporters: ['spec', [SummaryReporter, {}]],
+```
+
+As with Playwright, reach for a custom reporter specifically when results need to trigger something outside WDIO's own artifact set — a webhook call, a write to an internal test-results database — not as a general alternative to the built-in reporters.
+
+## Logging Strategy for CI-Only Failures
+
+`logLevel: 'debug'` in your config (covered in the debugging chapter) is the right tool when you're actively chasing one failure, but it's too noisy to leave on for every CI run. A more durable strategy: keep `logLevel: 'info'` as your default, and log deliberately at meaningful checkpoints in your own test code, so a failure's surrounding context is visible in the CI job log without needing to re-run with debug logging turned on:
+
+```typescript
+console.log(`[checkout] cart total before discount: ${cartTotal}`)
+await $('[data-test="finish"]').click()
+console.log(`[checkout] order confirmation URL: ${await browser.getUrl()}`)
+```
+
+This is a small habit that pays off specifically for the failures you can't reproduce locally — the same category of bug the `--logLevel debug` flag exists for, but without needing a second CI run to actually see it, since the log lines are already there from the run that failed.

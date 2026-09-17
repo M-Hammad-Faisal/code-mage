@@ -1,0 +1,84 @@
+---
+title: "Tabs, Windows & Dialogs"
+description: "Handling new tabs, popup windows, and native browser dialogs (alert/confirm/prompt) in Playwright"
+order: 8
+framework: "playwright"
+chapter: "tabs-windows-dialogs"
+---
+
+Most tests stay inside a single tab from start to finish. This chapter covers the moment that stops being true — a link opens in a new tab, a third-party auth flow pops a new window, or the app under test throws up a native `confirm()` dialog you weren't expecting.
+
+## New Tabs
+
+A `BrowserContext` can hold multiple pages. When something in your app opens a new tab — a link with `target="_blank"`, or a `window.open()` call — you catch it with the context's `page` event:
+
+```typescript
+test('opens product documentation in a new tab', async ({ page, context }) => {
+  const [newPage] = await Promise.all([
+    context.waitForEvent('page'),
+    page.getByRole('link', { name: 'View full spec sheet' }).click(),
+  ]);
+
+  await newPage.waitForLoadState();
+  await expect(newPage).toHaveURL(/spec-sheet/);
+  await expect(newPage.getByRole('heading')).toBeVisible();
+
+  await newPage.close();
+});
+```
+
+The `Promise.all()` pairing here isn't optional stylistic preference — you have to start listening for the `page` event *before* the click that triggers it, or there's a real chance the new page opens and finishes loading before your listener attaches, and you miss it entirely.
+
+Once you have `newPage`, it's a completely independent `Page` object — it has its own lifecycle, its own locators, and needs its own `waitForLoadState()` before you interact with it. The original `page` variable still points at the original tab; switching your attention to the new one doesn't change what `page` refers to.
+
+## Popup Windows
+
+Popups (opened via `window.open()` with specific size/feature flags, common in older payment or auth flows) work identically to new tabs from Playwright's perspective — they're both just additional `Page` objects on the same `BrowserContext`:
+
+```typescript
+const [popup] = await Promise.all([
+  page.waitForEvent('popup'),
+  page.getByRole('button', { name: 'Pay with PayPal' }).click(),
+]);
+
+await popup.getByLabel('Email').fill('buyer@example.com');
+await popup.getByRole('button', { name: 'Log In' }).click();
+```
+
+`popup` and `page` (as an event name) are aliases for the same underlying mechanism — use whichever reads more clearly for what's actually happening in your test.
+
+## Native Dialogs: alert, confirm, prompt
+
+Native browser dialogs block JavaScript execution until dismissed, which means they'd hang your test forever if you didn't handle them. Playwright auto-dismisses dialogs by default — but you'll usually want to control that behavior explicitly, especially for `confirm()`, where accept vs. dismiss changes what happens next in the app:
+
+```typescript
+test('confirms item removal', async ({ page }) => {
+  page.on('dialog', async (dialog) => {
+    expect(dialog.type()).toBe('confirm');
+    expect(dialog.message()).toContain('Remove this item?');
+    await dialog.accept();
+  });
+
+  await page.getByRole('button', { name: 'Remove' }).click();
+});
+```
+
+Register the `dialog` listener *before* the action that triggers the dialog, for the same reason as the new-tab pattern above — a dialog that fires before your listener is attached gets auto-dismissed by Playwright's default behavior, and your assertions on `dialog.message()` never run.
+
+For a `prompt()` dialog that expects text input, pass it to `accept()`:
+
+```typescript
+await dialog.accept('Custom cancellation reason');
+```
+
+## Switching Between Multiple Open Pages
+
+`context.pages()` returns every currently-open page on that context, in the order they were opened — useful when you need to act across more than two tabs at once, or find a tab you didn't capture a reference to when it opened:
+
+```typescript
+const allPages = context.pages();
+const inventoryTab = allPages.find((p) => p.url().includes('inventory'));
+await inventoryTab?.bringToFront();
+```
+
+`bringToFront()` doesn't affect Playwright's ability to interact with a page — you can act on any page in the context regardless of which one is visually focused — but it's useful when you're taking a screenshot or running something that depends on actual browser focus state, like a `document.hasFocus()` check inside the app itself.

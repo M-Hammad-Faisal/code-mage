@@ -1,7 +1,7 @@
 ---
 title: "CI/CD Integration"
 description: "Run Cypress tests in GitHub Actions, generate reports, and set up parallelization"
-order: 8
+order: 12
 framework: "cypress"
 chapter: "ci-cd"
 ---
@@ -294,6 +294,27 @@ Cypress downloads its browser binary (~300MB) on first install. Cache it to avoi
 ```
 
 The official `cypress-io/github-action` does this automatically, so you only need the manual cache step if you're calling `npx cypress run` directly.
+
+## Notifications: Getting Failures Seen
+
+An HTML report nobody opens is just as ignorable as no report at all. Post a Slack message on failure so a red build gets seen without anyone needing to go check CI manually:
+
+```yaml
+- name: Notify Slack on failure
+  if: failure()
+  uses: slackapi/slack-github-action@v2
+  with:
+    webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+    webhook-type: incoming-webhook
+    payload: |
+      {
+        "text": "🔴 Cypress suite failed on ${{ github.ref_name }} — <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|view run>"
+      }
+```
+
+`if: failure()` keeps it silent on green runs — the whole point is surfacing the state change that needs attention, not adding noise to every passing build. Store the webhook as a repository secret (`SLACK_WEBHOOK_URL`), never hardcoded in the workflow.
+
+If your team uses Cypress Cloud, it has its own native Slack integration configurable directly from the Cloud dashboard — worth using instead of a custom webhook step if you're already paying for Cloud, since it comes with richer context (which specific tests failed, a link straight to the recorded run) than a generic webhook message can include.
 
 ## Complete Production-Ready Workflow
 

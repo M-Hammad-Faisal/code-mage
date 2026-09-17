@@ -1,0 +1,70 @@
+---
+title: "Debugging & Selector Tools"
+description: "The Selector Playground, time-travel debugging in the Test Runner, and the CLI flags that matter when a test won't cooperate"
+order: 3
+framework: "cypress"
+chapter: "debugging-and-selector-tools"
+---
+
+Cypress's biggest structural advantage for debugging is that it runs inside the browser, not alongside it — which means the debugging tools aren't a separate window you have to context-switch to. This chapter covers the ones you'll actually use.
+
+## The Selector Playground
+
+Open the Cypress Test Runner (`npx cypress open`), run any test, and click the target icon in the top toolbar. This opens the Selector Playground — hover any element on the page and Cypress shows you the selector it would generate, along with how many elements on the page currently match it.
+
+```bash
+npx cypress open
+```
+
+That match count matters more than it looks like it should. A selector that matches "1 element" is unambiguous. A selector that matches "3 elements" means whatever assertion or action you chain onto it is implicitly acting on the first match — which works until the page changes and a different element becomes first. The Playground surfaces this instantly, before you've written a single line of test code that depends on it.
+
+You can also type a custom selector directly into the Playground's search box to test it against the live page before committing it to a spec file — the same "try it, see what matches, adjust" loop as Playwright's UI Mode locator picker, just built into the main Test Runner window instead of a separate mode.
+
+## Time-Travel Debugging
+
+Every command in a Cypress test — `cy.get()`, `cy.click()`, `cy.type()` — gets logged in the Command Log on the left side of the Test Runner. Hover over any logged command and Cypress shows you a snapshot of the DOM exactly as it existed at that point in the test's execution:
+
+- **Before** the command ran
+- **After** the command ran
+
+This is Cypress's real answer to "what did the page actually look like when this failed" — you don't need a separate trace file or a screenshot-on-failure setup to get it, because every command already carries its own before/after snapshot by default, for every run, not just failures.
+
+## `.debug()` and `cy.pause()`
+
+Two commands, two different use cases:
+
+```javascript
+// Logs the current subject to the browser console and pauses briefly
+cy.get('[data-test="inventory-item"]').debug()
+
+// Pauses the test entirely — advance manually with the Test Runner's step button
+cy.get('[data-test="checkout"]').click()
+cy.pause()
+cy.get('[data-test="first-name"]').type('John')
+```
+
+`.debug()` is for a quick "what is this actually" check mid-chain without stopping execution. `cy.pause()` is for stepping through a section of a test manually, one command at a time, when you need to actually watch the app respond between steps.
+
+Because Cypress tests run in a real Chrome DevTools-connected browser, you can also just open DevTools directly during a paused or debug-logged run and inspect the page exactly as you would for any web app — the console, network tab, and elements panel all work normally, since there's no separate automation-only browser context to break out of.
+
+## CLI Flags Worth Knowing
+
+```bash
+# Run one specific spec file instead of the whole suite
+npx cypress run --spec "cypress/e2e/checkout.cy.ts"
+
+# Run in a specific browser instead of the Cypress-bundled Electron
+npx cypress run --browser chrome
+
+# Run headed even in run mode (not just interactive open mode)
+npx cypress run --headed
+
+# Repeat a run to confirm a real intermittent failure vs. a one-off
+npx cypress run --spec "cypress/e2e/checkout.cy.ts" && npx cypress run --spec "cypress/e2e/checkout.cy.ts"
+```
+
+Cypress doesn't have a built-in `--repeat-each` equivalent the way Playwright does — if you need to confirm a flaky test is genuinely intermittent rather than reliably broken, running the same spec several times in a row from the CLI (or using a small shell loop) is the practical substitute.
+
+## Reading Test Retries as a Debugging Signal, Not Just a Safety Net
+
+If `retries` is configured in your `cypress.config.ts`, a test that fails once and passes on retry still shows up as passing in your final report — but Cypress logs both attempts. Don't treat a passing-on-retry test as a non-issue purely because CI is green; a test that needs its retry more than occasionally is telling you something real is unstable, and the retry is masking it rather than fixing it.

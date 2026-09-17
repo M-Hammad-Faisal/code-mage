@@ -1,0 +1,80 @@
+---
+title: "Debugging & Selector Tools"
+description: "Playwright Inspector, codegen, the UI Mode locator picker, and the CLI flags that actually matter when a test won't cooperate"
+order: 3
+framework: "playwright"
+chapter: "debugging-and-selector-tools"
+---
+
+You already saw `--ui`, `--headed`, and `codegen` in passing during setup. This chapter goes deeper into the actual toolset Playwright gives you for two specific, recurring problems: figuring out the right selector for an element, and figuring out why a test that looks correct isn't behaving correctly.
+
+## Playwright Inspector
+
+`--debug` opens the Playwright Inspector — a separate window that pauses your test before it runs and lets you step through it action by action:
+
+```bash
+npx playwright test tests/checkout.spec.ts --debug
+```
+
+Each click of "Step over" runs exactly one Playwright action and pauses again. The inspector also shows you the exact locator Playwright resolved for the current action, and highlights the matching element(s) directly in the browser — which is the fastest way to answer "did my selector actually match what I think it matched" without adding a single `console.log`.
+
+You can also drop a breakpoint directly in code instead of stepping through the whole test from the start:
+
+```typescript
+await page.pause(); // opens the Inspector here, mid-test
+```
+
+This is the better choice when the problem is somewhere in the middle of a long test — jump straight to the relevant section instead of stepping through everything before it.
+
+## Codegen: Generating Selectors From Real Interactions
+
+```bash
+npx playwright codegen https://www.saucedemo.com
+```
+
+Codegen opens a real browser alongside a code panel. Every click, type, and navigation you perform gets turned into Playwright code in real time, using the same selector priority Playwright recommends — role-based first, falling back to text or test IDs. It's genuinely useful for two things: bootstrapping a new test fast, and — just as usefully — checking what selector Playwright itself would generate for a tricky element, as a sanity check against a selector you wrote by hand.
+
+It is not a tool for producing your final test code. Codegen output tends to over-specify (it doesn't know which parts of an interaction are actually meaningful to assert on) and doesn't structure anything into Page Objects. Treat it as a first draft you clean up, not a finished test.
+
+```bash
+# Save output directly to a file as you record
+npx playwright codegen https://www.saucedemo.com -o tests/generated-draft.spec.ts
+
+# Record against a specific viewport, useful for responsive-only bugs
+npx playwright codegen --viewport-size=390,844 https://www.saucedemo.com
+```
+
+## UI Mode's Locator Picker, Revisited
+
+The [installation chapter](/tutorial/playwright/installation-setup) introduced UI Mode's watch mode and timeline. Its locator picker deserves a separate mention here because it solves a different problem than codegen: instead of recording a whole interaction, it lets you point at one specific element and get back the exact locator Playwright would use, with a live playground to edit and re-test it before you commit it to code. Reach for codegen when you're bootstrapping a full flow; reach for the UI Mode picker when you already have a test and just need one correct selector for one element.
+
+## CLI Flags Worth Knowing for Debugging
+
+```bash
+# Run one specific test by name (partial match, case-insensitive)
+npx playwright test -g "successful login"
+
+# Run only one project (e.g. one browser) instead of all configured ones
+npx playwright test --project=chromium
+
+# Repeat a flaky test multiple times in a row to confirm a real intermittent failure
+npx playwright test tests/checkout.spec.ts --repeat-each=10
+
+# Stop after the first failure instead of running the whole suite
+npx playwright test --max-failures=1
+
+# Force serial (non-parallel) execution — useful to rule out a parallelism-related bug
+npx playwright test --workers=1
+```
+
+`--repeat-each` in particular is worth reaching for before you assume a failure is "just flaky" — a test that fails 1 time in 10 tells you something real and reproducible about a race condition; a test that fails every single time you run it in isolation but only sometimes in the full suite tells you it's a shared-state problem instead. Which one it is changes where you go looking for the actual bug.
+
+## Reading a Trace Instead of Guessing
+
+If a test fails in CI and you can't reproduce it locally, the trace file is the actual source of truth — not the error message:
+
+```bash
+npx playwright show-trace test-results/checkout-should-succeed/trace.zip
+```
+
+The trace viewer shows you the DOM snapshot before and after every action, the network requests that happened around the failure, and console output — all from the exact run that failed, not a reconstruction. For a failure you can't reproduce locally, this is almost always faster than adding logging and waiting for the next CI run to (maybe) reproduce it again.

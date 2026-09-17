@@ -1,0 +1,95 @@
+---
+title: "Reporting & Artifacts"
+description: "Allure integration, custom reporters, and getting real value out of traces, screenshots, and video instead of just collecting them"
+order: 11
+framework: "playwright"
+chapter: "reporting-and-artifacts"
+---
+
+You've already seen the built-in HTML reporter and `trace`/`screenshot`/`video` config from earlier chapters. This chapter goes further: integrating Allure for teams that need it, writing a minimal custom reporter, and being deliberate about what you actually keep from every run instead of just turning every artifact on and hoping.
+
+## Allure Integration
+
+Allure is a common choice when a team needs a report format that plugs into existing dashboards (Jenkins, TestRail, or a standalone Allure server) rather than Playwright's own standalone HTML report:
+
+```bash
+npm install --save-dev allure-playwright
+```
+
+```typescript
+// playwright.config.ts
+export default defineConfig({
+  reporter: [
+    ['html'],
+    ['allure-playwright', { resultsDir: 'allure-results' }],
+  ],
+  // ...
+});
+```
+
+Generate the actual report from results after a run:
+
+```bash
+npx allure generate ./allure-results --clean -o ./allure-report
+npx allure open ./allure-report
+```
+
+Allure's real advantage over the built-in HTML reporter is history and trends — run it consistently across builds and it tracks flaky-test history, duration trends, and categorizes failures automatically, which the stock HTML reporter treats as one isolated run at a time.
+
+## Writing a Minimal Custom Reporter
+
+For something the built-in reporters don't do — posting results directly into an internal dashboard, for instance — Playwright's reporter interface is a plain class with a small set of lifecycle hooks:
+
+```typescript
+// reporters/summary-reporter.ts
+import type { Reporter, TestCase, TestResult } from '@playwright/test/reporter';
+
+class SummaryReporter implements Reporter {
+  private failures: string[] = [];
+
+  onTestEnd(test: TestCase, result: TestResult) {
+    if (result.status === 'failed') {
+      this.failures.push(`${test.title} — ${result.error?.message ?? 'unknown error'}`);
+    }
+  }
+
+  onEnd() {
+    if (this.failures.length > 0) {
+      console.log(`\n${this.failures.length} test(s) failed:`);
+      this.failures.forEach((f) => console.log(`  - ${f}`));
+    }
+  }
+}
+
+export default SummaryReporter;
+```
+
+```typescript
+// playwright.config.ts
+reporter: [['html'], ['./reporters/summary-reporter.ts']],
+```
+
+You won't need a custom reporter often — reach for one specifically when you need test results to trigger something outside Playwright's own artifact set, like a database write or a call to an internal API, rather than as a first choice over the built-in reporters.
+
+## Being Deliberate About Artifact Retention
+
+The installation chapter set `trace: 'on-first-retry'`, `screenshot: 'only-on-failure'`, `video: 'on-first-retry'` and moved on — worth returning to now that you understand traces, screenshots, and videos each have a real storage and CI-time cost, not just a debugging benefit:
+
+- **Traces** are the most valuable artifact per byte — full DOM snapshots, network, and console for every action — but the most expensive to generate. `on-first-retry` is the right default for almost every suite: you get a trace exactly when you need one (a test that failed once), without paying the cost on every green run.
+- **Video** is the least information-dense per byte — it shows you *that* something looked wrong, not *why*, and you still end up reaching for the trace to actually diagnose it. Keep it, but treat it as a supplementary artifact for the rare case a trace doesn't make the visual state obvious, not your primary debugging tool.
+- **Screenshots** are cheap and worth keeping liberally — `only-on-failure` is almost always the right setting; there's rarely a reason to pay the storage cost of a screenshot on every passing test.
+
+```yaml
+# .github/workflows/tests.yml — only upload what you'd actually open
+- name: Upload failure artifacts
+  if: failure()
+  uses: actions/upload-artifact@v7
+  with:
+    name: playwright-artifacts
+    path: |
+      test-results/**/trace.zip
+      test-results/**/*.png
+    retention-days: 14
+```
+
+Uploading video artifacts unconditionally on every CI run, across every test, is the single most common way a team's CI storage costs quietly balloon without anyone noticing until a bill shows up — scope video uploads to failures only, the same as everything else.

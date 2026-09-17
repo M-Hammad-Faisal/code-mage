@@ -1,7 +1,7 @@
 ---
 title: "CI/CD Integration"
 description: "Run WebdriverIO in GitHub Actions, generate Allure reports, and parallelize across browsers"
-order: 8
+order: 10
 framework: "webdriverio"
 chapter: "ci-cd"
 ---
@@ -475,6 +475,25 @@ Before going to production, verify:
 - [ ] `BASE_URL` is stored as a GitHub Variable (not Secret — it's not sensitive)
 - [ ] `wdio.conf.ts` reads all sensitive values from `process.env.*`
 - [ ] `browser.debug()` calls are removed before committing
+
+## Notifications: Getting Failures Seen
+
+Allure reports and spec-reporter output are only useful if someone actually opens them. Post a Slack message when the suite fails so a red build gets noticed without anyone needing to go check CI manually:
+
+```yaml
+- name: Notify Slack on failure
+  if: failure()
+  uses: slackapi/slack-github-action@v2
+  with:
+    webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+    webhook-type: incoming-webhook
+    payload: |
+      {
+        "text": "🔴 WebdriverIO suite failed on ${{ github.ref_name }} — <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|view run>"
+      }
+```
+
+`if: failure()` keeps this silent on passing runs, and the webhook URL belongs in a repository secret (`SLACK_WEBHOOK_URL`), never inline in the workflow file — the same pattern as every other secret in the checklist above.
 
 ## Download the Login Spec
 

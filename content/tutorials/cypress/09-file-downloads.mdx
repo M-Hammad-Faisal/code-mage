@@ -1,0 +1,76 @@
+---
+title: "File Downloads"
+description: "Verifying file downloads in Cypress — reading the downloaded file from disk, since there's no download event to listen for"
+order: 9
+framework: "cypress"
+chapter: "file-downloads"
+---
+
+File uploads have their own section in the [network and advanced interactions chapter](/tutorial/cypress/network-and-advanced) — this one covers the opposite direction, which works completely differently in Cypress than it does in Playwright or WebdriverIO.
+
+## Why This Isn't an Event You Listen For
+
+Playwright and WebdriverIO both expose a `download` event you can await, because they control the browser through an external protocol that can observe browser-level events like a download starting and finishing. Cypress, running inside the browser itself, doesn't have that same hook — there's no `cy.waitForDownload()` command built in.
+
+What Cypress *can* do reliably is what actually matters for a test: confirm that a file with the expected name landed in the download directory, and — if you need to go further — read its actual contents and assert on those.
+
+## Configuring the Download Directory
+
+By default, Cypress downloads files to a `cypress/downloads` folder relative to your project root. You can change this in config if needed:
+
+```typescript
+// cypress.config.ts
+export default defineConfig({
+  e2e: {
+    downloadsFolder: 'cypress/downloads',
+  },
+})
+```
+
+## Verifying a Download Happened
+
+The straightforward case: trigger the download, then check the file exists using `cy.readFile()`, which Cypress retries automatically the same way it retries any other assertion — useful because a download isn't instantaneous, and the file may not exist yet the moment the click resolves.
+
+```typescript
+it('downloads the order receipt as a PDF', () => {
+  cy.visit('/orders/1024')
+  cy.get('[data-test="download-receipt"]').click()
+
+  cy.readFile('cypress/downloads/receipt-1024.pdf', { timeout: 10000 }).should('exist')
+})
+```
+
+The `timeout` option is doing real work here — `cy.readFile()`'s default timeout may not be long enough for a download that takes a couple of seconds to actually land on disk, and without an explicit event to await, this retry-until-timeout is the closest Cypress gets to "waiting for the download to finish."
+
+## Verifying Contents, Not Just Existence
+
+For a CSV export or a generated report where the actual content matters, read past just confirming the file exists:
+
+```typescript
+it('exports the correct order data as CSV', () => {
+  cy.get('[data-test="export-csv"]').click()
+
+  cy.readFile('cypress/downloads/orders-export.csv', { timeout: 10000 }).then((contents) => {
+    expect(contents).to.include('Order ID,Total,Status')
+    expect(contents).to.include('1024,29.99,Shipped')
+  })
+})
+```
+
+For a binary format like PDF where you can't meaningfully assert on raw content as a string, checking existence and file size is usually the more realistic bar — verifying that a PDF was generated and isn't suspiciously empty, rather than trying to assert on the PDF's internal structure from a test.
+
+```typescript
+cy.readFile('cypress/downloads/receipt-1024.pdf', 'binary', { timeout: 10000 }).then((contents) => {
+  expect(contents.length).to.be.greaterThan(1000) // sanity check it's not an empty/broken file
+})
+```
+
+## Cleaning Up Between Test Runs
+
+Downloaded files persist in the downloads folder across test runs unless you clean them up, which can cause a later test to pass against a stale file left over from a previous run instead of the one it actually just downloaded. A `before` hook that clears the downloads directory at the start of a run is worth having in any suite that tests downloads at all:
+
+```typescript
+before(() => {
+  cy.task('clearDownloads') // implement via a Node task in cypress.config.ts using fs
+})
+```
