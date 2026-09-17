@@ -1,0 +1,121 @@
+---
+title: "I Said Allure 'Works' in Three Tutorials. Then I Actually Ran It."
+date: '2026-09-17'
+category: 'Project Breakdown'
+tags: ['allure', 'reporting', 'playwright', 'cypress', 'webdriverio', 'testing']
+excerpt: "Every reporting chapter on this site described Allure setup that had never once been run. Actually running it found a plugin that silently crashes Cypress 16, a Java dependency nobody mentions until it fails, and a flaky test that only a real repeated run would have caught."
+featured: true
+---
+
+Three separate tutorial chapters on this site — one for Playwright, one for Cypress, one for WebdriverIO — walk through setting up Allure reporting. Install a package, add a few lines of config, run `npx allure generate`, get a report. Clean, plausible, and entirely untested. I'd written all three from documentation and general knowledge, the same way most tutorials on the internet are written, and never actually run a single one of them end to end.
+
+That's a bad way to write instructions for other people to follow. So I stopped and actually did it — installed real packages, in real downloadable example projects, against the real live site this whole tutorial series tests against. It took about two hours, and it found three separate, real, nameable problems, none of which I would have found by reading documentation more carefully.
+
+## Problem One: The Cypress Plugin Crashes, and Nothing Tells You Why
+
+The Cypress chapter recommended `@shelex/cypress-allure-plugin` — a real, popular, widely-linked package. I installed it, wired it into `cypress.config.ts` exactly as documented, and ran the suite.
+
+```
+Error: spawn Unknown system error -86
+...
+1) An uncaught error was detected outside of a test:
+   TypeError: The following error originated from your test code, not from Cypress.
+   Cannot read properties of undefined (reading 'state')
+```
+
+Ten tests, zero run. Not a failed assertion — the test runner itself never got past startup. My first instinct was to suspect the machine, or some local Cypress config quirk, or a version mismatch in a completely unrelated dependency. Instead of guessing, I did the thing that actually answers the question: removed the plugin, changed nothing else, reran.
+
+```
+✔ login.cy.ts    10 passing
+```
+
+Ten green. Added the plugin back, nothing else touched: crash, reproducibly, every time. That's about as clean an isolation as a bug gets — one variable, flipped twice, with the same result both times. The plugin was the cause, not a coincidence.
+
+```bash
+npm view @shelex/cypress-allure-plugin time --json
+```
+
+```json
+{ "2.41.2": "2025-05-17T19:50:19.847Z" }
+```
+
+The plugin's last release predates this site's Cypress 16 upgrade by a wide margin. I checked its GitHub issues for anything mentioning Cypress 16 — nothing. No open issue, no closed one, no acknowledgment. As far as that repository's issue tracker is concerned, this incompatibility doesn't exist yet. It's not that the maintainer refused to fix it; nobody's told them it's broken.
+
+The actual fix, once I stopped assuming the documented package was still the right one to reach for, turned out to be one npm install away: the Allure team itself now publishes an official Cypress integration, `allure-cypress`, under the same `allure-framework` GitHub org that maintains `allure-playwright`. I installed it, wired it in with its own (different) setup API, ran the full 51-test suite:
+
+```
+✔ All specs passed!    51/51
+```
+
+Clean. The chapter now recommends the official package by name, and says explicitly why the old one doesn't work — not just "use this instead" with no context, because the next person who searches "cypress allure" is going to find the broken one first, the same way I did.
+
+## Problem Two: A Prerequisite Nobody Writes Down Until It's the Reason Everything Fails
+
+With Cypress fixed, I moved to actually generating the human-readable report — the whole point of collecting Allure results in the first place — using the tool every guide points at, `allure-commandline`.
+
+```bash
+npx allure generate allure-results --clean -o allure-report
+```
+
+```
+The operation couldn't be completed. Unable to locate a Java Runtime.
+Please visit http://www.java.com for information on installing Java.
+```
+
+`allure-commandline` is an npm package. Nothing about installing it via `npm install` suggests you're also signing up for a Java dependency. But underneath, it's a wrapper around a Java-based CLI tool, and the actual report-generation binary needs a JVM to run — a fact that's true, documented somewhere if you go looking, and mentioned in approximately none of the tutorials that tell you to run this command.
+
+I checked whether this was specific to my environment or a real, general gap. GitHub Actions' `ubuntu-latest` runner ships with five separate Java versions preinstalled — so the CI workflow in these chapters was always going to work. What it never told you: try this locally, on a laptop that's never needed Java for anything, and it fails on the exact command the tutorial tells you to run, with an error message that gives you no hint you're one `brew install openjdk` away from fixing it.
+
+This is the kind of gap that's genuinely hard to catch by reading — the command looks complete, the error looks like an installation problem with the tool itself, and nothing points you toward "you're missing an entirely different runtime this package silently depends on." It only shows up if you run it somewhere that doesn't already have Java sitting around, which, if you're writing documentation on a machine you've been developing on for years, is exactly the condition you're least likely to be in by accident.
+
+The actual fix here is better than a workaround — Allure shipped a genuinely different, Java-free command-line tool as part of "Allure Report 3," distributed as a separate npm package literally named `allure`:
+
+```bash
+npm install --save-dev allure
+npx allure generate ./allure-results --output allure-report
+```
+
+Pure Node.js. No JVM, no separate runtime, nothing else to install. I ran it on the same machine that had just failed with the Java error, and it produced a complete HTML report — `index.html`, the works — with nothing changed except which package generated it. All three chapters now point at `allure`, not `allure-commandline`, and say plainly why the swap matters instead of leaving the next reader to discover it the same way I did.
+
+## Problem Three: The Bug That Only a Second Run Would Ever Catch
+
+With both frameworks' Allure setups actually working, I reran the Cypress download test — the one verifying SauceDemo's order-confirmation PDF actually lands on disk — a few extra times, mostly as a final sanity check before calling this done.
+
+```
+1) File downloads
+     downloads the order confirmation PDF:
+   AssertionError: a PDF matching swag-labs-order-* should exist: expected null to be a string
+```
+
+This test had passed reliably earlier in this same project's history. Now it was failing, consistently, on every rerun — not intermittently, which would have looked like ordinary flakiness, but every single time. I added debug logging directly into the Node-side task that checks for the file, to see what was actually happening on disk rather than guessing from the test's own output:
+
+```
+DEBUG downloads dir exists: false ...
+DEBUG downloads dir exists: true ...
+DEBUG files: [ 'swag-labs-order-2026-09-17_09-49-58.pdf' ]
+```
+
+The file was there. It just wasn't there *yet* at the moment the test checked — the original code gave the download exactly one second (`cy.wait(1000)`) before looking, and that was no longer enough. Whether the underlying cause was a marginally slower connection to SauceDemo, a change in how the PDF gets generated, or just enough variance in this machine's load at the moment I happened to run it, the fixed wait had quietly crossed from "comfortably enough" to "not quite enough" — and a test suite has no way of telling you that's happened until you run it and watch it fail.
+
+The fix isn't a longer fixed wait — that just moves the same problem to a different, still-arbitrary number, and it's exactly the "just add a wait" anti-pattern this tutorial argues against everywhere else. It's a small polling loop that checks repeatedly instead of once:
+
+```typescript
+function findDownloadWithRetry(attemptsLeft: number): Cypress.Chainable<string> {
+  return cy.task('findDownload', 'swag-labs-order-').then((filename) => {
+    if (filename) return cy.wrap(filename as string);
+    if (attemptsLeft <= 0) {
+      throw new Error('a PDF matching swag-labs-order-* never appeared within the retry window');
+    }
+    cy.wait(500);
+    return findDownloadWithRetry(attemptsLeft - 1);
+  });
+}
+```
+
+I reran the fixed version five separate times before trusting it. Five for five.
+
+## Why This Is the Actual Point, Not a Side Note
+
+None of these three problems would show up if you only read the setup instructions and nodded along — they all required actually running the thing, watching it fail, and treating the failure as real information instead of an inconvenience to work around with a slightly different phrasing of the same untested command. A broken third-party dependency, an undocumented runtime prerequisite, and a timing assumption that quietly stopped holding — three different categories of bug, and the only thing that would have caught any of them is exactly what I hadn't done the first time: run the code, not just write it plausibly.
+
+The chapters are fixed now, and so are the three downloadable example projects, verified with full suites green — Playwright 102/102, Cypress 51/51, WebdriverIO 8/8 spec files — Allure results actually generating, actual HTML reports actually opening. But the more durable lesson isn't specific to Allure. It's that "this should work" and "I ran this and it worked" are different claims, and only one of them is actually worth putting in front of someone else as instructions.
