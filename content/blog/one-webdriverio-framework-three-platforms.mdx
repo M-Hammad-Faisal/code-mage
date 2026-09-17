@@ -159,7 +159,34 @@ The test file imports `resolveLoginPage(platform)` and calls `.login()` — it h
 
 I want to be straight about this, because "one framework for everything" is a pitch you'll see in a lot of conference talks and it oversells what actually happens day to day.
 
-**Native gestures don't map cleanly.** Swipe-to-delete, pinch-to-zoom, long-press context menus — these have no web equivalent, and Appium's gesture API (`action('pointer')` sequences, or `driver.execute('mobile: swipe', ...)`) is verbose and platform-specific enough that you end up writing Android and iOS gesture helpers separately anyway. The `LoginPage` interface pattern works great for forms and buttons; it falls apart for a carousel that only exists on mobile.
+**Native gestures don't map cleanly.** Swipe-to-delete, pinch-to-zoom, long-press context menus — these have no web equivalent, and Appium's gesture API is verbose and platform-specific enough that you end up writing Android and iOS gesture helpers separately anyway, not behind one shared interface. Here's what a swipe-to-delete actually looks like once you're past the "just describe it" stage:
+
+```typescript
+// gestures/android.gestures.ts — W3C Actions API, low-level pointer sequence
+async function swipeToDeleteAndroid(elementId: string): Promise<void> {
+  await driver.performActions([
+    {
+      type: 'pointer',
+      id: 'finger1',
+      parameters: { pointerType: 'touch' },
+      actions: [
+        { type: 'pointerMove', duration: 0, x: 300, y: 400, origin: elementId },
+        { type: 'pointerDown', button: 0 },
+        { type: 'pointerMove', duration: 300, x: 50, y: 400, origin: elementId },
+        { type: 'pointerUp', button: 0 },
+      ],
+    },
+  ])
+  await driver.releaseActions()
+}
+
+// gestures/ios.gestures.ts — XCUITest's own higher-level mobile: command instead
+async function swipeToDeleteIOS(elementId: string): Promise<void> {
+  await driver.execute('mobile: swipe', { elementId, direction: 'left' })
+}
+```
+
+Android's version is a raw W3C pointer-action sequence — down, move, up, with explicit coordinates and timing. iOS's version reaches for XCUITest's own higher-level `mobile: swipe` command instead, because Appium's iOS driver exposes gesture primitives Android's driver doesn't, and vice versa. There's no shared abstraction that makes sense here without either flattening iOS's simpler API down to Android's more manual one, or building a fake unified interface that just calls one branch or the other internally — which isn't really an abstraction, it's a `switch` statement wearing an abstraction's clothes. The `LoginPage` interface pattern works great for forms and buttons, where both platforms genuinely have the same underlying concept (a text field, a button). It falls apart for a carousel or a swipe gesture that only exists on mobile, because there's no web behavior to unify it *with* in the first place.
 
 **Waits behave differently per platform.** Web waits are mostly about DOM state — element attached, visible, not animating. Mobile waits are about app state — is the activity still transitioning, has the keyboard finished animating in, is the webview inside a hybrid screen actually loaded. We ended up with platform-specific wait helpers (`waitForKeyboardDismissed()` on mobile has no web analog) rather than one universal `waitForReady()`.
 

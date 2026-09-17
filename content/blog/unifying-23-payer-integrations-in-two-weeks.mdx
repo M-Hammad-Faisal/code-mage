@@ -145,6 +145,8 @@ class PayerOrchestrator {
 
 The key decision here is that the *pool*, not the individual integration, owns session identity. A session checked out for payer A's job can never accidentally be the same object another concurrent job for payer A is holding — the pool enforces that structurally, instead of every integration having to remember to be careful about it. That one change killed most of the session-collision bugs on its own, because they were never really about the portals — they were about shared mutable state that nothing owned.
 
+`SessionPool` here is a real, named pattern worth being precise about — the **Object Pool** pattern, though worth a correction to a claim I've seen repeated elsewhere: it isn't actually one of the Gang of Four's original 23 patterns, despite frequently being lumped in with "the GoF patterns" in casual conversation; it matured and became widely adopted as a separate, later addition to the broader design-patterns literature. What it captures, regardless of provenance, is directly what fixed the session-collision bugs here: managing a set of reusable, expensive-to-create objects (browser sessions, in this case) so that callers *borrow and return* them through one central owner, rather than each caller creating and managing its own copy. The `checkout()`/`checkin()` pair in `PayerOrchestrator.run()` is exactly that borrow/return contract — the structural reason two concurrent jobs for the same payer can never end up holding the same session object is that the pool is the only thing with the authority to hand one out in the first place.
+
 ## What the Deadline Made Me Cut
 
 Two weeks is not enough time to write 23 adapters from scratch and make them all beautiful. So I didn't try to.
