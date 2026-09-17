@@ -398,6 +398,13 @@ Want a working starting point instead of typing everything from scratch?
   tests={9}
 />
 
-Drop it into `cypress/e2e/` in a fresh Cypress project with `baseUrl: 'https://www.saucedemo.com'` and it'll run as-is.
+<DownloadCard
+  filename="tabs-and-downloads.cy.ts"
+  href="/downloads/cypress/tabs-and-downloads.cy.ts"
+  description="Real href/target check and a real PDF download, covered in the Tabs and File Downloads chapters"
+  tests={2}
+/>
+
+Drop either into `cypress/e2e/` in a fresh Cypress project with `baseUrl: 'https://www.saucedemo.com'` and it'll run as-is — the download spec needs the small `findDownload`/`clearDownloads` task shown in its header comment added to your `cypress.config.ts` first.
 
 That's the full Cypress tutorial. You've got selectors, assertions, page objects, network interception, stability patterns, and CI integration. Build on these foundations and you'll have a test suite that actually catches bugs instead of creating noise.

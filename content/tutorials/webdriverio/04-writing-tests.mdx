@@ -131,13 +131,13 @@ Automatic waiting handles most cases. For manual waits:
 
 ```typescript
 // Wait for element to exist in DOM
-await $('[data-test="cart-badge"]').waitForExist({ timeout: 5000 })
+await $('[data-test="shopping-cart-badge"]').waitForExist({ timeout: 5000 })
 
 // Wait for element to be visible
 await $('[data-test="success-message"]').waitForDisplayed({ timeout: 8000 })
 
 // Wait for element to become clickable
-await $('[data-test="checkout-btn"]').waitForClickable()
+await $('[data-test="checkout"]').waitForClickable()
 
 // Wait for element to disappear
 await $('[data-test="loading-spinner"]').waitForDisplayed({
@@ -256,6 +256,8 @@ describe('Checkout Flow', () => {
 ```
 
 ## Handling Alerts and Dialogs
+
+*SauceDemo never triggers a native alert/confirm/prompt, so there's nothing on this tutorial's site to run this against — the commands below are correct WebdriverIO API syntax for when your own app does use one.*
 
 ```typescript
 // Native browser alerts

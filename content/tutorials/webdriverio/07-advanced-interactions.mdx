@@ -33,6 +33,8 @@ To assert the selection:
 await expect(sort).toHaveValue('lohi')
 ```
 
+*SauceDemo's own sort control is a native `<select>` (the example above), not this custom-dropdown pattern — so the snippet below is reference syntax for when you hit a non-native dropdown elsewhere, not something this tutorial's site has to run it against.*
+
 For custom dropdown components (not native `<select>`), treat them like any other element — click the trigger, wait for the menu, click the option:
 
 ```typescript
@@ -42,6 +44,8 @@ await $('[data-test="sort-option-lohi"]').click()
 ```
 
 ## Drag and Drop
+
+*SauceDemo has no drag-and-drop feature anywhere in the app — this section is reference syntax, not something you can run against this tutorial's site.*
 
 WDIO's built-in `dragAndDrop()` works for most cases:
 
@@ -108,20 +112,24 @@ await browser.action('key')
 
 ## Hover / Tooltip
 
+*SauceDemo has no hover-triggered tooltip anywhere in the app — this section is reference syntax, not something you can run against this tutorial's site.*
+
 Hovering over an element triggers `:hover` CSS and `mouseover` events:
 
 ```typescript
 // Move the mouse pointer over the element
-await $('[data-test="item-name"]').moveTo()
+await $('[data-test="product-name"]').moveTo()
 
 // Assert the tooltip appeared
 await expect($('[data-test="tooltip"]')).toBeDisplayed()
 
 // Hover with offset — useful if the element is tiny
-await $('[data-test="item-name"]').moveTo({ xOffset: 10, yOffset: 5 })
+await $('[data-test="product-name"]').moveTo({ xOffset: 10, yOffset: 5 })
 ```
 
 ## File Upload
+
+*SauceDemo has no file upload input anywhere in the app — this section is reference syntax, verified against WebdriverIO's own API, not something you can run against this tutorial's site.*
 
 For `<input type="file">` elements, set the file path directly — no need to interact with the OS file picker:
 
@@ -205,6 +213,8 @@ For a text-based format with a fixed filename, read the file directly afterward 
 />
 
 ## iframes
+
+*SauceDemo has no iframe anywhere in the app — this section is reference syntax, not something you can run against this tutorial's site.*
 
 WDIO operates in the top-level frame by default. To interact with content inside an iframe, switch to it first:
 
@@ -493,7 +503,7 @@ await browser.releaseActions()
 
 This is the W3C WebDriver Actions API, not something WDIO-specific — each `pointer` entry is an independent finger, and the coordinates describe where it starts and ends. For common gestures like swipe or pinch, most real-world suites wrap this in a small helper rather than writing the raw action sequence inline every time. This is genuinely an Appium/mobile concern rather than something you'll reach for testing a desktop browser — if you're only testing web in Chrome or Firefox, you're unlikely to need this at all.
 
-## Complete Example: File Upload with iframe Interaction
+## Complete Example: Sorting, New Tabs, and localStorage
 
 ```typescript
 import path from 'path'

@@ -120,7 +120,7 @@ cy.contains('Sauce Labs Backpack').click()
 cy.contains('h3', 'Sauce Labs Backpack').click()
 
 // Most precise — use data attributes when available
-cy.get('[data-test="item-sauce-labs-backpack-title"]')
+cy.get('[data-test="inventory-item"]').filter(':contains("Sauce Labs Backpack")')
 ```
 
 Use `cy.contains()` when you're navigating by user-visible text and the text is unique on the page. Use `cy.get()` with `data-test` attributes when you want test stability independent of copy changes.

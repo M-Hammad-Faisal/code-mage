@@ -395,19 +395,7 @@ jobs:
 
 ## Download the Full Example Suite
 
-The complete working test suite from this tutorial is available to clone and run immediately.
-
-**GitHub Repository:** [github.com/M-Hammad-Faisal/playwright-saucedemo-example](https://github.com/M-Hammad-Faisal/playwright-saucedemo-example)
-
-```bash
-git clone https://github.com/M-Hammad-Faisal/playwright-saucedemo-example.git
-cd playwright-saucedemo-example
-npm install
-npx playwright install chromium
-npx playwright test
-```
-
-Or download individual spec files if you want to drop them into your own project:
+Every file below is real, passing code — verified against the live site, not assembled for this page. Each is self-contained with inline page objects and test data; drop any of them into a fresh Playwright project with `baseURL: 'https://www.saucedemo.com'` and they'll run.
 
 <DownloadCard
   filename="login.spec.ts"
@@ -430,23 +418,31 @@ Or download individual spec files if you want to drop them into your own project
   tests={2}
 />
 
-Each file is self-contained with inline page objects and test data. Drop any of them into a fresh Playwright project with `baseURL: 'https://www.saucedemo.com'` and they'll run.
+<DownloadCard
+  filename="tabs-and-downloads.spec.ts"
+  href="/downloads/playwright/tabs-and-downloads.spec.ts"
+  description="New-tab handling and a real PDF download, covered in the Tabs/Downloads chapters"
+  tests={2}
+/>
+
+For the full project structure these were extracted from — shared page objects, config, and every other spec covered across this tutorial — see the [project README](/downloads/playwright/project/README.md).
 
 ---
 
 ## What You've Built
 
-Between the prerequisites and these 8 chapters, you've gone from zero to a production-grade Playwright setup:
+Between the prerequisites and these 12 chapters, you've gone from zero to a production-grade Playwright setup:
 
 - ✅ Node.js, npm, and VS Code configured
 - ✅ TypeScript fundamentals for test automation
-- ✅ Understanding of how the test runner works
-- ✅ Playwright installed and configured
-- ✅ Real tests against SauceDemo
+- ✅ Debugging and selector tools — Inspector, codegen, UI Mode
 - ✅ Stable selector strategy
+- ✅ Meaningful assertions, including ARIA structural snapshots
 - ✅ Page Object Model with fixtures
-- ✅ Meaningful assertions
-- ✅ Flaky test diagnosis and prevention
-- ✅ GitHub Actions CI with sharding, caching, and artifact reports
+- ✅ Understanding of how the test runner works
+- ✅ Tabs, windows, dialogs, frames, downloads, and uploads
+- ✅ Flaky test diagnosis and prevention, including named test locks
+- ✅ Reporting — Allure integration, custom reporters, artifact retention strategy
+- ✅ GitHub Actions CI with sharding, caching, artifact reports, and Slack notifications
 
 This is the setup you'd put on a real team. The WebdriverIO tutorial is next — same test site, completely different tool, so you can compare the approaches directly.

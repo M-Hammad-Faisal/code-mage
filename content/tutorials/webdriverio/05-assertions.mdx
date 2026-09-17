@@ -14,10 +14,10 @@ Standard Jest matchers like `expect(await el.getText()).toBe('Hello')` work, but
 
 ```typescript
 // This will fail intermittently — evaluated once at call time
-expect(await $('[data-test="cart-badge"]').getText()).toBe('1')
+expect(await $('[data-test="shopping-cart-badge"]').getText()).toBe('1')
 
 // This retries until it passes or times out — far more reliable
-await expect($('[data-test="cart-badge"]')).toHaveText('1')
+await expect($('[data-test="shopping-cart-badge"]')).toHaveText('1')
 ```
 
 Always use `expect-webdriverio` matchers when asserting on elements. Save plain Jest matchers for asserting on plain JavaScript values.

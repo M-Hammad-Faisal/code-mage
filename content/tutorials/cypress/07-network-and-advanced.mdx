@@ -207,6 +207,8 @@ The first test in a run performs the login. Every subsequent test restores the c
 
 ## Handling Alerts and Confirms
 
+*SauceDemo never triggers a native alert/confirm/prompt, so there's nothing on this tutorial's site to run this against — the commands below are correct Cypress syntax for when your own app does use one.*
+
 Browser `alert()`, `confirm()`, and `prompt()` dialogs are handled with `cy.on()`:
 
 ```typescript
@@ -246,6 +248,8 @@ cy.window().then((win) => {
 
 ## File Uploads
 
+*SauceDemo has no file upload input anywhere in the app — this section is reference syntax, verified against Cypress's own docs, not something you can run against this tutorial's site.*
+
 Cypress has built-in file upload support via `.selectFile()` — no plugin needed:
 
 ```typescript
@@ -258,6 +262,8 @@ cy.get('[data-test="upload-success"]').should('be.visible')
 Put test files in `cypress/fixtures/`.
 
 ## Iframes
+
+*SauceDemo has no iframe anywhere in the app — this section is reference syntax, not something you can run against this tutorial's site.*
 
 Iframes are a known pain point in Cypress. The built-in commands don't cross iframe boundaries. The workaround is to use `.its()` and `.then()` to get the iframe's document:
 

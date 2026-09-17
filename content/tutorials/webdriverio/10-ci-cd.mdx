@@ -506,6 +506,13 @@ Want a working starting point instead of typing everything from scratch?
   tests={9}
 />
 
-Drop it into `test/specs/` in a fresh WDIO project with `baseUrl: 'https://www.saucedemo.com'` and it'll run as-is.
+<DownloadCard
+  filename="tabs-and-downloads.e2e.ts"
+  href="/downloads/webdriverio/tabs-and-downloads.e2e.ts"
+  description="Real new-tab handling and a real PDF download, covered in the Advanced Interactions chapter"
+  tests={2}
+/>
+
+Drop either into `test/specs/` in a fresh WDIO project with `baseUrl: 'https://www.saucedemo.com'` and it'll run as-is — the download spec needs the Chrome download prefs shown in its header comment added to your `wdio.conf.ts` capabilities first.
 
 That's the full WebdriverIO tutorial. You now have a test suite that's structured with Page Objects, has reliable waits, handles complex browser interactions, and runs in CI with parallel execution and actionable reports.
