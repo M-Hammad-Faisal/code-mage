@@ -47,7 +47,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install dependencies
@@ -92,7 +92,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
       - run: npm ci
 
@@ -174,6 +174,57 @@ export default defineConfig({
 ### The Merge Reports Job
 
 Sharded reports are initially separate HTML files per shard. The `merge-reports` job collects them all and produces one unified report. This is the artifact you actually download and share with your team.
+
+One detail worth being deliberate about: `merge-multiple: false` in the download step. Each shard uploads its report under a distinct artifact name (`playwright-report-shard-1`, `-2`, and so on), and `merge-multiple: false` keeps them in separate subdirectories under `all-reports/` rather than flattening every shard's files into one folder. `npx playwright merge-reports` expects that separated structure — it reads each shard's raw blob report independently before combining them. Flattening the directories with `merge-multiple: true` here would overwrite files that happen to share the same name across shards, silently losing data from whichever shard's file got overwritten last, well before you ever notice the merged report looks incomplete.
+
+### Authenticated Tests in CI
+
+If any tests need to start already logged in — most suites do, past the login flow itself — don't log in fresh inside every shard. Logging in through a real UI form four times in parallel, once per shard, wastes time and adds four extra points where a slow login page can make an unrelated shard flaky. Instead, authenticate once in a dedicated setup job, save the session, and pass it to every shard as its own artifact:
+
+```yaml
+jobs:
+  setup:
+    name: Authentication Setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Run auth setup
+        run: npx playwright test setup/auth.setup.ts
+
+      - name: Upload auth state
+        uses: actions/upload-artifact@v7
+        with:
+          name: auth-state
+          path: playwright/.auth/
+          retention-days: 1
+
+  test:
+    needs: setup
+    strategy:
+      matrix:
+        shardIndex: [1, 2, 3, 4]
+        shardTotal: [4]
+    steps:
+      # ... checkout, setup-node, npm ci, browser install as above ...
+
+      - name: Download auth state
+        uses: actions/download-artifact@v8
+        with:
+          name: auth-state
+          path: playwright/.auth/
+
+      - name: Run tests
+        run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+```
+
+`needs: setup` makes every shard wait for the auth job to finish and publish its artifact before starting — one real login, shared across every shard, instead of four redundant ones running in parallel and quietly multiplying whatever flakiness the login form itself has.
 
 ## Viewing the Report
 
