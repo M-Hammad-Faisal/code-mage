@@ -1,0 +1,96 @@
+---
+title: "Async/Await and the Event Loop: What's Actually Happening When You Write await page.click()"
+date: '2026-09-22'
+category: 'Test Automation'
+tags: ['javascript', 'async-await', 'fundamentals', 'typescript']
+excerpt: "Every test you've ever written is full of await. Most people using it correctly still can't explain what it actually does to their code at runtime — which is fine, until you hit a bug that only makes sense once you can."
+featured: false
+---
+
+If you write JavaScript or TypeScript test automation, you type `await` dozens of times a day and it works, right up until it doesn't — a race condition that only shows up sometimes, a `Promise` printed instead of the value you expected, two operations that seem to run in the wrong order. Every one of those bugs is explainable, precisely, by understanding one thing most people using `async`/`await` correctly have never actually been taught: what the JavaScript engine is doing, mechanically, when it hits an `await`.
+
+## JavaScript Is Single-Threaded. Say That Out Loud.
+
+Start here, because everything else follows from it: a JavaScript engine runs your code on exactly one thread. Not one thread per request, not one thread per test — one thread, period, executing one instruction at a time, in order. There's no genuine parallelism happening inside a single Node.js process the way there is in a multi-threaded language.
+
+This should immediately raise a question, if you've ever written a test like this:
+
+```typescript
+await page.click('[data-test="add-to-cart"]');
+await page.waitForSelector('[data-test="cart-badge"]');
+```
+
+If JavaScript can only do one thing at a time, how does `page.click()` — which involves sending a command over the network to a browser, waiting for the browser to process a click, and waiting for a response — not just freeze the entire program for however long that round trip takes? The answer is the entire reason `async`/`await` exists, and it's not what most people assume.
+
+## What `await` Actually Does: It Suspends a Function, Not the Thread
+
+Here's the mechanical truth, stated as plainly as possible: when the JavaScript engine hits an `await` on a `Promise` that hasn't resolved yet, it does not block. It **pauses the execution of the current function** at that exact line, hands control back to something called the **event loop**, and goes and does other work — including, crucially, letting other code that was already queued up run. When the awaited `Promise` eventually resolves (because the browser sent back a response, or a timer fired, or a file finished reading), the engine comes back and resumes that specific paused function from exactly where it left off.
+
+This is the whole trick. `async`/`await` isn't a way of doing multiple things simultaneously — the thread is still single — it's a way of writing code that *looks* sequential while the underlying engine interleaves waiting periods with other useful work instead of sitting idle. `page.click()` returns a `Promise` immediately; the actual click-and-response cycle happens somewhere else (in Node's networking layer, ultimately talking to the browser process), and your `async` function is suspended — not blocking anything — until that work reports back.
+
+## The Event Loop, Concretely
+
+The "event loop" is the mechanism that decides what runs next once your currently-executing code finishes or gets suspended. A drastically simplified but accurate mental model:
+
+1. Run the currently executing script until it either finishes or hits an `await` on something not yet resolved.
+2. If it hit an `await`, that function is now suspended. Control returns to the event loop.
+3. The event loop checks: is there other code waiting to run — a resolved `Promise`'s `.then()` callback, a `setTimeout()` that's due, an I/O callback that just completed? If so, run the next one.
+4. Repeat, forever, for the life of the program.
+
+The critical detail most explanations skip: there are actually two separate queues feeding step 3, and they don't have equal priority. **Microtasks** — which is what resolved `Promise` callbacks are — get drained completely, every single one, before the engine moves on to a single **macrotask** — which is what `setTimeout()` callbacks are, among other things. This distinction explains behavior that looks bizarre until you know it's there:
+
+```typescript
+console.log('1');
+
+setTimeout(() => console.log('2'), 0);
+
+Promise.resolve().then(() => console.log('3'));
+
+console.log('4');
+
+// Output: 1, 4, 3, 2 — not 1, 2, 3, 4
+```
+
+`setTimeout(..., 0)` does not mean "run this immediately." It means "run this as a macrotask, after the current script finishes and after every pending microtask has drained." That's why `'3'` (a microtask) prints before `'2'` (a macrotask), even though the `setTimeout` was scheduled first in the source code. If you've ever been confused about why a `Promise`-based operation seemed to "jump the queue" ahead of something scheduled earlier with a timer, this is why — and it's not a bug, it's the specification working exactly as designed.
+
+## Why This Explains Real Testing Bugs
+
+**Bug 1: Forgetting `await` produces a `Promise`, not a value, and the test keeps running anyway.**
+
+```typescript
+// Missing await — this line does NOT wait for the click to finish
+page.click('[data-test="submit"]');
+await expect(page.getByText('Success')).toBeVisible();
+```
+
+Because `page.click()` isn't awaited, the async function doesn't suspend at that line at all — it returns a `Promise` immediately and JavaScript, being single-threaded and having nothing telling it to wait, moves straight to the next line. The assertion starts racing against a click that may not have even reached the browser yet. This isn't the test framework being unreliable; it's exactly what "don't suspend the function here" means when you skip `await`. The fix isn't adding a wait — it's putting `await` back so the function actually suspends until the click's `Promise` resolves before the next line runs.
+
+**Bug 2: `console.log(someAsyncCall())` prints `Promise { <pending> }`.**
+
+```typescript
+console.log(page.textContent('.price')); // Promise { <pending> }
+```
+
+`page.textContent()` returns a `Promise` synchronously, before the actual text-reading work has completed. Without `await`, you're logging the `Promise` object itself — a placeholder for a future value — not the value it will eventually contain. This is the single most common "why is my test printing garbage" question, and it's not a quirk; it's the direct, correct consequence of `await` being the only thing that unwraps a `Promise` into its resolved value.
+
+**Bug 3: Two `await`s that "should" run in parallel run one after another instead, and the test is slower than it needs to be.**
+
+```typescript
+// Sequential — each one suspends and waits before the next starts
+await page.click('[data-test="tab-1"]');
+await page.click('[data-test="tab-2"]');
+```
+
+Each `await` suspends the function until that specific operation resolves before moving to the next line — that's correct if the second click genuinely depends on the first finishing. But if the two operations are actually independent, sequencing them like this wastes real time. `Promise.all()` is the fix, and understanding *why* it works follows directly from everything above: it starts both operations (both `Promise`s begin their work immediately, before either `await` fires), then suspends once, waiting for both to resolve together, instead of suspending twice in sequence.
+
+```typescript
+// Both operations start immediately; we suspend once, for both together
+await Promise.all([
+  page.click('[data-test="tab-1"]'),
+  someIndependentAsyncCheck(),
+]);
+```
+
+## The Actual Payoff
+
+None of this changes how you write `await page.click(...)` tomorrow morning. What it changes is what happens the next time something async in your test suite behaves in a way that doesn't match your intuition — a race condition that only fails in CI, a value that's mysteriously a `Promise` instead of a string, an operation that seems to fire out of order relative to a `setTimeout`. Instead of adding a wait and hoping, or restructuring code by trial and error until the flakiness goes away, you can trace through what the engine is actually doing: what's suspended, what's queued, and in what order the queues actually drain. That's the difference between a debugging technique that works on this one bug and a mental model that works on the next one too.

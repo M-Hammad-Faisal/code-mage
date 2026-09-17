@@ -1,0 +1,136 @@
+---
+title: "Classes, Objects, and Why Page Objects Are Just OOP"
+date: '2026-09-18'
+category: 'Test Automation'
+tags: ['object-oriented-programming', 'page-object-model', 'typescript', 'fundamentals']
+excerpt: "Most test automation tutorials teach Page Object Model as a testing pattern with its own special rules. It isn't one — it's four ordinary object-oriented programming concepts, applied to a browser. Once you see that, half the 'best practices' debates around it stop being mysterious."
+featured: true
+---
+
+Every test automation tutorial — including three chapters of this one — eventually shows you a `LoginPage` class with a `login()` method and tells you this is "the Page Object Model." Framed that way, it sounds like a testing-specific technique you have to learn on top of the framework you're already learning. It isn't. It's four ordinary object-oriented programming ideas — encapsulation, the class/instance distinction, composition, and (occasionally) inheritance — applied to a web page instead of a bank account or a shopping cart. If you already understand OOP from any other context, you already understand Page Object Model; you just haven't been told that yet. And if you don't — if "class" and "object" are still slightly fuzzy words to you — this is actually a good place to learn them, because a login form is a lot easier to reason about than the abstract examples most OOP tutorials reach for.
+
+## A Class Is a Blueprint. An Object Is the Thing Built From It.
+
+This is the single most important distinction in OOP, and it's also the one most tutorials manage to make confusing by leading with jargon. Here's the concrete version:
+
+```typescript
+class LoginPage {
+  usernameField = '[data-test="username"]';
+  passwordField = '[data-test="password"]';
+
+  async login(username: string, password: string) {
+    await page.fill(this.usernameField, username);
+    await page.fill(this.passwordField, password);
+    await page.click('[data-test="login-button"]');
+  }
+}
+```
+
+`class LoginPage { ... }` is not a login page. It's a *description* of what a login page interaction looks like — a blueprint. Nothing has happened yet. No browser has been touched. You could write this class in a file that never runs, and it would sit there, inert, forever.
+
+```typescript
+const loginPage = new LoginPage();
+await loginPage.login('standard_user', 'secret_sauce');
+```
+
+`new LoginPage()` is where something actually gets built from the blueprint — an **object** (also called an **instance**). This object is a real thing in memory, with its own copy of `usernameField` and `passwordField`, and it's the object — not the class — that you call `.login()` on.
+
+The reason this distinction matters practically: you can build more than one object from the same class. If your test suite logs in as three different users in three different tests, you're not writing the `login()` logic three times — you're creating three separate `LoginPage` objects (or reusing one), each call to `.login()` acting independently. The class is written once. It gets *instantiated* — turned into a real object — every time you need to use it. This is the entire reason classes exist as a language feature: to let you define a shape once and stamp out as many real instances of that shape as you need, without retyping the shape's logic each time.
+
+## Encapsulation: Why the Selector Lives Inside the Class
+
+Go back to the `LoginPage` class above. Notice that `usernameField` — the actual CSS selector — is a property *inside* the class, not a constant floating around in your test file. This is **encapsulation**: bundling data (the selector) together with the code that operates on that data (the `login()` method) into one unit, and hiding the data from anything outside that unit that doesn't need to see it.
+
+Here's the test file that uses this class:
+
+```typescript
+test('logs in successfully', async () => {
+  const loginPage = new LoginPage();
+  await loginPage.login('standard_user', 'secret_sauce');
+  await expect(page).toHaveURL('/inventory.html');
+});
+```
+
+This test never touches `usernameField` directly. It doesn't know the selector is `[data-test="username"]`, doesn't know it's a CSS attribute selector rather than an ID or an ARIA role, doesn't know anything about *how* `login()` accomplishes what it does. It just calls `.login()` and trusts the class to handle the rest. That's encapsulation doing its job: the test is written against *what the page can do* (`login(username, password)`), not *how the page is built* (its actual DOM structure).
+
+This is precisely why Page Object Model fixes the "the selector changed and now I have to update it in 40 places" problem covered in an earlier post on this blog. It was never really a testing-specific insight — it's what encapsulation is *for*, in any OOP codebase, in any domain. A `BankAccount` class encapsulates a balance so that nothing outside the class can set it to a negative number by mistake. A `LoginPage` class encapsulates a selector so that nothing outside the class needs to know or care what it is. Same mechanism, different domain.
+
+## Composition: Building Bigger Objects Out of Smaller Ones
+
+A real test suite doesn't just have a `LoginPage`. It has a `LoginPage`, an `InventoryPage`, a `CartPage`, a `CheckoutPage` — and a full end-to-end test walks through several of them in sequence. The naive approach is to give every test direct access to every page class:
+
+```typescript
+test('completes a purchase', async () => {
+  const loginPage = new LoginPage();
+  const inventoryPage = new InventoryPage();
+  const cartPage = new CartPage();
+  const checkoutPage = new CheckoutPage();
+
+  await loginPage.login('standard_user', 'secret_sauce');
+  await inventoryPage.addToCart('Sauce Labs Backpack');
+  await inventoryPage.goToCart();
+  await cartPage.proceedToCheckout();
+  await checkoutPage.fillShippingInfo('John', 'Doe', '12345');
+  await checkoutPage.finish();
+});
+```
+
+This works, but every test that needs the full flow has to know about, instantiate, and wire together all four classes. A cleaner approach is **composition**: build one class that *contains* instances of the others, and exposes a single higher-level method that coordinates them internally.
+
+```typescript
+class CheckoutFlow {
+  private loginPage = new LoginPage();
+  private inventoryPage = new InventoryPage();
+  private cartPage = new CartPage();
+  private checkoutPage = new CheckoutPage();
+
+  async purchaseItem(username: string, password: string, itemName: string) {
+    await this.loginPage.login(username, password);
+    await this.inventoryPage.addToCart(itemName);
+    await this.inventoryPage.goToCart();
+    await this.cartPage.proceedToCheckout();
+    await this.checkoutPage.fillShippingInfo('John', 'Doe', '12345');
+    await this.checkoutPage.finish();
+  }
+}
+```
+
+```typescript
+test('completes a purchase', async () => {
+  const flow = new CheckoutFlow();
+  await flow.purchaseItem('standard_user', 'secret_sauce', 'Sauce Labs Backpack');
+});
+```
+
+`CheckoutFlow` doesn't inherit from `LoginPage` or `InventoryPage` — it *has* instances of them as properties, and delegates work to them. That's composition: building a more capable object by combining simpler objects, rather than by inheriting from a parent class. It's the same relationship a `Car` class has with an `Engine` class — a car isn't a kind of engine, it *has* an engine, and calls the engine's methods when it needs to.
+
+## Inheritance: The One That's Genuinely Overused
+
+Inheritance — one class extending another to reuse its behavior — is the OOP concept most testing tutorials reach for first, and it's the one worth being the most careful with. Here's the legitimate case for it in test automation: every page in your app shares some behavior — waiting for the page to load, taking a screenshot, checking the page title — so it seems natural to put that shared behavior in a `BasePage` class and have every other page class extend it.
+
+```typescript
+class BasePage {
+  async waitForLoad() {
+    await page.waitForLoadState('networkidle');
+  }
+
+  async takeScreenshot(name: string) {
+    await page.screenshot({ path: `screenshots/${name}.png` });
+  }
+}
+
+class LoginPage extends BasePage {
+  async login(username: string, password: string) {
+    await this.waitForLoad(); // inherited from BasePage
+    // ... rest of login logic
+  }
+}
+```
+
+This is a real, defensible use of inheritance: `LoginPage` genuinely *is a kind of* page, and every page genuinely does need `waitForLoad()` and `takeScreenshot()`. The test — is this an "is-a" relationship or a "has-a" relationship? — is the right question to ask before reaching for `extends`. A `LoginPage` *is a* `BasePage`. A `CheckoutFlow`, from the composition example above, is not *a kind of* `LoginPage` — it merely *uses* one. That's why it composed rather than inherited.
+
+Where inheritance goes wrong in test suites is when it's used to share behavior between classes that don't actually have an is-a relationship — a `LoginPage` extending a `FormHelpers` class just because both happen to fill in text fields, for instance. That's not modeling a real hierarchy; it's using inheritance as a shortcut for code reuse, which composition usually handles more honestly. If you find yourself extending a class purely to borrow a couple of its methods, and the two classes don't have a genuine "is a" relationship, that's usually composition trying to happen and being forced through the wrong mechanism instead.
+
+## Why This Actually Matters Beyond Passing a Tutorial
+
+None of this is specific to testing, and that's the point. Encapsulation, the class/instance distinction, composition, and inheritance are the same four concepts whether you're modeling a login page, a bank account, a video game character, or an inventory system. If Page Object Model ever felt like an arbitrary set of rules someone made up for testing specifically, it's because it was taught that way — as a pattern with its own vocabulary, disconnected from the general-purpose programming concepts it's actually built from. Learn OOP once, properly, and Page Object Model stops being a testing-specific thing you memorize and becomes an obvious application of things you already know. The reverse is also true, and arguably more useful: if you learn OOP *through* Page Object Model — through a login form and a shopping cart instead of an abstract `Animal` and `Dog` example — the concepts tend to stick better, because you're applying them to something you can actually run and watch work.

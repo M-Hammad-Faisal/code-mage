@@ -1,0 +1,72 @@
+---
+title: "The Locator Hierarchy, From First Principles"
+date: '2026-09-20'
+category: 'Test Automation'
+tags: ['selectors', 'accessibility', 'fundamentals', 'testing']
+excerpt: "Every framework's docs tell you to prefer role-based selectors over CSS classes. Almost none of them explain why, in a way that actually transfers when you hit a case the cheat sheet didn't cover. Here's the reasoning underneath the rule."
+featured: true
+---
+
+Playwright's docs, Testing Library's docs, and most serious testing guides all converge on roughly the same locator priority list: prefer accessible roles, then labels, then text, then test IDs, and treat CSS classes and XPath as a last resort. Most of them state this as received wisdom — a ranked list to memorize — without explaining the actual reasoning that produces that ranking. Memorized rules break the moment you hit a case the list didn't anticipate. Understood reasoning generalizes. This post is the reasoning.
+
+## The Real Question a Locator Answers
+
+Strip away the framework syntax, and every locator is answering one question: *given this description, which single element in the DOM does it point to, and how likely is that mapping to stay true after the page changes?* Every tier in the hierarchy is really just a different source of "description," and they differ in exactly one dimension that matters: **how tightly is this description coupled to the page's actual purpose, versus how it happens to be built right now?**
+
+That's the whole framework. Once you see selectors this way, the ranking stops being an arbitrary list and becomes a direct consequence of one idea.
+
+## Tier 1: Role and Accessible Name — Coupled to Purpose, Not Implementation
+
+```typescript
+page.getByRole('button', { name: 'Add to cart' })
+```
+
+A button's *role* (`button`) and *accessible name* (`Add to cart`) describe what the element **is for**, from the perspective of anyone — human or screen reader — interacting with the page. This description is derived from the semantic HTML and ARIA attributes that make the page usable at all. It's about as decoupled from implementation detail as a selector can get: the developer could rewrite the button's CSS classes, restructure its parent `<div>`s, switch from a styled-components library to Tailwind, and none of that touches the button's role or accessible name, because none of that is *what the button is for*.
+
+This is also why role-based selectors have a property no other tier has: using them makes you a de facto accessibility tester. A `getByRole('button', { name: 'Add to cart' })` that can't find anything is telling you something real — either the element genuinely has no accessible role (a `<div onClick>` instead of a `<button>`, which screen reader users also can't operate), or the accessible name doesn't say what you think it says. The selector failing is diagnostic information about the app, not just an inconvenience for your test.
+
+The failure mode, covered from the debugging side in an earlier post on this blog, is assuming a role exists because the *pattern* is correct without checking that the *markup* actually supports it. `getByRole('listitem')` is the textbook first choice for one product card in a list of products — right up until you inspect the DOM and find the cards are plain `<div>`s with no `role` attribute at all. The hierarchy tells you what to prefer *when the option is genuinely available*. It never promises the option is always available. That check — does this element actually carry the role I'm about to assume — is not optional overhead; it's the whole reason this tier is the most reliable one when it applies.
+
+## Tier 2 and 3: Label and Placeholder — Coupled to User-Facing Copy
+
+```typescript
+page.getByLabel('Username')
+page.getByPlaceholder('Enter your email')
+```
+
+A form label or placeholder is one level less tightly coupled to purpose than a role, because it's coupled to *copy* — the actual words a designer or product manager chose — rather than to the element's fundamental type. A `<button>` is a button no matter what text sits inside it, but "Enter your email" is specifically about email, and a copy change ("Your email address," "Email") breaks the selector even though the underlying form field never changed.
+
+This is real coupling, and it's worth naming honestly rather than pretending labels are as stable as roles: copy changes for reasons that have nothing to do with the test — localization, a UX writer doing a pass, an A/B test on the signup form. But it's still meaningfully more stable than the next tier down, because labels and placeholders are still part of the page's *user-facing contract* — they're what a real user reads to understand the form. A redesign that keeps the same fields but changes their visual styling won't touch them. Only a redesign that changes what the form actually says will.
+
+## Tier 4: Text Content — Coupled to Whatever's on the Page Right Now
+
+```typescript
+page.getByText('Sauce Labs Backpack')
+```
+
+Text content selectors match against whatever's literally rendered — a product name, a heading, a status message. The coupling here is to *content*, which is a level further from purpose than copy on a static label: a product name isn't describing an interaction the way "Add to cart" is, it's describing a piece of dynamic data that happens to currently be "Sauce Labs Backpack" and could just as easily be anything else the catalog contains. Use this tier for content you know is stable for the duration of a test — a fixed heading, a known fixture's name — and be wary of it for anything the app itself might legitimately change, like a price, a count, or user-generated content.
+
+## Tier 5: Test IDs — Coupled to Nothing But an Attribute Someone Chose to Add
+
+```typescript
+page.locator('[data-test="checkout-button"]')
+```
+
+This is the tier most selector-hierarchy explanations undersell, because on paper it looks like it should rank *higher* than role or label — after all, a `data-test` attribute is explicitly, deliberately added for testing, and nothing else in the app depends on it or will casually change it. That stability is real. What test IDs lack is the thing that made role-based selectors valuable in the first place: they carry no information about *why* the element exists or what a real user experiences. A `data-test="btn-1"` tells you nothing about whether the element is accessible, whether its purpose is clear, or whether a screen reader user could find it. Prefer semantic selectors *when they're genuinely available and correct*, and treat test IDs as the pragmatic fallback for exactly the cases where semantic markup doesn't exist or can't be relied on — which, on real production apps built without testability in mind, is often the majority of elements, not the exception.
+
+## Tier 6: CSS Classes and XPath — Coupled to Implementation Directly
+
+```typescript
+page.locator('.btn.btn-primary.checkout-cta')
+page.locator('//div[3]/button[1]')
+```
+
+This is the tier where the coupling stops being about purpose or content and becomes coupling to the literal, current structure of the code. A CSS class is frequently a styling decision, not a semantic one — `.btn-primary` describes *how the button looks*, and a design system migration, a CSS-in-JS refactor, or a Tailwind adoption can rewrite every class name on the page without changing what a single button *does*. XPath position (`div[3]/button[1]`) is worse still — it's coupled to the literal order of sibling elements, which shifts if a designer inserts one new `<div>` anywhere above it in the tree, for a reason that has nothing to do with your test.
+
+These aren't forbidden. They're correctly ranked last because they're the selectors most likely to break for reasons that have zero relationship to whether the feature under test is actually working — which is the exact failure mode that makes a team stop trusting its test suite.
+
+## Applying the Principle Instead of the List
+
+Once the ranking is understood as "prefer descriptions coupled to purpose over descriptions coupled to implementation," you can reason correctly about cases the standard cheat sheet never lists. A `<canvas>`-rendered chart with no accessible structure at all? No tier above test ID is even available — reach for one immediately, correctly, without treating it as a compromise. A third-party embedded widget you don't control, with unstable auto-generated class names but a stable `aria-label`? Role and label outrank test ID here even though you might reflexively reach for "just grab the class" first, because the label is genuinely more coupled to the widget's purpose than a class name some other team's build tool generated.
+
+The actual skill was never memorizing that role beats label beats text beats test ID beats CSS. It's recognizing, for the specific element in front of you, which available description is least likely to change for reasons that have nothing to do with the behavior you're actually testing — and reaching for that one.
