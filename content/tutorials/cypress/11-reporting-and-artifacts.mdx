@@ -10,26 +10,25 @@ You've already seen `cypress-mochawesome-reporter` for shareable HTML reports in
 
 ## Allure Integration
 
-If your organization already has Allure tooling around other test suites (a shared Allure server, existing dashboards, trend tracking across builds), Cypress has a maintained plugin rather than a built-in integration:
+If your organization already has Allure tooling around other test suites (a shared Allure server, existing dashboards, trend tracking across builds), install the **official** Allure integration — published under the `allure-framework` GitHub org, the same team behind `allure-playwright`:
 
 ```bash
-npm install --save-dev @shelex/cypress-allure-plugin
+npm install --save-dev allure-cypress allure
 ```
+
+Use `allure-cypress`, not the older, third-party `@shelex/cypress-allure-plugin` some guides still reference. That plugin's last release predates Cypress 16 and it crashes outright when you actually run it against a current Cypress install — verified directly: installing it, wiring it in, and running the suite reproducibly threw a runner-level `TypeError` that disappeared the instant the plugin was removed, with nothing else in the config changed. There's no open issue acknowledging the break and no newer release fixing it. `allure-cypress` is the actively maintained replacement and was verified working end-to-end against Cypress 16 — full suite green with real results generated.
 
 ```typescript
 // cypress.config.ts
 import { defineConfig } from 'cypress'
-import allureWriter from '@shelex/cypress-allure-plugin/writer'
+import { allureCypress } from 'allure-cypress/reporter'
 
 export default defineConfig({
   e2e: {
     baseUrl: 'https://www.saucedemo.com',
     setupNodeEvents(on, config) {
-      allureWriter(on, config)
+      allureCypress(on, config)
       return config
-    },
-    env: {
-      allure: true,
     },
   },
 })
@@ -37,24 +36,29 @@ export default defineConfig({
 
 ```typescript
 // cypress/support/e2e.ts
-import '@shelex/cypress-allure-plugin'
+import 'allure-cypress'
 ```
 
-Run tests as normal, then generate the report the same way you would for any other Allure-producing tool:
+Run tests as normal, then generate the report. Use the `allure` package (Allure Report 3), not the older `allure-commandline` — that one wraps a Java CLI and fails outright with "Unable to locate a Java Runtime" on any machine without a JDK installed, a prerequisite no guide mentions until it breaks. `allure` is pure Node.js and needs nothing else installed:
 
 ```bash
 npx cypress run
-npx allure generate allure-results --clean -o allure-report
+npx allure generate ./allure-results --output allure-report
 npx allure open allure-report
 ```
 
-The plugin also lets you attach custom labels and steps directly from test code — useful if your team categorizes failures (by feature area, by severity) inside Allure's own dashboard rather than just by spec file name:
+The package also lets you attach custom labels and steps directly from test code — useful if your team categorizes failures (by feature area, by severity) inside Allure's own dashboard rather than just by spec file name. Import `allure-js-commons` directly in a spec, rather than a Cypress custom command:
 
 ```typescript
+import * as allure from 'allure-js-commons'
+
 it('adds item to cart', () => {
-  cy.allure().label('feature', 'Cart')
-  cy.allure().label('severity', 'critical')
-  // ...
+  allure.feature('Cart')
+  allure.severity('critical')
+
+  allure.step('add backpack to cart', () => {
+    cy.get('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+  })
 })
 ```
 

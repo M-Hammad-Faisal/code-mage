@@ -13,8 +13,10 @@ You've already seen the built-in HTML reporter and `trace`/`screenshot`/`video` 
 Allure is a common choice when a team needs a report format that plugs into existing dashboards (Jenkins, TestRail, or a standalone Allure server) rather than Playwright's own standalone HTML report:
 
 ```bash
-npm install --save-dev allure-playwright
+npm install --save-dev allure-playwright allure
 ```
+
+Install `allure` (Allure Report 3), not the older `allure-commandline` — that one wraps a Java CLI and fails outright with "Unable to locate a Java Runtime" on any machine without a JDK installed, a prerequisite most guides never mention until it breaks on a fresh machine. `allure` is pure Node.js — no separate runtime needed. Verified directly: `allure-commandline` fails immediately on a Java-less machine; `allure` generates a full report on the same machine with nothing else installed.
 
 ```typescript
 // playwright.config.ts
@@ -30,8 +32,8 @@ export default defineConfig({
 Generate the actual report from results after a run:
 
 ```bash
-npx allure generate ./allure-results --clean -o ./allure-report
-npx allure open ./allure-report
+npx allure generate ./allure-results --output allure-report
+npx allure open allure-report
 ```
 
 Allure's real advantage over the built-in HTML reporter is history and trends — run it consistently across builds and it tracks flaky-test history, duration trends, and categorizes failures automatically, which the stock HTML reporter treats as one isolated run at a time.
