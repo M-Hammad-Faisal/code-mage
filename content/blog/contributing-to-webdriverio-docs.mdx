@@ -33,6 +33,8 @@ A few things came out of that process that I think matter beyond just "here's a 
 
 **Handling multiple simultaneous downloads.** For suites that trigger several downloads at once, the page distinguishes between verifying them sequentially — trigger, wait, assert, repeat — versus kicking them off in parallel and validating the full set once everything's settled. Sequential is simpler and easier to debug; parallel is faster but means your existence checks need to account for files that haven't necessarily all landed at the same moment.
 
+**Keep browser versions current, deliberately.** The page also flags something that's easy to treat as unrelated background maintenance rather than part of download-testing strategy specifically: browser vendors change download behavior between releases, sometimes without much fanfare, and a suite pinned to an old browser binary can pass locally while silently testing against download plumbing that's already been superseded in whatever version your actual users are running. Cross-browser download testing isn't just "write it once for Chrome, Firefox, and Edge" — it's an ongoing commitment to keeping the test environment's browser versions honest about what's actually shipping.
+
 None of this is exotic. It's the kind of thing that's a five-minute conversation once someone who's hit it explains it to you, and a multi-day debugging session if you haven't.
 
 ## Reflecting on the actual contribution process
