@@ -73,6 +73,12 @@ The Network tab lists every request for the run — sortable by type, status, me
 
 Watch mode is the other habit-changer: click the eye icon next to a test (or the sidebar's top eye icon for all tests) and it re-runs automatically on save. I used to run `npx playwright test path/to/file.spec.ts` after every edit; now I just save and watch the sidebar update.
 
+## Where the VS Code Test Explorer Fits, Separately From Both
+
+There's a third tool worth being precise about, because people sometimes conflate it with UI Mode: the official Playwright VS Code extension's Test Explorer — the Testing icon in the sidebar, a tree of every test with a run button and a gutter you can click to run "up to this line." It's not a smaller version of UI Mode; it's solving a different problem. Test Explorer's whole value is that it never leaves your editor — click a test, it runs, breakpoints you've already set in your actual source file pause execution and hand control to VS Code's own debug toolbar (step, continue, evaluate an expression in the debug console), all without a separate window ever opening.
+
+I use Test Explorer specifically when I already know roughly what's wrong and just want to run one test fast, with a breakpoint at the one line I'm suspicious of, without breaking my editor flow to switch windows. I reach for full UI Mode when I don't yet know what's wrong and need the timeline, the DOM-snapshot-per-step, and the locator picker to actually go find it — the exploratory case Test Explorer isn't built for at all, since it's fundamentally a "run this specific thing" tool, not a "help me understand what happened across this whole test" one. They're not competing for the same job; picking between them is really answering "do I know what I'm looking for yet."
+
 ## Where I Still Reach for `--debug` or Trace Viewer
 
 UI Mode isn't a full replacement, and pretending otherwise would be dishonest.

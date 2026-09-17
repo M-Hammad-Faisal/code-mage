@@ -81,7 +81,7 @@ Adding a new output format now means writing a new class, not editing an existin
 
 ## Liskov Substitution: Subclasses Must Honor the Parent's Contract
 
-Martin's formulation: code using a base class reference must work correctly if handed any derived class, "without knowing it." This is the one that produces the subtlest bugs, because it violates something no compiler checks. Imagine a `BasePage` whose contract implicitly promises `waitForLoad()` actually waits for the page to be interactive:
+The "L" in SOLID predates Martin's own five-principle framing by well over a decade, and traces back to Barbara Liskov's 1987 OOPSLA keynote, stated originally in more formal terms: "if for each object o₁ of type S there is an object o₂ of type T such that for all programs P defined in terms of T, the behavior of P is unchanged when o₁ is substituted for o₂, then S is a subtype of T." Robert Martin's later, more approachable version — code using a base class reference must work correctly if handed any derived class, "without knowing it" — is the same idea, stated for working programmers rather than as a formal type-theory definition, but it's worth knowing the principle has real academic roots older than the acronym it's usually encountered inside. This is the one that produces the subtlest bugs, because it violates something no compiler checks. Imagine a `BasePage` whose contract implicitly promises `waitForLoad()` actually waits for the page to be interactive:
 
 ```typescript
 class BasePage {
