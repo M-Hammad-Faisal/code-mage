@@ -387,9 +387,20 @@ jobs:
 
 This workflow runs tests in parallel across 3 containers, records to Cypress Cloud, uploads screenshots on failure, and publishes the HTML report as an artifact — everything you need for a production test pipeline.
 
-## Download the Login Spec
+## Download the Full Example Suite
 
-Want a working starting point instead of typing everything from scratch?
+The complete working test project from this tutorial is available to clone and run immediately.
+
+**GitHub Repository:** [github.com/M-Hammad-Faisal/cypress-saucedemo-example](https://github.com/M-Hammad-Faisal/cypress-saucedemo-example)
+
+```bash
+git clone https://github.com/M-Hammad-Faisal/cypress-saucedemo-example.git
+cd cypress-saucedemo-example
+npm install
+npx cypress run
+```
+
+Or download individual spec files if you want to drop them into your own project instead:
 
 <DownloadCard
   filename="login.cy.ts"

@@ -395,7 +395,19 @@ jobs:
 
 ## Download the Full Example Suite
 
-Every file below is real, passing code — verified against the live site, not assembled for this page. Each is self-contained with inline page objects and test data; drop any of them into a fresh Playwright project with `baseURL: 'https://www.saucedemo.com'` and they'll run.
+The complete working test project from this tutorial is available to clone and run immediately.
+
+**GitHub Repository:** [github.com/M-Hammad-Faisal/playwright-saucedemo-example](https://github.com/M-Hammad-Faisal/playwright-saucedemo-example)
+
+```bash
+git clone https://github.com/M-Hammad-Faisal/playwright-saucedemo-example.git
+cd playwright-saucedemo-example
+npm install
+npx playwright install chromium firefox
+npx playwright test
+```
+
+Or download individual spec files if you want to drop them into your own project — each is self-contained with inline page objects and test data, and real, passing code verified against the live site:
 
 <DownloadCard
   filename="login.spec.ts"
@@ -425,7 +437,6 @@ Every file below is real, passing code — verified against the live site, not a
   tests={2}
 />
 
-For the full project structure these were extracted from — shared page objects, config, and every other spec covered across this tutorial — see the [project README](/downloads/playwright/project/README.md).
 
 ---
 
