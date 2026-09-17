@@ -19,7 +19,7 @@ My first instinct was the same one every test engineer reaches for: the selector
 
 This is the moment where a debugging session either gets faster or slower depending on what you do next. I did the slow thing first — I stared at the code, reasoned about timing, added waits, reran. Nothing changed. Then I did the thing that actually worked: I stopped trusting the error message and went and looked at what was really happening on the wire.
 
-## `curl -I` told me in two seconds what an hour of guessing hadn't
+## `curl -I` told me in two seconds what an hour of guessing hadn't — but only half the story
 
 ```bash
 curl -sI https://www.saucedemo.com/inventory.html
@@ -32,9 +32,22 @@ server: GitHub.com
 
 Not a Cypress error. Not a WebdriverIO error. A real, unambiguous 404 from GitHub's own servers, for a URL every single tutorial chapter across all three frameworks assumed you could navigate to directly.
 
-The site is a GitHub Pages-hosted single-page app. `/` is a real static file. `/inventory.html`, `/cart.html`, every "page" past the login screen — none of them are real files. They're client-side routes, rendered by JavaScript after you log in through the root URL. Type that URL into a fresh browser tab, or call `page.goto()`, `browser.url()`, or `cy.visit()` directly against it, and you get exactly what `curl` showed me: a 404, from the actual server, before any of your test framework's own logic even runs.
+At the time, I stopped there — `curl -I` only fetches headers, and a 404 status code felt like a complete enough answer to stop debugging selectors and start fixing the navigation pattern. Going back to write this up properly, I checked the actual response *body* too, not just the status line, and found something the headers alone never showed: SauceDemo's 404 page isn't empty. It contains a real, working script — the well-known ["Single Page Apps for GitHub Pages"](https://github.com/rafgraph/spa-github-pages) trick, written by Rafael Pedicini, that GitHub Pages-hosted SPAs commonly use to work around exactly this limitation.
 
-This explains why it looked so inconsistent. A test that logs in through `/` and lets the app's own router carry it to `/inventory.html` works perfectly — no real navigation ever happens, it's all `history.pushState()` under the hood. A test that tries to *reload* or *revisit* that same URL directly — which is an extremely normal thing to do in a `beforeEach` hook, "start every test from a clean page" — fails, every time, with an error that has nothing to do with your selectors.
+Here's the actual mechanism, verified end to end rather than assumed: GitHub Pages serves static files only, and has no concept of client-side routes at all — it doesn't know `/inventory.html` is "a valid route the JavaScript app will handle," it just sees a request for a file that doesn't exist on disk and returns its default 404. SauceDemo's build includes a custom `404.html` (this *is* a real, deliberate GitHub Pages feature — a repo can define its own 404 page) containing a small script that rewrites the broken URL into a query string and redirects to the real `index.html`, which then reads that query string and hands routing back to the SPA's own JavaScript router. I confirmed this actually completes correctly by watching a real Playwright navigation through to the end rather than stopping at the first response:
+
+```typescript
+const response = await page.goto('/inventory.html');
+console.log(response?.status());        // 404 — the initial GitHub Pages response
+await page.waitForTimeout(1000);
+console.log(page.url());                 // https://www.saucedemo.com/ — redirect completed
+```
+
+The initial HTTP response genuinely is a 404 — that part of the original story holds. What I got wrong the first time was implying that's the end of it. It isn't. The redirect script runs, the URL changes back to the real root, and SauceDemo's own app takes over — and because you're not logged in, its own router renders a real, deliberate, correctly-worded error screen: *"Epic sadface: You can only access '/inventory.html' when you are logged in."* That's not a broken page. That's the application correctly doing its job, several steps downstream of a 404 that, on its own, told me only the first quarter of what was actually happening.
+
+This reframes the original debugging story rather than undoing it. `add-to-cart-sauce-labs-backpack` genuinely wasn't findable — but not because the page was a dead 404. It was because the page that actually rendered, after the redirect completed, was the "you're not logged in" error screen, not the inventory page — a completely different, and entirely reasonable, set of elements to be looking at. The selector was never wrong. The *page* was never the one the test thought it was.
+
+This also explains why it looked so inconsistent depending on how a test reached the URL. A test that logs in through `/` and lets the app's own router carry it to `/inventory.html` works perfectly — no real navigation ever happens, it's all `history.pushState()` under the hood, no 404, no redirect script, no auth-guard screen. A test that tries to *reload* or *revisit* that same URL directly — an extremely normal thing to do in a `beforeEach` hook, "start every test from a clean page" — triggers the whole 404-then-redirect-then-auth-guard chain every single time, landing on a page that has none of the elements the test expected, for reasons that have nothing to do with the selectors it was written against.
 
 ## Why this survived multiple rounds of "working" code
 
@@ -63,8 +76,23 @@ await page.getByRole('button', { name: 'Login' }).click();
 
 Nothing clever. Log in through the real route, let the app's own client-side router do the rest. The fix isn't the interesting part — the interesting part is how confidently wrong the broken version looked, and how little a stack trace told me about *why* it was wrong.
 
-## What I'd tell someone hitting this
+## Why the Fix Still Works, Now For the Right Reason
 
-If a selector-not-found error shows up in a context where the selector is definitely right and the element is definitely visible when you check manually, stop debugging the selector. Check what actually loaded. `curl -I` the exact URL your test is navigating to. If it's not a 200, none of your selector logic matters yet — you're not even on the page you think you're on.
+```typescript
+// Broken — hits GitHub's 404, then a redirect chain, then an auth-guard screen
+await page.goto('/inventory.html');
 
-This is a two-minute check that would have saved me an hour, if I'd reached for it first instead of last.
+// Correct — the only route that doesn't trigger any of that
+await page.goto('/');
+await page.getByPlaceholder('Username').fill('standard_user');
+await page.getByPlaceholder('Password').fill('secret_sauce');
+await page.getByRole('button', { name: 'Login' }).click();
+```
+
+The fix hasn't changed from the first version of this post — log in through the real route, let the app's own client-side router carry you to `/inventory.html` without ever hitting GitHub's static file server for a path it can't serve. What's changed is *why* this is the fix: not "the other URL is permanently broken and shows nothing," but "the other URL takes a real, working, but entirely unnecessary detour through a 404 and a redirect script and an auth guard, and lands you somewhere that was never the page your test wanted in the first place."
+
+## What I'd Tell Someone Hitting This
+
+If a selector-not-found error shows up in a context where the selector is definitely right and the element is definitely visible when you check manually, stop debugging the selector — check what actually rendered. `curl -I` the exact URL your test is navigating to, but don't stop at the status line the way I did the first time: a non-200 status only tells you the *initial* response failed, not what happened next. If you want the full picture, check the response *body* too (`curl -s`, no `-I`) — a 404 with a redirect script inside it behaves completely differently from a 404 that's genuinely a dead end, and only one of those two actually needs the selector debugging you were about to do. Better still, drive it through the real framework and read the final URL and body after any redirects settle, the way the verification above does — that's the only way to see what a real browser, executing real JavaScript, actually ends up showing a user.
+
+The two-minute version of this check would have saved me an hour the first time. The more complete version — checking the body, not just the status — is what it took to actually understand *why*, instead of landing on a plausible-sounding explanation and stopping there.
