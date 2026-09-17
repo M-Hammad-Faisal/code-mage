@@ -1,21 +1,19 @@
 ---
-title: 'Why I Switched from Selenium to Playwright (And Never Looked Back)'
+title: 'Why I Switched from Selenium to Playwright (And What I Got Wrong About Selenium 4)'
 date: '2026-01-10'
 category: 'Test Automation'
-tags: ['playwright', 'selenium', 'testing', 'automation']
-excerpt: 'After years of writing Selenium tests, I switched to Playwright. Here''s what changed, what stayed the same, and whether the switch was worth it.'
+tags: ['playwright', 'selenium', 'testing', 'automation', 'comparison']
+excerpt: 'Three years of Selenium, then a switch to Playwright that stuck. A full comparison — including the Selenium 4 features that have genuinely closed part of the gap, and the one architectural difference that hasn''t.'
 featured: true
 ---
 
-I spent three years writing Selenium tests. I learned to love it — the explicit waits, the page object pattern, the way it forced you to think about browser state. Then I moved to a project using Playwright and after two weeks, I never opened a Selenium file again.
+I spent three years writing Selenium tests. I learned to love it — the explicit waits, the Page Object pattern, the way it forced you to think carefully about browser state before you were allowed to act on it. Then I moved to a project using Playwright, and after two weeks I never opened a Selenium file again.
 
-Here's an honest breakdown of why.
+That's the honest version of the story. The less honest version — the one I wrote the first time I put this post up — treated Selenium as a framework frozen in 2019, still requiring a separate proxy tool for network mocking, still without any answer to auto-waiting. That was true when I first learned Selenium. It's not entirely true anymore, and pretending otherwise does a disservice to anyone deciding between the two frameworks today with real, current information rather than a snapshot of how things looked years ago. So this is a rewrite: the real case for Playwright, the real ground Selenium has actually made up, and the one thing that hasn't changed no matter how much Selenium's tooling has improved.
 
-## The Problem with Selenium (in 2026)
+## The Actual Problem: Selenium Was Built Before the Web It Now Has to Test
 
-Selenium isn't bad. It's battle-tested, it has a massive ecosystem, and every QA engineer on the planet knows it. But it has a fundamental design problem: it was built for a different web.
-
-The modern web is async. SPAs, React hydration, lazy loading, websockets — Selenium's synchronous mental model fights against all of this. You end up writing code like:
+Selenium's core design — a synchronous WebDriver protocol issuing one command at a time, waiting for a response before issuing the next — dates back to an era of server-rendered pages where "the page is loaded" was a single, well-defined moment. The modern web isn't that: single-page apps, hydration, lazy-loaded components, WebSocket-driven UI updates. None of that maps cleanly onto "issue a command, wait for a response," and the practical result, for as long as I used Selenium, was code like this:
 
 ```python
 WebDriverWait(driver, 10).until(
@@ -23,20 +21,11 @@ WebDriverWait(driver, 10).until(
 )
 ```
 
-You get used to it. But you're spending mental energy on *waiting* instead of *testing*.
+You get used to writing this. It becomes muscle memory, the same way `time.sleep(2)` hacks become muscle memory when you're in a hurry and the explicit wait feels like overkill for one line. But "used to it" isn't the same as "not a real cost" — every explicit wait is a line of code whose entire job is compensating for something the framework doesn't do for you automatically, and across a suite of hundreds of tests, that's a genuinely large amount of code that exists purely to work around timing, not to test behavior.
 
-## What Playwright Does Differently
+## What Playwright Actually Does Differently — And What Hasn't Changed
 
-Playwright's core insight is simple: **auto-waiting should be the default, not the exception**.
-
-When you call `page.click('#submit-btn')`, Playwright automatically waits for the element to be:
-- Attached to the DOM
-- Visible
-- Stable (not animating)
-- Enabled
-- Receiving pointer events
-
-All of that, for free, on every action. No `WebDriverWait`. No explicit sleeps. No `time.sleep(2)` hacks.
+Playwright's core bet: auto-waiting should be the default on every single action, not an opt-in tool you reach for when you happen to remember. Call `page.click('#submit-btn')`, and Playwright automatically checks, before the click ever fires, that the element is attached to the DOM, visible, stable (not mid-animation), enabled, and actually able to receive pointer events — not obscured by something else on top of it. Every action gets this, automatically, with no explicit wait written anywhere:
 
 ```typescript
 // This just works — no waits needed
@@ -44,25 +33,25 @@ await page.click('#submit-btn');
 await expect(page.locator('.success-message')).toBeVisible();
 ```
 
-## The Features That Actually Matter
+This is the one piece of the original comparison that's held up completely unchanged. I went and checked, rather than assuming: Selenium 4 still has no equivalent built-in actionability system. Selenium's `WebDriverWait` and `ExpectedConditions` did get real, worthwhile improvements — Selenium 4 switched from the old `TimeUnit` API to Java's `Duration` class, which is more readable and less error-prone to configure — but that's a quality-of-life improvement to *how you write an explicit wait*, not a change to *whether you need to write one*. You still decide, for every interaction, whether this specific element needs a wait before it, and you're still the one responsible for getting that decision right. Playwright made that decision once, for every action, and you never have to make it again.
 
-### 1. Parallel execution is a first-class citizen
+## Where I Was Wrong: Selenium's Network Interception Story Has Actually Changed
 
-Selenium parallelism usually means Selenium Grid, Docker, or some CI magic that inevitably breaks. In Playwright, it's built right into the test runner:
+The original version of this post said, flatly, that "mocking APIs in Selenium requires a proxy (like BrowserMob)." I wrote that because it was true when I learned Selenium, and I never went back to check whether it still was. It isn't — not entirely.
 
-```typescript
-// playwright.config.ts
-export default defineConfig({
-  workers: 4, // run 4 tests in parallel
-  fullyParallel: true,
-});
+Selenium 4.18 shipped native network interception through the WebDriver BiDi protocol — the same bidirectional, WebSocket-based protocol architecture that Playwright, Cypress, and WebdriverIO have all converged on for their own newer capabilities. The real API:
+
+```java
+try (Network network = new Network(driver)) {
+    network.addIntercept(new AddInterceptParameters(InterceptPhase.BEFORE_REQUEST_SENT));
+    network.onBeforeRequestSent(
+        responseDetails -> network.failRequest(responseDetails.getRequest().getRequestId())
+    );
+    driver.get("https://example.com");
+}
 ```
 
-I cut our CI pipeline from 18 minutes to 5 minutes on the same machine just by flipping this switch.
-
-### 2. Network interception is trivial
-
-Mocking APIs in Selenium requires a proxy (like BrowserMob). In Playwright, it's native:
+This is real, and it means the flat claim "Selenium can't do this without a separate proxy" is no longer accurate. What's still true, and worth stating precisely rather than glossing over: this API is genuinely early. The Python bindings expose it through underscore-prefixed private methods (`driver.network._add_intercept()`), which the project's own documentation says plainly will change once a public API stabilizes. Interception phases are limited compared to what a mature mocking layer offers, and some capabilities — handling authentication challenges, for instance — are currently Firefox-specific rather than working uniformly across browsers. Compare that to Playwright's `page.route()`, which has been stable, full-featured, and browser-agnostic for a long time now:
 
 ```typescript
 await page.route('**/api/products', route =>
@@ -70,48 +59,59 @@ await page.route('**/api/products', route =>
 );
 ```
 
-This changed how I write tests. Instead of depending on a flaky live backend, I mock the API layer and test the UI in complete isolation.
+The honest comparison, as of right now, isn't "Selenium can't mock network requests." It's "Selenium's native network interception exists, is real, and is meaningfully less mature than Playwright's" — a different, more defensible claim, and one that's likely to keep narrowing as Selenium's BiDi implementation matures. Writing the first version of this comparison as a permanent, settled fact rather than a snapshot of a specific point in time was the actual mistake, not the underlying preference for Playwright.
 
-### 3. Screenshots and video on failure — zero config
+## The Features That Still Make the Difference Day to Day
+
+**Parallel execution as a first-class citizen.** Selenium parallelism historically meant standing up Selenium Grid, wiring in Docker, and maintaining CI infrastructure that broke in ways unrelated to your actual tests. Playwright's parallelism is a config flag:
 
 ```typescript
 // playwright.config.ts
+export default defineConfig({
+  workers: 4,
+  fullyParallel: true,
+});
+```
+
+I cut a CI pipeline from 18 minutes to 5 on the same machine, changing nothing but this one setting.
+
+**Screenshots and video on failure, with zero extra infrastructure.**
+
+```typescript
 use: {
   screenshot: 'only-on-failure',
   video: 'retain-on-failure',
 }
 ```
 
-When a test fails in CI, I get a full video of exactly what happened. It's a game changer for debugging flaky tests.
+When a test fails in CI, I get a video of exactly what happened, generated automatically, uploaded as a build artifact. No third-party service, no extra service running alongside the test suite.
 
-### 4. The codegen tool
+**The trace viewer**, which is a step further than either of the above: a complete, replayable timeline of DOM snapshots, network activity, and console output for a specific run, openable locally with `npx playwright show-trace`. Selenium has no equivalent built-in artifact this rich.
+
+**Codegen**, for bootstrapping — not production code, but genuinely useful for a new tester learning the locator API by watching real interactions turn into real code:
 
 ```bash
 npx playwright codegen https://saucedemo.com
 ```
 
-Playwright opens a browser and records your interactions as test code. It isn't perfect, but it's an incredible starting point for new testers to learn the API.
+## Where Selenium Genuinely Still Wins
 
-## What Selenium Still Wins At
+**Cross-company standardization.** If fifty teams in a large enterprise already run Selenium, switching frameworks isn't a technical decision alone — it's an organizational one, and the existing investment in Selenium Grid infrastructure, reporting pipelines, and institutional knowledge is real and doesn't disappear because a newer tool exists.
 
-**Cross-company standardization.** If you're in a large enterprise where 50 teams use Selenium, you can't just switch overnight. The ecosystem around Selenium — reporting tools, CI integrations, talent familiarity — is still larger.
+**Mobile native app testing.** Selenium plus Appium remains the standard path for testing native iOS and Android apps, not just mobile web. Playwright is browser-only — it has no answer to native app automation at all, and that's not a maturity gap that's likely to close, since it's outside what Playwright is built to do.
 
-**Mobile testing.** Selenium + Appium is the standard for native mobile app testing. Playwright is purely browser-centric.
-
-**Legacy browser support.** Still stuck testing an ancient internal app that only runs on a legacy IE-mode browser? Selenium is your only option there — but that's an increasingly rare corner of the industry, not a mainstream concern anymore.
+**Legacy and enterprise browser requirements.** An internal tool that only runs correctly in IE-mode within Edge, or a regulated environment mandating a specific certified browser configuration, is squarely Selenium's territory. It's an increasingly small corner of the industry, but for the teams actually in it, it's not optional.
 
 ## Should You Switch?
 
-If you're starting a new project: **yes, start with Playwright**. The developer experience is objectively better.
+Starting a new project today: Playwright, with more confidence than the original version of this post had, now that I've actually gone back and checked what's changed rather than repeating a comparison from memory. The auto-waiting difference alone remains the single largest, most consistent driver of flaky-test reduction, and nothing in Selenium 4's genuine improvements — the Duration-based waits, the BiDi network interception, the relative locators — changes that specific architectural gap.
 
-If you have an existing Selenium suite: **migrate gradually**. Start with new test files in Playwright, and move old ones over when they need significant rework anyway.
+Maintaining an existing Selenium suite: migrate gradually, new files in Playwright, old ones moved over when they need significant rework anyway rather than as a big-bang rewrite.
 
-If you're a QA engineer learning automation: **learn Playwright first**. Selenium is worth understanding conceptually, but Playwright is where the industry's heading.
+Learning automation from scratch: learn Playwright first, but don't treat Selenium as obsolete — understanding the WebDriver protocol Selenium is built on, and the explicit-wait discipline it teaches, is still genuinely useful groundwork, especially since Playwright, Cypress, and WebdriverIO all originate from engineers who understood Selenium's limitations firsthand.
 
-## The Bottom Line
+## The Actual Bottom Line
 
-Playwright is what Selenium would be if it were designed today. It respects the async nature of the web, it has sensible defaults, and it makes the happy path easy and the hard path possible.
-
-Three years of Selenium taught me *what* to test. Two weeks of Playwright taught me how much time I'd been wasting on *how* to test.
+Playwright is closer to what a test framework designed today, for today's web, would look like — auto-waiting as a true default, network mocking that's been stable for years rather than months, parallelism and rich failure artifacts built in rather than bolted on. Selenium has genuinely improved in ways worth acknowledging rather than dismissing, and the network-interception gap in particular is real ground it's made up. What hasn't changed, and what actually decided this switch for me, is the one thing no amount of incremental improvement to Selenium's explicit-wait ergonomics fixes: Playwright doesn't ask you to remember to wait. It just does.
 
 Check out the [Playwright tutorial series](/tutorial/playwright) on this site if you want to go deep.

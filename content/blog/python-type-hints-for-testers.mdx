@@ -158,6 +158,63 @@ def authenticated_page(page: Page) -> Page:
 
 The return type `-> Page` tells pytest and your IDE exactly what this fixture yields, enabling proper autocomplete in every single test that uses it.
 
+## Protocol: Typing "Anything That Behaves Like a Page Object"
+
+Everything above types a single, concrete class. There's a separate, less-known tool worth knowing once your test suite has more than one implementation of "something page-object-shaped" — testing against multiple browser engines, or swapping a real page object for a lightweight fake in a unit test. Python's `typing.Protocol` (from [PEP 544](https://peps.python.org/pep-0544/)) lets you describe *the shape something has to have*, without that something needing to inherit from a shared base class at all — the same "program to an interface, not an implementation" idea covered from the TypeScript side in another post on this blog, expressed through Python's own structural typing system rather than explicit inheritance:
+
+```python
+from typing import Protocol
+
+class LoginCapable(Protocol):
+    def login(self, username: str, password: str) -> None: ...
+    def get_error_text(self) -> str | None: ...
+```
+
+```python
+def assert_shows_error(page: LoginCapable, username: str, password: str, expected: str) -> None:
+    page.login(username, password)
+    assert page.get_error_text() == expected
+```
+
+`assert_shows_error` never mentions `LoginPage` by name. Any class with a matching `login()` and `get_error_text()` — the real Playwright-backed one, a lightweight test double with no browser at all — satisfies `LoginCapable` automatically, with zero `implements` keyword and zero shared base class, because Python's structural typing (PEP 544 calls this "static duck typing") checks the *shape*, not the ancestry. This is real static duck typing — Python's `mypy`, Pyright, and other type checkers verify the shape matches at check time, not just at runtime.
+
+If you need to check a Protocol's shape at *runtime* too — not just when mypy runs — decorate it with `@runtime_checkable`:
+
+```python
+from typing import Protocol, runtime_checkable
+
+@runtime_checkable
+class LoginCapable(Protocol):
+    def login(self, username: str, password: str) -> None: ...
+
+isinstance(login_page, LoginCapable)  # works, checks method presence
+```
+
+Reach for `Protocol` specifically when you have (or expect to have) more than one implementation of the same capability and don't want them artificially forced into a shared inheritance hierarchy just to satisfy a type checker — the same situation the interface-based design covered elsewhere on this blog solves, here without needing an actual abstract base class at all.
+
+## Generics: One Helper Instead of a Copy Per Type
+
+The same problem TypeScript generics solve — writing one function that works correctly across multiple types instead of copy-pasting a near-identical version per type — exists in Python too, solved with `TypeVar`:
+
+```python
+from typing import TypeVar
+
+T = TypeVar('T')
+
+def first_matching(items: list[T], predicate: 'Callable[[T], bool]') -> T | None:
+    for item in items:
+        if predicate(item):
+            return item
+    return None
+```
+
+```python
+backpack = first_matching(products, lambda p: p.name == 'Sauce Labs Backpack')  # inferred: ProductTestData | None
+admin = first_matching(users, lambda u: u['role'] == 'admin')  # inferred: UserCredentials | None
+```
+
+`T` is a placeholder — when you call `first_matching(products, ...)`, the type checker infers `T` as whatever type `products` actually holds, and the return type follows automatically. One function, correctly typed for every list you hand it, instead of a `first_matching_product`, `first_matching_user`, `first_matching_order` copy-pasted per type.
+
 ## Running mypy in CI
 
 Having type hints without checking them is like writing tests and never running them. Put mypy in your pre-commit or CI:
@@ -193,6 +250,30 @@ def parse_response(data: dict[str, object]) -> list[ProductTestData]:
 ```
 
 Also: don't type-annotate everything inside the test functions themselves. Type the *infrastructure* (fixtures, helpers, page objects) and keep the test body readable.
+
+## Three Mistakes Worth Naming
+
+**Typing a mutable default argument as if it were safe.** This isn't specific to test code, but it shows up constantly in fixture and helper functions:
+
+```python
+# Dangerous regardless of the type hint — the SAME list is reused across every call
+def make_cart(items: list[str] = []) -> list[str]:
+    items.append('default-item')
+    return items
+```
+
+A type hint of `list[str] = []` looks correct and type-checks cleanly, but Python evaluates default arguments once, at function definition time, not per call — every call that doesn't pass its own `items` shares and mutates the exact same list object. This is the same aliasing bug covered from the JavaScript side elsewhere on this blog, just wearing Python's specific footgun (mutable default arguments) instead of a shared object reference. The fix: default to `None`, and construct the mutable value inside the function body.
+
+```python
+def make_cart(items: list[str] | None = None) -> list[str]:
+    items = items if items is not None else []
+    items.append('default-item')
+    return items
+```
+
+**Using `Any` as an escape hatch instead of a last resort.** `Any` tells the type checker to stop checking — not "this could be several types" (that's a `Union`, or `str | int`), but "verify nothing here." Reaching for it because a real type is momentarily inconvenient to write defeats the entire point of having typed the surrounding code at all; the type-safety only holds as strongly as the weakest `Any` anyone left in the chain.
+
+**Typing a return value as narrower than what the function can actually return.** A function annotated `-> str` that can, under a real condition, return `None` will type-check fine — right up until a caller trusts the annotation, skips a `None` check the real behavior required, and gets a runtime `AttributeError` the type checker never had a chance to catch, because the annotation lied about what could come back. `-> str | None` costs nothing to write and is the entire reason `get_error_text()` in the Page Object example above is typed the way it is.
 
 ## The Payoff
 
