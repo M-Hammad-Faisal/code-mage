@@ -23,7 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -59,7 +59,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -87,7 +87,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -98,15 +98,14 @@ jobs:
         # what actually ships. Keep this step free of continue-on-error.
         run: npm audit --omit=dev --audit-level=high
 
-      - name: Audit dev dependencies (informational)
-        # The @lhci/cli → inquirer/puppeteer-core → tmp/uuid/qs chain carries
-        # high/moderate advisories with no non-breaking fix (`npm audit fix
-        # --force` would downgrade @lhci/cli to 0.1.0, breaking Lighthouse CI).
-        # These packages never reach the production bundle, so this step is
-        # informational only — surface it in logs, don't block on it.
-        # Tracked upstream: https://github.com/raszi/node-tmp/issues
+      - name: Audit dev dependencies
+        # The @lhci/cli -> puppeteer-core -> extract-zip chain used to carry
+        # high-severity advisories with no non-breaking fix. Fixed by pinning
+        # @puppeteer/browsers to ^3.0.6 in package.json overrides, which
+        # dropped extract-zip entirely upstream (switched to modern-tar).
+        # Verified end-to-end: npx lhci autorun still launches Chrome and
+        # completes a real audit with this override in place.
         run: npm audit --omit=prod --audit-level=high
-        continue-on-error: true
 
       - name: Check for outdated packages
         run: npm outdated || true
