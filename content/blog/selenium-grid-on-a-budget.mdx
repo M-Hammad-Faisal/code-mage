@@ -110,6 +110,16 @@ A few things that bite people the first time they set this up:
 - **`SE_NODE_MAX_SESSIONS` controls real concurrency**, not the replica count alone — two Chrome nodes at `max_sessions=2` gives you four concurrent Chrome sessions, not two.
 - **Appium's Grid 4 integration is not first-class the way Chrome/Firefox nodes are.** In practice, most teams run Appium as its own endpoint and point mobile-specific test config at it directly, rather than expecting Grid's Router to transparently proxy mobile sessions the way it does browser sessions.
 
+## A Note on the Appium Version in That Compose File
+
+The `appium/appium:v2.11.2` image above reflects what we actually ran, but Appium has since moved to a 3.x major line, and the upgrade is worth knowing about before you copy that compose file into a new setup, because a couple of the changes affect exactly the kind of relaxed-security flag used above.
+
+The security feature flag scoping that was optional in Appium 2.13 is mandatory in Appium 3 — a bare feature name like `adb_shell` now has to be scoped to its driver, as `uiautomator2:adb_shell`, or the server throws an error instead of silently ignoring it. If you're running `--relaxed-security` broadly rather than allowlisting specific features, this matters less, but if you'd locked things down to individual `--allow-insecure` flags for CI hardening, expect to update the flag names on the upgrade, not just bump the image tag.
+
+The other change worth knowing: Appium 3 replaces the old `GET /sessions` endpoint (which listed all active sessions server-wide) with `GET /appium/sessions`, gated behind a `session_discovery` feature flag you have to opt into explicitly. If any tooling around your Grid — a dashboard, a cleanup script that kills orphaned sessions — was polling the old endpoint, it silently stops working on the upgrade rather than erroring loudly, so it's worth grepping for `/sessions` calls against your Appium endpoint specifically before switching the image tag. Node/npm minimums also moved up (20.19 / 10.x), which is one more thing to check in whatever base image or CI runner builds your Appium node.
+
+None of this changes the architecture described above — Appium's Grid integration is still looser than the native Chrome/Firefox nodes, for the same reasons. It's a maintenance note, not a design change: pin `appium/appium:3.x` deliberately rather than floating on `latest` in that node service, the same way you'd pin the Selenium images, so a background Docker Hub pull doesn't hand your CI a different major version overnight.
+
 ## What "reduces cost" leaves out
 
 The pitch for self-hosting always undersells the ongoing cost, so here's the honest list of what you're signing up for:
