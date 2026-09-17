@@ -83,6 +83,30 @@ Both tests reference `baseUser` — the same object, aliased across two files, w
 
 **Test data builders**, covered in an earlier post on Factory and Strategy patterns: a builder that returns the *same* default object on every call, rather than a fresh one, silently reintroduces this exact bug — two tests calling `buildUser()` and expecting independent objects can end up aliased to the same underlying default, mutating each other's "independent" test data without either test doing anything that looks wrong in isolation.
 
+## `Object.freeze()`: Making the Discipline Enforced, Not Just Followed
+
+Spread syntax gives you a *convention* — write `{ ...cart }` instead of mutating `cart` directly — but nothing stops someone from writing `cart.total = ...` again next month, in a hurry, without meaning to reintroduce the exact bug this post is about. `Object.freeze()` turns the convention into something the runtime actually enforces:
+
+```typescript
+const quote = Object.freeze({ items: ['backpack'], total: 29.99 });
+
+quote.total = 26.99; // silently does nothing in non-strict mode, throws a TypeError in strict mode/modules
+console.log(quote.total); // still 29.99
+```
+
+In an ES module (which is what nearly all modern TypeScript/JavaScript test code actually is), strict mode is on by default, so that assignment throws immediately at the exact line that tried to mutate — turning a silent, distant aliasing bug into a loud, immediate one, right where the mistake happened. That's a strictly better failure mode: the whole problem with aliasing bugs is the distance between cause and symptom, and a thrown exception at the mutation site collapses that distance to zero.
+
+The one sharp edge worth knowing before reaching for this everywhere: `Object.freeze()` is **shallow**. It locks the object's own top-level properties, but if one of those properties is itself an object or array, that nested structure is *not* frozen and can still be mutated freely:
+
+```typescript
+const order = Object.freeze({ id: 'order-1', items: ['backpack'] });
+
+order.id = 'order-2';        // throws — top-level property is frozen
+order.items.push('hat');     // works fine — the nested array was never frozen
+```
+
+For genuinely deep immutability, you need a recursive freeze that walks every nested object and array before freezing the parent — a real, non-trivial amount of extra work, and slower than a shallow freeze at scale, which is exactly why most guidance settles on "freeze deliberately, at the specific boundaries where aliasing bugs actually tend to happen" — test fixtures and builder defaults, the two cases covered below — rather than freezing everything by default.
+
 ## The Practical Discipline, Not a Language Feature You Need to Adopt Wholesale
 
 You don't need a fully immutable-by-default language or a library like Immutable.js to get the actual benefit here. The concrete habit that eliminates this entire bug category: functions that appear to transform data should return a *new* value rather than mutating the one they were handed, using spread syntax (`{ ...obj }`, `[...arr]`) or equivalent, consistently enough that nobody reading a call site has to go check the function's internals to know whether their original data is safe. The payoff isn't abstract code-quality virtue — it's the concrete, measurable elimination of a bug where the cause and the symptom can be separated by any distance the codebase allows, which is precisely what makes this category so disproportionately expensive to debug compared to almost anything else that goes wrong in a test suite.

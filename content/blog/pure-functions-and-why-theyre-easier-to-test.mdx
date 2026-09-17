@@ -66,6 +66,25 @@ test('calculates tax using the current rate', () => {
 
 The test now has to know about, set up, and often tear down state that has nothing to do with the specific behavior it's trying to verify — and if it forgets to reset `currentTaxRate` afterward, it silently poisons whichever test happens to run next. This is precisely the mechanism behind a whole category of flaky test suite: **hidden dependence on external, mutable state**, which purity directly eliminates by construction.
 
+## The Same Property That Makes Testing Easy Also Makes Caching Safe
+
+Referential transparency has a second, less obvious payoff worth knowing, because it explains a technique you've likely used without connecting it back to purity: **memoization** — caching a function's return value against its input, so a repeated call with the same argument skips recomputing and returns the cached result instead.
+
+```typescript
+const cache = new Map<string, TestData>();
+
+function memoizedBuildTestData(seed: string): TestData {
+  if (cache.has(seed)) return cache.get(seed)!;
+  const result = buildExpensiveTestData(seed); // some genuinely slow computation
+  cache.set(seed, result);
+  return result;
+}
+```
+
+This is only safe to do at all because `buildExpensiveTestData` is pure. If it weren't — if it read from a database, or depended on the wall clock, or referenced some mutable external counter — caching its result would be actively wrong: the cached value would go stale the moment the external thing it secretly depended on changed, and every caller after the first would silently get an outdated answer instead of a fresh, correct one. Referential transparency is precisely the property that makes "compute once, reuse the result forever" a valid optimization rather than a correctness bug waiting to happen — the same guarantee ("this call will produce exactly this output, every time, unconditionally") that made the tax-calculation test above immune to flakiness is what makes memoizing that same function safe.
+
+This matters directly for slow test suites: if you have an expensive, genuinely pure computation — building a large fixture object, computing some derived test data — that gets called identically across many tests, memoizing it is a legitimate, safe speedup precisely because of its purity. Reaching for the same trick on an impure function is a bug, not an optimization, for exactly the reason the "hidden dependence on external, mutable state" section above already established.
+
 ## This Explains Why UI Automation Is Structurally Harder to Test Than Business Logic
 
 `page.click()` is about as impure as a function gets — it doesn't return a value that depends only on its arguments at all, it reaches out and mutates the actual state of a real browser, a piece of the world entirely external to your test process. This isn't a flaw in Playwright, Cypress, or WebdriverIO; it's an unavoidable structural fact about what browser automation fundamentally *is* — code whose entire purpose is producing side effects in something outside itself. It's worth naming honestly, because it explains, precisely, why UI tests are inherently more prone to timing issues and environmental flakiness than a unit test of a pure calculation function ever will be: they're not doing the same *kind* of work. A pure function's test only has to reason about inputs and outputs. A UI test has to reason about the entire state of a real, external, asynchronously-updating system — which is a fundamentally larger and less predictable problem, no matter how well-written the test is.

@@ -51,6 +51,37 @@ await expect(page.getByTestId('cart-badge')).toHaveText('1'); // races the app's
 
 The click triggers an async state update inside the application (an API call, a re-render) and the test's assertion is a second, independent operation racing against that update — with no guarantee the app's write finishes before the test's read happens. Framework-native assertions that auto-retry (Playwright's `expect`, Cypress's `.should()`) exist specifically to paper over exactly this race by re-checking until a timeout rather than checking once — but they only mask the *symptom*; the underlying race, two operations touching the same piece of state with no enforced ordering between them, is still genuinely there.
 
+## A Real-World Race You've Definitely Tested Around: the Double-Submit Button
+
+There's a version of this exact bug that shows up outside test code entirely, in production UI, and it's worth naming because the fix is a genuinely instructive real-world pattern: a checkout button that fires an API call on click, without disabling itself first. Click it twice quickly — a slow network, an impatient user, or a UI test that double-clicks by accident — and two requests race to the same endpoint, with no guarantee which one's response the UI ends up reflecting, or whether the backend itself ends up creating two orders instead of one.
+
+```typescript
+// Race: nothing stops a second click from firing before the first request resolves
+button.addEventListener('click', async () => {
+  await placeOrder(); // two clicks -> two concurrent, unguarded calls to this
+});
+```
+
+The standard fix is **debouncing** — specifically *leading-edge* debounce, which runs the handler immediately on the first call and then ignores any further calls until a cooldown period passes, rather than the more familiar trailing-edge debounce used for search-input handlers (which waits for a pause in typing before running at all):
+
+```typescript
+function debounceLeading(fn: () => Promise<void>, waitMs: number) {
+  let onCooldown = false;
+  return async () => {
+    if (onCooldown) return;       // ignore clicks during the cooldown window
+    onCooldown = true;
+    await fn();
+    setTimeout(() => { onCooldown = false; }, waitMs);
+  };
+}
+
+button.addEventListener('click', debounceLeading(placeOrder, 2000));
+```
+
+This is the exact same shared-mutable-state-plus-unenforced-ordering shape as the `cartTotal` example above, just with the "shared state" being "has this button already been clicked" instead of a running total — and the fix is the same category of solution too: instead of hoping the timing works out, `onCooldown` makes the second click's critical section explicitly check whether the first one is still in flight before entering it at all, which is a hand-rolled version of the same idea a real mutex or lock provides in threaded programming — mutual exclusion, enforced in code, instead of relying on however the timing happens to fall out.
+
+If you've ever written a UI test that clicks a submit button and then adds a wait "just in case it double-fires," that's the exact race this section describes, and disabling or debouncing the button in the *application* is the actual fix — not a longer wait in the test that's merely reducing the odds of catching the app's own unguarded race condition in the act.
+
 ## Why "Just Add a Wait" Treats the Symptom, Not the Definition
 
 `await page.waitForTimeout(1000)` "fixes" a race condition the same way turning the volume down "fixes" a smoke alarm — it doesn't change the underlying timing relationship, it just makes the failure less likely to show up during the specific run you happened to test it on. The actual fix, once you're thinking in terms of shared state and critical sections rather than vague flakiness, is almost always one of two things: wait for a specific, well-defined signal that the write has actually completed (a network response, a DOM mutation, an explicit "ready" state) rather than an arbitrary duration — or restructure the code so the read and write genuinely can't interleave in the first place, the way `Promise.all()` intentionally avoids sequencing two truly independent operations that don't share state at all.

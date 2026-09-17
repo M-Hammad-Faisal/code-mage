@@ -91,6 +91,29 @@ When someone says "I mocked the payment gateway" without being specific, you gen
 
 The practical fallout shows up most often as **overmocking** — reaching for strict, behavior-verifying mocks in situations where a simple stub or fake would do, and ending up with tests that break every time an implementation detail changes even though the actual behavior a user cares about didn't. If your test suite has a reputation for "breaking on every refactor even when nothing's actually broken," an overuse of strict behavior-verification mocks where state-verifying stubs and fakes would have tolerated the refactor is one of the most common root causes.
 
+## Mapping This to What Jest's API Actually Calls Things
+
+The terminology gets genuinely confusing in practice because the tools themselves don't use Meszaros's five words consistently. Jest's own API is the clearest example: `jest.fn()` — the function most people reach for and call "a mock" — is really closer to a **stub-that-also-spies**, not a Meszaros-precise mock at all.
+
+```typescript
+const chargeFn = jest.fn().mockResolvedValue({ success: true, transactionId: 'txn_123' });
+// stub behavior: returns a canned answer every time, regardless of arguments
+
+await orderService.checkout(cart, { charge: chargeFn });
+
+expect(chargeFn).toHaveBeenCalledWith(2999); // spy behavior: inspecting recorded calls, after the fact
+```
+
+That single `jest.fn()` call does both a stub's job (`mockResolvedValue` sets the canned return) and a spy's job (`toHaveBeenCalledWith` inspects the call log afterward) — which is exactly why "jest mock" gets used as a catch-all term covering what Meszaros's taxonomy treats as two distinct concepts. `jest.spyOn(object, 'methodName')` is the one Jest API that maps cleanly onto Meszaros's actual **Spy** definition — it wraps a *real* existing method, letting it run by default while recording how it was called, and only stubs its behavior if you explicitly chain `.mockImplementation()` onto it:
+
+```typescript
+const spy = jest.spyOn(paymentGateway, 'charge'); // real method still runs
+await orderService.checkout(cart, paymentGateway);
+expect(spy).toHaveBeenCalledWith(2999); // recorded, but nothing was faked
+```
+
+Neither Jest nor most JavaScript testing libraries ship a genuine Meszaros-style **Mock** — upfront expectations, automatic failure the moment reality diverges — as a first-class primitive the way, say, a Java mocking framework built around that exact concept does. What you get instead is `jest.fn()`'s stub-plus-spy hybrid, composed with assertions you write yourself afterward, which is functionally closer to state/spy-style verification even when someone calls the whole thing "mocking." This is worth knowing specifically because it means the tool's own vocabulary won't rescue you from the ambiguity covered above — "I mocked it with `jest.fn()`" is still exactly as underspecified a sentence as "I mocked it," because `jest.fn()` itself doesn't commit you to stub-style or spy-style usage; that's a decision you make in how you call it and what you assert on afterward, not something the API name settles for you.
+
 ## The Practical Rule
 
 Reach for a **stub** by default — you need a dependency to return something predictable so your test doesn't depend on a real network call, database, or third-party service. Reach for a **fake** when a stub's canned answers aren't enough and you actually need stateful behavior — an in-memory list that grows and shrinks correctly as your code adds and removes from it. Reach for a **spy** when you need to confirm an interaction happened as a *secondary* check, alongside a state-based assertion that's still your test's main point. Reach for a genuine **mock** — with upfront expectations and automatic verification — only when the interaction itself, not just its eventual effect, is the actual thing under test: confirming that a specific audit-logging call fires, for instance, where the call *is* the requirement, not a side effect of one.
