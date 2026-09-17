@@ -74,7 +74,7 @@ This is the one that causes the most long-term pain, and it's subtle because it 
 
 The assertion itself isn't the problem. The problem is what it does to the test suite's readability once you have hundreds of them: you can no longer read a test file and know what it's actually verifying, because half the "what" is hidden inside a class named after a URL.
 
-My rule, after getting burned by this more than once: page objects expose **state**, tests make **judgments**.
+My rule, after getting burned by this more than once: page objects expose **state**, tests make **judgments**. This isn't just my own preference — it's Fowler's own stated position, worth quoting directly since it's the exact rule people reach for without knowing where it comes from: ["I favor having no assertions in page objects."](https://martinfowler.com/bliki/PageObject.html) His reasoning matches the pain described above — mixing "provide access to page data" with "judge whether that data is correct" bloats the page object with responsibilities that don't belong together, and the fix is the same one I landed on independently: the page object's job stops at exposing the page's state; the test client is what decides whether that state is right.
 
 ```typescript
 // Page object exposes state, doesn't judge it

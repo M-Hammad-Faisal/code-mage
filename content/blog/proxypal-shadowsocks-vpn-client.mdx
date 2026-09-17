@@ -23,6 +23,12 @@ Practically, that means: you run a `ss-local` process on your machine, which exp
 
 It's lighter than a full VPN stack because there's no virtual network interface, no routing table surgery, no kernel-level tunnel — it's an application-layer proxy. That's also its limitation: it proxies what you point at it (browser, specific apps configured to use a SOCKS5 proxy), not your entire OS's network stack by default. For my use case — automation and scraping tools that already speak HTTP/SOCKS proxies — that's exactly the right level.
 
+## A Cipher Detail Worth Getting Right: 2022 Edition vs. Classic AEAD
+
+The AEAD ciphers I mentioned above — ChaCha20-Poly1305, AES-256-GCM — are what most existing ShadowSocks deployments still run, but they're not actually the current spec anymore. The **Shadowsocks 2022 edition** (SIP022) replaced the subkey derivation function those classic ciphers relied on, `HKDF_SHA1`, which the spec itself now describes as obsolete, with one built on BLAKE3's own key-derivation mode instead. The mandatory ciphers under the 2022 spec are `2022-blake3-aes-128-gcm` and `2022-blake3-aes-256-gcm`, with ChaCha20-based variants available as an implementation option for CPUs that lack AES hardware instructions.
+
+This matters for ProxyPal specifically because it's not a cosmetic version bump — a 2022-edition server and a classic-AEAD client aren't interoperable, since the key derivation itself is different, not just the encryption. If you're pointing ProxyPal at a `ss-server` someone else runs, whichever cipher family the server actually speaks is not optional to get right; a mismatched cipher string in the config doesn't degrade gracefully, the handshake just fails outright, which is exactly the kind of "why won't this connect" moment the app's status-checking thread exists to catch and report clearly instead of silently hanging.
+
 ## Why not just use a config file and the CLI
 
 The honest answer is I did, for about two months. `ss-local -c config.json` and a shell alias got me 90% of the way there. What broke down was everything *around* that one command:
