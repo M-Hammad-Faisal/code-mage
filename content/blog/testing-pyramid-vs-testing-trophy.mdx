@@ -1,0 +1,40 @@
+---
+title: "The Testing Pyramid vs. the Testing Trophy: Two Real Strategies, Not One Right Answer"
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['testing-strategy', 'fundamentals', 'unit-testing', 'integration-testing']
+excerpt: "Mike Cohn's Testing Pyramid and Kent C. Dodds's Testing Trophy disagree about where most of your testing effort should go, and both have a real, specific argument for their answer. The mistake is treating either one as a universal law instead of a strategy that fits a particular kind of application."
+featured: false
+---
+
+If you've read testing advice from two different sources, there's a real chance they contradicted each other on this exact question: should most of your automated tests be fast, isolated unit tests, or should most of them be integration tests that exercise several parts of the system together? Two well-known, well-reasoned answers exist, they genuinely disagree, and both are right — for different situations. Treating either one as a universal law is where teams get into trouble.
+
+## The Testing Pyramid: Mostly Unit Tests, by Design
+
+Mike Cohn popularized the term in his 2009 book *Succeeding with Agile*, developing the underlying idea years earlier through work with Lisa Crispin (Jason Huggins independently arrived at a similar shape around the same period). Martin Fowler's widely-read formulation states the core rule directly: "you should have many more low-level UnitTests than high level BroadStackTests running through a GUI." The shape is three layers, widening toward the bottom:
+
+- **Unit tests** (the large base) — test one function, one class, one component, in isolation, with dependencies replaced by test doubles.
+- **Integration/service tests** (the middle) — test through an API or service layer, several real components together, without a browser or GUI in the loop.
+- **End-to-end/UI tests** (the small top) — test through the actual interface, the closest thing to how a real user experiences the system.
+
+The reasoning is almost entirely about cost and reliability. UI-driven tests are slow (a full browser session per test), brittle (a CSS change can break a selector that has nothing to do with the behavior under test), and expensive to maintain at scale. Unit tests are the opposite on every axis: fast, isolated, and precise about exactly what broke when they fail. The pyramid's advice is a direct consequence of that cost asymmetry — do most of your verification at the cheap, reliable layer, and reserve the expensive, brittle layer for the smaller set of things only a full system can actually verify.
+
+## The Testing Trophy: Mostly Integration Tests, on Purpose
+
+Kent C. Dodds introduced the Testing Trophy in a 2018 tweet, building on a principle from Guillermo Rauch: "Write tests. Not too many. Mostly integration." The trophy has four layers, not three — static, unit, integration, end-to-end, bottom to top — but the visual shape (narrow at the very base and top, wide in the upper-middle) reflects a specific claim: **integration tests deserve the most investment**, not unit tests.
+
+Dodds's own reasoning, stated directly: "the more your tests resemble the way your software is used, the more confidence they can give you." A unit test that mocks every dependency can pass while the real, wired-together system is completely broken — the mock told the test everything was fine, even though the real integration point between two modules was never actually exercised. An integration test that exercises several real modules together catches exactly that class of bug, which a pile of green unit tests, each individually correct in isolation, can miss entirely.
+
+The trophy's fourth layer — **static** analysis, meaning linting and type-checking — sits at the very base, explicitly counted as a form of testing in its own right: a type error or a lint violation catches an entire category of bug before a single test even runs, for close to zero cost per check.
+
+## Why They Actually Disagree, Not Just Look Different
+
+This isn't two different opinions about the same tradeoff — it's two different assessments of where the real risk lives, shaped by two different kinds of software. Dodds's own framing names the source directly: his experience is as a UI engineer building browser-based applications, where the actual risk isn't "does this one function compute correctly in isolation" (which a unit test verifies well) but "do these several UI components, wired together with real state management and real DOM updates, actually work when combined" — precisely the thing a unit test, by design, doesn't exercise. Cohn and Fowler's classic pyramid comes out of a different context, more oriented around backend and service-layer systems, where units genuinely can be tested in meaningful isolation, and where the *number* of tests that need to run on every commit matters a lot for feedback speed at scale.
+
+## What This Actually Means for Choosing a Strategy
+
+Neither shape is "correct" independent of what you're building. A pure computation-heavy library — a pricing engine, a date-parsing utility, anything with clear inputs and outputs and minimal external state — genuinely benefits from a pyramid shape: the logic is naturally unit-testable, isolation is cheap and meaningful, and a large base of fast unit tests catches most real bugs before they ever need a slower, broader test to surface them.
+
+A React or Vue component library, a page that coordinates form state across several child components, an API endpoint whose entire job is orchestrating three other services correctly — these are exactly the systems where Dodds's argument bites hardest: unit-testing each piece in isolation, with the others mocked, can leave the actual wiring between them completely unverified, and that wiring is precisely where production bugs in this kind of system tend to live.
+
+The practical takeaway isn't "pick a shape and defend it forever." It's asking, honestly, for the specific system in front of you: where does a bug actually tend to originate — inside one function's logic, or in how several pieces are wired together — and letting that answer, not a diagram from a blog post, decide where your testing effort actually goes. Both diagrams are real, well-reasoned strategies from people who tested a lot of real software. They just tested different kinds of it.

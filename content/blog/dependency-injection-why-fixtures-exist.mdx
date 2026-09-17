@@ -1,0 +1,108 @@
+---
+title: "Dependency Injection: Why Playwright's Fixtures Exist, and How to Design Your Own"
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['dependency-injection', 'fundamentals', 'test-architecture', 'playwright']
+excerpt: "Playwright's fixture system feels like a testing-specific convenience until you recognize it as dependency injection wearing a test framework's clothes — a pattern with a name, a history, and rules that explain why fixtures behave the way they do."
+featured: false
+---
+
+Every Playwright test signature has this shape: `async ({ page }) => { ... }`. Most people learn this as "how you get access to the browser page" and never ask a deeper question: who's deciding what `page` actually is, and why does the test never construct it itself? The answer is dependency injection — a decades-old software design pattern, not a Playwright-specific trick — and understanding it as DI rather than as framework magic is what lets you extend the fixture system correctly instead of fighting it.
+
+## The Core Idea, Stripped of Framework Syntax
+
+Dependency injection means: a piece of code declares *what it needs*, and something else — a framework, a container, an orchestrating function — is responsible for providing it, rather than the code constructing its own dependencies internally. Here's the non-DI version of a class that needs a database connection:
+
+```typescript
+class OrderService {
+  private database = new PostgresConnection('prod-connection-string'); // constructs its own dependency
+
+  async createOrder(order: Order) {
+    await this.database.insert('orders', order);
+  }
+}
+```
+
+`OrderService` decides, internally, exactly which database it talks to. Anyone using this class — including a test — gets that exact database, no say in the matter. The DI version inverts this: the dependency is declared as something the class *needs*, and handed in from outside:
+
+```typescript
+class OrderService {
+  constructor(private database: DatabaseClient) {} // needs a DatabaseClient; doesn't build one
+
+  async createOrder(order: Order) {
+    await this.database.insert('orders', order);
+  }
+}
+```
+
+```typescript
+// production code hands in the real thing
+const service = new OrderService(new PostgresConnection('prod-connection-string'));
+
+// a test hands in something else entirely
+const service = new OrderService(new InMemoryDatabaseClient());
+```
+
+`OrderService` itself never changed. What changed is *what gets handed to it*, decided entirely by whoever constructs it — production code, or a test. This is the exact mechanism behind the Dependency Inversion Principle covered in an earlier SOLID-focused post on this blog; DI is that principle's practical, everyday implementation technique.
+
+## Playwright's Fixtures Are This Exact Pattern
+
+Look at a Playwright fixture definition with DI vocabulary in mind:
+
+```typescript
+const test = base.extend<{ authenticatedPage: Page }>({
+  authenticatedPage: async ({ page }, use) => {
+    await page.goto('/');
+    await page.getByPlaceholder('Username').fill('standard_user');
+    await page.getByPlaceholder('Password').fill('secret_sauce');
+    await page.getByRole('button', { name: 'Login' }).click();
+    await use(page); // hand the constructed dependency to whatever asked for it
+  },
+});
+```
+
+```typescript
+test('checkout flow', async ({ authenticatedPage }) => {
+  // this test never logged in — it just declared what it needs, and got it
+});
+```
+
+The test function `async ({ authenticatedPage }) => { ... }` is declaring a dependency, exactly the way `OrderService`'s constructor declared a need for a `DatabaseClient`. It doesn't know or care *how* `authenticatedPage` gets built — whether that's a real login form submission, a cookie injected directly, or something else entirely. That knowledge lives entirely in the fixture definition, one place, and every test that declares `authenticatedPage` as a dependency benefits from it without repeating the setup.
+
+This isn't a metaphor or a loose analogy — it's worth being precise about it, since Playwright's own documentation describes fixture resolution in language that maps directly onto how dependency injection containers work in other ecosystems: the framework inspects a test's declared parameters, resolves the fixtures those parameters name, resolves *their* own declared dependencies first if a fixture depends on another fixture, and lazily skips constructing any fixture a given test never actually asked for.
+
+## Why Fixtures Compose
+
+Because this is genuine DI, fixtures can depend on other fixtures, and the framework handles the resolution order automatically:
+
+```typescript
+const test = base.extend<{ authenticatedPage: Page; cartWithOneItem: Page }>({
+  authenticatedPage: async ({ page }, use) => {
+    // ... login logic ...
+    await use(page);
+  },
+  cartWithOneItem: async ({ authenticatedPage }, use) => {
+    await authenticatedPage.getByTestId('add-to-cart-sauce-labs-backpack').click();
+    await use(authenticatedPage);
+  },
+});
+```
+
+```typescript
+test('shows correct cart total', async ({ cartWithOneItem }) => {
+  // gets a page that's already logged in AND has an item in the cart —
+  // this test declared neither of those steps
+});
+```
+
+`cartWithOneItem` depends on `authenticatedPage`, which depends on `page`. The test declaring `cartWithOneItem` gets the entire chain resolved automatically, in the correct order, without knowing the chain exists. This is precisely what a DI container does in larger application frameworks — resolve a full dependency graph from a single top-level request — implemented here as Playwright's fixture system instead of a general-purpose container.
+
+## Designing Your Own Fixtures With This in Mind
+
+Once fixtures are understood as DI rather than magic, the design question for a new one becomes concrete: what does this test genuinely *need as input*, independent of how that input gets constructed? A fixture that mixes "what's needed" with "how it's built" in a way that leaks implementation details defeats the purpose — the whole value is that a test consuming `authenticatedPage` shouldn't need to know or care whether login happens via a real form or a shortcut. If changing *how* a fixture builds its value ever requires changing the tests that consume it, the dependency wasn't actually inverted — it just moved.
+
+The other practical design question is scope: Playwright fixtures can be test-scoped (rebuilt fresh for every test, the safer default) or worker-scoped (built once, reused across every test in that worker process, faster but shared — and therefore only safe for state that's genuinely safe to share, like a browser instance, not state a test might mutate, like a logged-in session another test could interfere with).
+
+## The Actual Payoff
+
+Recognizing fixtures as dependency injection rather than a Playwright-specific convention means the mental model transfers. The same reasoning — declare what you need, let something else provide it, keep construction details out of the code that merely consumes the result — applies whether you're extending Playwright's fixture system, designing a constructor for a plain TypeScript class, or reading about a DI container in a completely different language and framework. It's one pattern, one set of tradeoffs, wearing several different pieces of syntax depending on where you encounter it.

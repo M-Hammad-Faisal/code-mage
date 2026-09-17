@@ -1,0 +1,73 @@
+---
+title: "DRY in Test Code: What the Principle Actually Says, and Where It Backfires"
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['dry', 'fundamentals', 'test-architecture', 'best-practices']
+excerpt: "Andy Hunt and Dave Thomas's actual definition of DRY is narrower and more useful than the 'never repeat code' slogan it got flattened into — and test suites are exactly where the flattened version causes the most damage."
+featured: false
+---
+
+"Don't Repeat Yourself" is one of the most-cited principles in software engineering and one of the most commonly misapplied, because the version most people learned isn't quite what Andy Hunt and Dave Thomas actually wrote in *The Pragmatic Programmer* (1999). The precise formulation: "every piece of knowledge must have a single, unambiguous, authoritative representation within a system." That's a narrower, more specific claim than "don't write similar-looking code twice" — and the gap between the two is exactly where test suites get hurt by well-intentioned DRY refactoring.
+
+## What the Principle Actually Targets: Knowledge, Not Text
+
+The precise wording is about *knowledge* — a single fact, rule, or piece of information about how the system behaves — having one authoritative source. Two lines of code that happen to look similar aren't necessarily the same *knowledge*; they might be two independent facts that coincidentally share a similar shape right now. Confusing "looks the same" with "is the same knowledge" is the exact mistake that produces bad abstractions.
+
+```typescript
+test('standard user sees the inventory page after login', async () => {
+  await loginPage.login('standard_user', 'secret_sauce');
+  await expect(page).toHaveURL('/inventory.html');
+});
+
+test('locked out user sees an error, not the inventory page', async () => {
+  await loginPage.login('locked_out_user', 'secret_sauce');
+  await expect(page.getByTestId('error')).toBeVisible();
+});
+```
+
+These two tests share a login call that looks identical in shape. But they aren't testing the same knowledge — one is verifying "a valid user reaches the inventory page," the other is verifying "an invalid user is blocked and shown an error." The *login mechanism* is legitimately one piece of knowledge worth centralizing (which both tests already do, by calling `loginPage.login()` rather than reimplementing form-filling inline) — but the *expected outcome of each specific scenario* is not shared knowledge at all, and shouldn't be forced into one.
+
+## Where DRY Backfires: Conditional Logic Inside a Test
+
+Here's what happens when someone notices these two tests "look similar" and tries to eliminate the repetition at the wrong level — not by centralizing the login mechanism (already correctly done), but by merging the *tests themselves*:
+
+```typescript
+test.each([
+  ['standard_user', '/inventory.html', null],
+  ['locked_out_user', null, 'error'],
+])('login with %s', async (username, expectedUrl, expectedError) => {
+  await loginPage.login(username, 'secret_sauce');
+  if (expectedUrl) {
+    await expect(page).toHaveURL(expectedUrl);
+  }
+  if (expectedError) {
+    await expect(page.getByTestId(expectedError)).toBeVisible();
+  }
+});
+```
+
+This is shorter. It's also worse, for a specific, nameable reason: the `if` branches inside the test body mean the test's *actual assertion* now depends on which row of parameterized data happens to be running, which means a failure report says "login with locked_out_user failed" without directly telling you which branch — the URL check or the error check — was the one that broke, and reading the test in isolation no longer tells you what it's actually verifying without also reading the data table above it. The original two separate tests, each with one unconditional assertion, told you exactly what broke the instant you saw the test name. This is DRY applied to *code shape* instead of *knowledge*, and it's a worse test suite as a direct result, even though it's measurably fewer lines.
+
+## Where DRY Is Correctly Applied: The Login Mechanism Itself
+
+Compare that to what should actually be centralized — the knowledge of *how a login form is filled in and submitted*, which genuinely is one fact, used identically by both scenarios above:
+
+```typescript
+class LoginPage {
+  async login(username: string, password: string) {
+    await this.usernameField.fill(username);
+    await this.passwordField.fill(password);
+    await this.loginButton.click();
+  }
+}
+```
+
+If the login form's markup changes — a new required field, a different selector — that's a change to one genuine piece of knowledge, and it needs to change in exactly one place. This is DRY working correctly, and it's also the same encapsulation concept covered in an earlier post on this blog about Page Object Model: the *mechanism* is shared knowledge worth centralizing; the *expected outcome of each test scenario* is not.
+
+## A Test for Which Kind of Duplication You're Looking At
+
+Before merging two similar-looking blocks of test code, ask: if the underlying application behavior these two blocks are checking diverges in the future — if `locked_out_user` starts seeing a different error format than some other invalid-login case — would fixing that *require editing the shared, merged code*? If yes, you probably merged two things that were never actually the same knowledge, they just happened to look alike at the moment you noticed them. If changing one scenario's expected behavior would obviously have no reason to touch the other, keeping them as separate, independently-readable tests isn't "code duplication that should be cleaned up" — it's two different facts about the system, correctly represented as two different things, and Hunt and Thomas's actual principle never asked you to collapse them.
+
+## The Rule That Actually Follows From the Original Definition
+
+Hunt and Thomas's own framing applies the principle broadly — not just to code, but to database schemas, documentation, and test plans — precisely because it's about *where a fact lives*, not about *minimizing character count*. The useful version of DRY for test code isn't "never write two similar-looking blocks." It's: identify what's actually true, independent of any test, about how the system behaves — a form's fill-and-submit mechanism, a calculation, a validation rule — and make sure exactly one place in the codebase is authoritative about each fact. Two tests asserting two different outcomes are not duplicated knowledge just because the code that sets each of them up looks alike. They're doing their actual job: being separately readable statements of two separately true things.

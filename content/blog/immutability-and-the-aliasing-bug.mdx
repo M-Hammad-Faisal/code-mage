@@ -1,0 +1,88 @@
+---
+title: "Immutability and the Aliasing Bug That Only Shows Up Three Functions Later"
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['immutability', 'fundamentals', 'javascript', 'test-architecture']
+excerpt: "The most confusing bugs to debug aren't the ones that crash loudly — they're the ones where a value changed and nothing in the stack trace tells you where. Immutability doesn't eliminate bugs in general. It eliminates this one specific, disproportionately confusing category of them."
+featured: false
+---
+
+An **immutable** value is one that, once created, cannot be changed — any operation that looks like a modification actually produces a *new* value instead, leaving the original untouched. This sounds like a minor implementation detail until you've spent an hour debugging a test where a value was demonstrably correct three lines earlier and demonstrably wrong by the time an assertion ran, with nothing in between that looks like it should have touched it. That specific, disproportionately confusing bug has a name — **aliasing** — and immutability is the direct, structural fix for it.
+
+## What Aliasing Actually Is
+
+Two variables are **aliased** when they both refer to the *same* underlying object in memory, rather than each holding an independent copy. JavaScript arrays and objects are mutable and reference-based by default, which means this happens far more easily than most people expect:
+
+```typescript
+const originalCart = { items: ['backpack'], total: 29.99 };
+const cartForDiscount = originalCart; // NOT a copy — same object, two names
+
+cartForDiscount.total = 26.99; // applying a discount...
+
+console.log(originalCart.total); // 26.99 — the "original" changed too
+```
+
+`cartForDiscount` was never a separate cart. It's the same object as `originalCart`, referenced through a second variable name — so a change made through one name is visible through the other, immediately, with no explicit connection between them anywhere near the line that actually caused the surprise.
+
+## Why This Bug Is Uniquely Hard to Track Down
+
+Most bugs leave a trail: a stack trace, a line that threw, a value that's visibly wrong right where you're looking. An aliasing bug doesn't, because the mutation and the symptom can be arbitrarily far apart in the code, connected only by the fact that two variables happen to share the same underlying reference — a fact that's invisible just from reading either variable's name.
+
+```typescript
+function applyDiscount(cart: Cart, percentOff: number) {
+  cart.total = cart.total * (1 - percentOff / 100); // mutates the object passed in
+  return cart;
+}
+
+test('discount does not affect the original quote', async () => {
+  const quote = { items: ['backpack'], total: 29.99 };
+  const discounted = applyDiscount(quote, 10);
+
+  expect(discounted.total).toBeCloseTo(26.99); // passes
+  expect(quote.total).toBeCloseTo(29.99);       // FAILS — quote.total is now 26.99 too
+});
+```
+
+`applyDiscount` looks, from its signature, like a function that computes a new discounted value. What it actually does is mutate the object it was handed and return that same, now-modified object — so `quote` and `discounted` are aliases of one object, not two independent carts. The test's second assertion fails for a reason that has nothing to do with the discount math being wrong; the math is fine. The bug is that `applyDiscount` silently mutated its input, and anything else in the codebase still holding a reference to that same input is now looking at changed data it never asked to have changed.
+
+## The Immutable Version Makes the Bug Structurally Impossible
+
+```typescript
+function applyDiscount(cart: Cart, percentOff: number): Cart {
+  return { ...cart, total: cart.total * (1 - percentOff / 100) }; // returns a NEW object
+}
+
+test('discount does not affect the original quote', async () => {
+  const quote = { items: ['backpack'], total: 29.99 };
+  const discounted = applyDiscount(quote, 10);
+
+  expect(discounted.total).toBeCloseTo(26.99); // passes
+  expect(quote.total).toBeCloseTo(29.99);       // ALSO passes — quote was never touched
+});
+```
+
+The spread (`{ ...cart, total: ... }`) constructs a brand-new object, copying every field from `cart` except `total`, which gets the new computed value. `quote` and `discounted` are now genuinely two separate objects that happen to share most of their data — not two names for the same one. There's no aliasing left to cause a surprise, because there's no shared mutable reference anywhere in this version for a distant mutation to reach through.
+
+## Where This Specifically Bites Test Automation
+
+**Shared test fixtures**, covered from a different angle in a separate post on this blog: a fixture object handed to multiple tests, where one test mutates a field the fixture object holds, is exactly the aliasing bug above — except the "distant" mutation and the "surprised" assertion are now in two entirely different test files, making the connection even harder to spot than in a single function.
+
+```typescript
+const baseUser = { username: 'standard_user', cart: { items: [] } };
+
+test('adds item to cart', async () => {
+  baseUser.cart.items.push('backpack'); // mutates the SHARED object
+});
+
+test('starts with an empty cart', async () => {
+  expect(baseUser.cart.items).toHaveLength(0); // FAILS if the test above ran first
+});
+```
+
+Both tests reference `baseUser` — the same object, aliased across two files, with no visible connection between the mutation in one and the failure in the other beyond a shared variable name defined somewhere else entirely.
+
+**Test data builders**, covered in an earlier post on Factory and Strategy patterns: a builder that returns the *same* default object on every call, rather than a fresh one, silently reintroduces this exact bug — two tests calling `buildUser()` and expecting independent objects can end up aliased to the same underlying default, mutating each other's "independent" test data without either test doing anything that looks wrong in isolation.
+
+## The Practical Discipline, Not a Language Feature You Need to Adopt Wholesale
+
+You don't need a fully immutable-by-default language or a library like Immutable.js to get the actual benefit here. The concrete habit that eliminates this entire bug category: functions that appear to transform data should return a *new* value rather than mutating the one they were handed, using spread syntax (`{ ...obj }`, `[...arr]`) or equivalent, consistently enough that nobody reading a call site has to go check the function's internals to know whether their original data is safe. The payoff isn't abstract code-quality virtue — it's the concrete, measurable elimination of a bug where the cause and the symptom can be separated by any distance the codebase allows, which is precisely what makes this category so disproportionately expensive to debug compared to almost anything else that goes wrong in a test suite.

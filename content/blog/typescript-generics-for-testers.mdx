@@ -1,0 +1,125 @@
+---
+title: "TypeScript Generics for Testers: Writing One Helper Instead of Five"
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['typescript', 'generics', 'fundamentals', 'test-architecture']
+excerpt: "Most testers learn just enough TypeScript to get by, and generics are usually the first thing skipped. They're also the exact tool that turns five nearly-identical helper functions into one that actually stays type-safe."
+featured: false
+---
+
+If you've ever written a `waitForApiResponse` helper for one endpoint, then copy-pasted it for a second endpoint, then a third — each copy identical except for the response type it expects — you've hit exactly the problem generics exist to solve. TypeScript's own handbook states the motivation plainly: generics let you build "reusable components that work with multiple types while maintaining type safety," which is the alternative to the two bad options every tester eventually tries first — hardcoding one specific type (loses reusability) or typing everything as `any` (loses type safety entirely, silently).
+
+## The Problem, Concretely
+
+Here's the copy-paste version most people write without generics:
+
+```typescript
+async function waitForUserResponse(): Promise<User> {
+  const response = await page.waitForResponse('/api/user');
+  return response.json();
+}
+
+async function waitForOrderResponse(): Promise<Order> {
+  const response = await page.waitForResponse('/api/order');
+  return response.json();
+}
+
+async function waitForProductResponse(): Promise<Product> {
+  const response = await page.waitForResponse('/api/product');
+  return response.json();
+}
+```
+
+Three functions, identical logic, different only in the URL and the return type. Every new endpoint means copying the pattern a fourth time. This is precisely the situation a **type parameter** — a placeholder for a type, filled in at the call site — exists to eliminate.
+
+## The Generic Version
+
+```typescript
+async function waitForApiResponse<T>(urlPattern: string): Promise<T> {
+  const response = await page.waitForResponse(urlPattern);
+  return response.json();
+}
+```
+
+```typescript
+const user = await waitForApiResponse<User>('/api/user');
+const order = await waitForApiResponse<Order>('/api/order');
+```
+
+`<T>` is the type parameter — TypeScript's handbook uses `Type` as the placeholder name in its own examples, but any single identifier works; `T` is just the community's default convention. When you call `waitForApiResponse<User>(...)`, TypeScript substitutes `User` everywhere `T` appears in the function's signature — so `user` above is correctly typed as `User`, not `any`, and not some hardcoded type that only happens to work for one endpoint. One function, correctly typed for every call site, instead of a new copy per response shape.
+
+## Constraining What `T` Is Allowed to Be
+
+An unconstrained `T` can be literally anything, which is a problem the moment your generic function needs to actually *do* something with the value beyond passing it through untouched. Here's a generic that assumes every object it receives has an `id` field, so it can look one up:
+
+```typescript
+function findById<T>(items: T[], id: string): T | undefined {
+  return items.find((item) => item.id === id); // ERROR — TypeScript doesn't know T has .id
+}
+```
+
+TypeScript is right to complain here: nothing about `<T>` promises the caller will only ever pass objects with an `id` property. The fix is a **generic constraint**, using `extends` to say "T can be anything, as long as it at least has this shape":
+
+```typescript
+interface HasId {
+  id: string;
+}
+
+function findById<T extends HasId>(items: T[], id: string): T | undefined {
+  return items.find((item) => item.id === id); // OK — T is guaranteed to have .id
+}
+```
+
+```typescript
+const users: User[] = [/* ... */];
+const found = findById(users, 'user-123'); // TypeScript infers T = User, and knows User has .id
+```
+
+`findById` now works for any type that has an `id` field — `User`, `Order`, `Product`, all without rewriting the function — while still catching a genuine mistake at compile time if you call it with something that doesn't have one.
+
+## Where This Actually Pays Off: Generic Page Object Assertions
+
+The most common real payoff in a test suite is a single assertion helper that works correctly across every Page Object, instead of one per class:
+
+```typescript
+async function expectFieldError<T extends { errorMessage: Locator }>(
+  page: T,
+  expectedText: string
+) {
+  await expect(page.errorMessage).toBeVisible();
+  await expect(page.errorMessage).toContainText(expectedText);
+}
+```
+
+```typescript
+await expectFieldError(loginPage, 'Username is required');
+await expectFieldError(checkoutPage, 'Postal code is invalid');
+```
+
+Both `LoginPage` and `CheckoutPage` satisfy the constraint (each has an `errorMessage: Locator` property), so one function correctly checks error text on either, with TypeScript verifying at compile time that whatever page object you pass in actually has the field this helper depends on — catching, before you ever run the test, a mistake like passing a page object that has no `errorMessage` property at all.
+
+## Multiple Type Parameters
+
+Generics aren't limited to one placeholder. A helper that maps API response data into a Page Object's expected input shape commonly needs two:
+
+```typescript
+function mapResponseToFormData<TResponse, TFormData>(
+  response: TResponse,
+  mapper: (response: TResponse) => TFormData
+): TFormData {
+  return mapper(response);
+}
+```
+
+```typescript
+const formData = mapResponseToFormData<OrderApiResponse, CheckoutFormData>(
+  apiResponse,
+  (r) => ({ firstName: r.customer.first, lastName: r.customer.last, postalCode: r.customer.zip })
+);
+```
+
+`TResponse` and `TFormData` are independent placeholders — the function doesn't need to know or care what either concrete type is, only that a `mapper` function exists that can turn one into the other, and TypeScript verifies the whole chain lines up correctly at every call site.
+
+## The Actual Skill
+
+You don't need generics for a one-off helper used in a single test file. The signal worth watching for is the same one that motivates the Factory and Strategy patterns covered elsewhere on this blog: the moment you're about to copy-paste a function and change only the type it operates on, that's the exact shape of problem a type parameter solves. Reaching for `any` instead trades away the actual benefit of using TypeScript in the first place — catching a mismatched type before the test runs, rather than discovering it as a runtime failure with a confusing stack trace.

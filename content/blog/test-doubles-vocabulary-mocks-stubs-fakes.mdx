@@ -1,0 +1,98 @@
+---
+title: "Mocks, Stubs, and Fakes: The Test Double Vocabulary Almost Everyone Gets Wrong"
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['testing', 'fundamentals', 'unit-testing', 'terminology']
+excerpt: "Nearly everyone says 'mock' when they mean 'stub.' The distinction sounds pedantic until you notice it's actually describing two fundamentally different ways of verifying that code did the right thing."
+featured: false
+---
+
+Ask ten engineers to define "mock" and you'll get ten slightly different answers, and at least half of them are actually describing a stub. This isn't a trivia problem. Gerard Meszaros gave these five terms precise, distinct meanings in his book *xUnit Test Patterns*, later popularized by Martin Fowler in a widely-cited article — and the distinction between them isn't pedantry, it's describing two genuinely different philosophies for how a test proves something worked.
+
+## The Five, Precisely
+
+All five are **test doubles** — a general term for any object that stands in for a real dependency during a test, the way a stunt double stands in for an actor. What separates them is what they actually *do* when your code calls them.
+
+**Dummy** — an object passed around but never actually used, purely to satisfy a function signature that requires an argument you don't care about for this particular test:
+
+```typescript
+function createOrder(user: User, logger: Logger) { /* ... */ }
+
+const dummyLogger = {} as Logger; // never called, just needed to satisfy the type
+createOrder(realUser, dummyLogger);
+```
+
+**Fake** — an object with a real, working implementation, but one that takes a shortcut unsuitable for production. An in-memory database standing in for a real one is the canonical example:
+
+```typescript
+class InMemoryUserRepository implements UserRepository {
+  private users = new Map<string, User>();
+  async save(user: User) { this.users.set(user.id, user); }
+  async findById(id: string) { return this.users.get(id) ?? null; }
+}
+```
+
+This genuinely works — you can save a user and read it back — but it's not a real database, and nobody would deploy it to production.
+
+**Stub** — an object that returns canned, pre-programmed answers to whatever it's asked, regardless of how it's called:
+
+```typescript
+const stubPaymentGateway = {
+  charge: async () => ({ success: true, transactionId: 'txn_123' }),
+};
+```
+
+Call `.charge()` once, call it five times with different arguments — the stub answers the same way every time, because it was never designed to check *how* it was called, only to answer *when* called.
+
+**Spy** — Meszaros's own definition: "stubs that also record some information based on how they were called." A spy does what a stub does — returns a canned answer — and additionally remembers what happened, so you can inspect it after the fact:
+
+```typescript
+const chargeSpy = { calls: [] as Array<{ amount: number }>, };
+const spyPaymentGateway = {
+  charge: async (amount: number) => {
+    chargeSpy.calls.push({ amount });
+    return { success: true, transactionId: 'txn_123' };
+  },
+};
+
+// later, in the assertion:
+expect(chargeSpy.calls).toEqual([{ amount: 2999 }]);
+```
+
+**Mock** — objects "pre-programmed with expectations which form a specification of the calls they are expected to receive," in Meszaros's phrasing. This is the one word everyone reaches for regardless of which of the five they actually mean, and it's the one with the most specific definition of all of them.
+
+## The Distinction That Actually Matters: State Verification vs. Behavior Verification
+
+Here's the part worth sitting with, because it's the actual reason this taxonomy exists rather than being five interchangeable synonyms for "fake object." Fowler's article draws a line straight through the middle of these five terms: dummies, fakes, stubs, and spies can all be used with **state verification** — you let the code under test run, then inspect the resulting state of some object afterward to check it's correct. Mocks are built specifically for **behavior verification** — you set up an expectation of *which calls should happen*, run the code, and then check whether those exact calls actually occurred, often failing the test immediately if a call happens that wasn't expected.
+
+Concretely, with a spy (state-adjacent, inspected after the fact):
+
+```typescript
+await orderService.checkout(cart, spyPaymentGateway);
+expect(chargeSpy.calls).toContainEqual({ amount: 2999 }); // checked AFTER the run
+```
+
+With a true mock (behavior verification, expectations set up front):
+
+```typescript
+const mockGateway = createMock<PaymentGateway>();
+mockGateway.expects('charge').withArgs(2999).once(); // expectation set BEFORE the run
+
+await orderService.checkout(cart, mockGateway);
+
+mockGateway.verify(); // fails here if the expected call never happened, or happened differently
+```
+
+The spy version asks "what happened?" after the fact and lets you decide what matters. The mock version asks "did exactly this happen?" and the object itself is responsible for failing the test if reality didn't match the expectation. That's not a stylistic difference — it changes what your test is actually asserting. A spy-based test can tolerate the code under test calling `charge()` an extra time for logging purposes, as long as the amount you care about shows up somewhere in the recorded calls. A mock with a strict `.once()` expectation fails the moment a second call happens, whether or not that second call was actually a problem.
+
+## Why the Sloppy Usage Causes Real Confusion
+
+When someone says "I mocked the payment gateway" without being specific, you genuinely don't know from that sentence alone whether their test is checking *that a charge happened with the right amount* (state/spy-style, tolerant of extra calls) or *that exactly one charge call happened, with exactly these arguments, and nothing else* (true mock, brittle to anything unexpected). Those are different tests with different failure characteristics, and conflating them under one word means a code review comment like "can you mock the gateway here" is genuinely ambiguous about what the reviewer wants.
+
+The practical fallout shows up most often as **overmocking** — reaching for strict, behavior-verifying mocks in situations where a simple stub or fake would do, and ending up with tests that break every time an implementation detail changes even though the actual behavior a user cares about didn't. If your test suite has a reputation for "breaking on every refactor even when nothing's actually broken," an overuse of strict behavior-verification mocks where state-verifying stubs and fakes would have tolerated the refactor is one of the most common root causes.
+
+## The Practical Rule
+
+Reach for a **stub** by default — you need a dependency to return something predictable so your test doesn't depend on a real network call, database, or third-party service. Reach for a **fake** when a stub's canned answers aren't enough and you actually need stateful behavior — an in-memory list that grows and shrinks correctly as your code adds and removes from it. Reach for a **spy** when you need to confirm an interaction happened as a *secondary* check, alongside a state-based assertion that's still your test's main point. Reach for a genuine **mock** — with upfront expectations and automatic verification — only when the interaction itself, not just its eventual effect, is the actual thing under test: confirming that a specific audit-logging call fires, for instance, where the call *is* the requirement, not a side effect of one.
+
+None of this requires memorizing Meszaros's book. It requires noticing, the next time you write "I'll just mock that," which of these five things you actually mean — and whether your test is really checking a result, or checking an interaction. Those are different questions, and test doubles this precise exist because the difference is real.

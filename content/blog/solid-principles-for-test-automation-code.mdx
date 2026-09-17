@@ -1,0 +1,173 @@
+---
+title: "SOLID Principles, Applied to Test Automation Code"
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['solid', 'object-oriented-programming', 'fundamentals', 'test-architecture']
+excerpt: "SOLID gets taught as application-architecture advice and almost never applied to the test code sitting right next to that architecture — even though test suites rot for exactly the same five reasons production code does."
+featured: false
+---
+
+Robert C. Martin introduced five object-oriented design principles in a 2000 paper; Michael Feathers coined the SOLID acronym for them around 2004. Every course on software architecture covers them, almost always using examples from production application code — a payment processor, an order system, a user service. Test code gets treated as if it lives outside these rules, exempt because "it's just tests." It isn't exempt. A Page Object class, a test data builder, a custom assertion helper — these are still classes, still functions, still code that has to be read, changed, and trusted by other engineers, and they rot for exactly the same five reasons production code does.
+
+## Single Responsibility: One Reason to Change
+
+The principle, in Martin's own formulation: a class should have "never more than one reason to change." Applied to a Page Object, this is a straightforward and common violation:
+
+```typescript
+// Violates SRP: this class has at least three reasons to change —
+// selector changes, network mocking needs, and assertion logic changes
+class CheckoutPage {
+  async fillShippingInfo(info: ShippingInfo) { /* ... */ }
+
+  async mockShippingRatesAPI(rates: ShippingRate[]) {
+    await page.route('/api/shipping-rates', (route) => route.fulfill({ json: rates }));
+  }
+
+  async expectOrderTotal(amount: number) {
+    await expect(page.getByTestId('order-total')).toHaveText(`$${amount}`);
+  }
+}
+```
+
+This class changes if the checkout page's selectors change, *and* if the app's network mocking strategy changes, *and* if the framework's assertion API changes. Three unrelated reasons for one class to need edits is the exact symptom SRP names. Split it:
+
+```typescript
+class CheckoutPage {
+  async fillShippingInfo(info: ShippingInfo) { /* ... */ }
+}
+
+class ShippingRateMocks {
+  static mock(rates: ShippingRate[]) { /* network interception */ }
+}
+
+class CheckoutAssertions {
+  static async expectOrderTotal(amount: number) { /* ... */ }
+}
+```
+
+Now a change to how you mock network calls touches `ShippingRateMocks` and nothing else. The Page Object stays stable through changes that have nothing to do with the page's actual selectors.
+
+## Open/Closed: Extend Without Editing
+
+Martin's original phrasing: software entities should be "open for extension, but closed for modification." A reporting function that branches on report type is the classic violation, and it shows up in test suites as custom reporter logic that grows an `if` chain every time someone needs a new output format:
+
+```typescript
+// Every new format requires editing this function
+function generateReport(results: TestResult[], format: string) {
+  if (format === 'json') return JSON.stringify(results);
+  if (format === 'csv') return toCsv(results);
+  if (format === 'slack') return toSlackMessage(results);
+  // next format = another edit to this function
+}
+```
+
+The open/closed fix is the same shape as the Strategy pattern covered in an earlier post on this blog — define an interface, let new formats implement it, and stop touching the function that orchestrates them:
+
+```typescript
+interface ReportFormatter {
+  format(results: TestResult[]): string;
+}
+
+class JsonFormatter implements ReportFormatter {
+  format(results: TestResult[]) { return JSON.stringify(results); }
+}
+
+function generateReport(results: TestResult[], formatter: ReportFormatter) {
+  return formatter.format(results); // never needs to change for a new format
+}
+```
+
+Adding a new output format now means writing a new class, not editing an existing, already-tested function.
+
+## Liskov Substitution: Subclasses Must Honor the Parent's Contract
+
+Martin's formulation: code using a base class reference must work correctly if handed any derived class, "without knowing it." This is the one that produces the subtlest bugs, because it violates something no compiler checks. Imagine a `BasePage` whose contract implicitly promises `waitForLoad()` actually waits for the page to be interactive:
+
+```typescript
+class BasePage {
+  async waitForLoad() {
+    await page.waitForLoadState('networkidle');
+  }
+}
+
+class DashboardPage extends BasePage {
+  async waitForLoad() {
+    // Overridden to do nothing — "the dashboard loads fast, we don't need to wait"
+  }
+}
+```
+
+`DashboardPage` compiles fine, extends `BasePage` fine, but silently breaks the contract every caller of `waitForLoad()` relies on. Any generic test helper written against `BasePage` — a shared `loginAndWait(page)` function that calls `page.waitForLoad()` internally — now behaves unpredictably specifically when handed a `DashboardPage`, for a reason that has nothing to do with that helper's own code. This is exactly the situation Liskov Substitution warns about: the bug isn't in the base class, isn't in the helper, and isn't caught by TypeScript's type checker at all — it only shows up as flakiness once the substitution actually happens at runtime. The fix isn't a code pattern so much as a discipline: if a subclass can't honestly fulfill what callers reasonably expect from the base class's method, it shouldn't override that method at all — it should either fulfill the contract properly (a fast check that load already happened, not skipping the check entirely) or not inherit from that base in the first place.
+
+## Interface Segregation: Don't Force Objects to Depend on Methods They Don't Use
+
+The principle: "clients should not be forced to depend upon interface methods that they do not use." A single bloated `TestReporter` interface is a common violation:
+
+```typescript
+interface TestReporter {
+  onTestStart(name: string): void;
+  onTestEnd(name: string, passed: boolean): void;
+  onSuiteStart(name: string): void;
+  onSuiteEnd(name: string): void;
+  uploadToSlack(): Promise<void>;
+  uploadToJira(): Promise<void>;
+}
+```
+
+A simple console logger that only needs `onTestStart`/`onTestEnd` is now forced to implement (or stub out with no-ops) `uploadToSlack` and `uploadToJira`, methods it has no legitimate use for. Segregating into smaller, focused interfaces lets each implementation depend only on what it actually needs:
+
+```typescript
+interface TestLifecycleReporter {
+  onTestStart(name: string): void;
+  onTestEnd(name: string, passed: boolean): void;
+}
+
+interface UploadingReporter {
+  upload(): Promise<void>;
+}
+
+class ConsoleReporter implements TestLifecycleReporter { /* only these two methods */ }
+class SlackReporter implements TestLifecycleReporter, UploadingReporter { /* all four */ }
+```
+
+## Dependency Inversion: Depend on Abstractions, Not Concrete Implementations
+
+The principle: "one should depend upon abstractions, not concretes." This is the one that determines whether your tests can actually run against a fake, a staging environment, and production without rewriting anything:
+
+```typescript
+// Violates DIP: hard-coded dependency on a specific concrete database client
+class OrderService {
+  private database = new ProductionDatabaseClient();
+
+  async createOrder(order: Order) {
+    await this.database.insertOrder(order);
+  }
+}
+```
+
+Any test that instantiates `OrderService` now talks to a real, concrete database client, whether it wants to or not. Inverting the dependency means `OrderService` depends on an interface, and the concrete implementation gets handed in from outside:
+
+```typescript
+interface OrderRepository {
+  insertOrder(order: Order): Promise<void>;
+}
+
+class OrderService {
+  constructor(private repository: OrderRepository) {}
+
+  async createOrder(order: Order) {
+    await this.repository.insertOrder(order);
+  }
+}
+```
+
+```typescript
+// Production: new OrderService(new RealDatabaseOrderRepository())
+// Test: new OrderService(new InMemoryOrderRepository())
+```
+
+This is the same principle underneath dependency injection, covered from a different angle in another post on this blog — and it's the mechanism that makes a class testable at all without spinning up its real infrastructure dependencies for every single test.
+
+## Why Bother, for "Just" Test Code
+
+Every one of these five violations produces the same downstream symptom in a test suite: changes that should be small and isolated end up rippling across files that had no business being affected. A selector change breaks network-mocking logic that happened to live in the same class. Adding one new report format means editing a function that was already trusted and already covered by other tests. A subclassed page object silently breaks a shared helper in a way no type checker catches. SOLID isn't application-architecture-specific wisdom that happens to not apply to tests — it's a description of what well-factored object-oriented code looks like, full stop, and test code is object-oriented code the same as anything else in the repository.

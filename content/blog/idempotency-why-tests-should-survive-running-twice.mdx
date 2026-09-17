@@ -1,0 +1,73 @@
+---
+title: "Idempotency: Why Your Tests (and the APIs They Call) Should Survive Running Twice"
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['idempotency', 'api-testing', 'fundamentals', 'reliability']
+excerpt: "Idempotency is a real, precisely-defined engineering concept — not a synonym for 'safe' — and it explains both why your CI retries can silently create duplicate data and why a well-designed API makes that impossible in the first place."
+featured: false
+---
+
+An operation is **idempotent** if performing it multiple times produces the same result as performing it once. That's the whole definition, and it's precise enough to test directly: does calling this operation a second time change anything that the first call didn't already change? `DELETE /users/42` is idempotent — the user is gone after the first call, and gone (still) after the second; nothing changes on repeat. `POST /orders` creating a new order is, by default, *not* idempotent — call it twice and you get two orders, not one, because each call's entire purpose is to create something new.
+
+This matters for testing in two separate, equally real ways: whether your own test suite's retry logic can silently corrupt data, and whether the API you're testing was actually built to handle a legitimate real-world failure mode correctly.
+
+## Where This Bites Your Test Suite Directly
+
+CI systems retry flaky steps constantly — a test framework's own `retries` config, a CI runner retrying a whole job, a network blip causing a step to rerun. Retries are safe exactly when the thing being retried is idempotent, and dangerous exactly when it isn't:
+
+```typescript
+test('completes checkout', async ({ page }) => {
+  await page.getByTestId('firstName').fill('John');
+  // ... rest of checkout form ...
+  await page.getByTestId('place-order').click(); // creates a real order — NOT idempotent
+  await expect(page.getByText('Order confirmed')).toBeVisible();
+});
+```
+
+If this test is configured to retry on failure — reasonable, since UI tests do have genuine transient flakiness — and it fails *after* the order was actually placed but *before* the confirmation assertion resolved (a slow network response, a race in the assertion timing), retrying the entire test places a second real order. Now your test data has two orders where there should be one, and if this test runs against a shared staging environment rather than fully isolated per-run data, that duplicate can corrupt state other tests depend on.
+
+The fix isn't "don't retry" — retries are a legitimate, necessary tool for genuine flakiness, covered from a different angle in this tutorial's own flaky-tests chapters. The fix is recognizing which specific steps in a test are non-idempotent and either making the *test* idempotent (seed fresh, uniquely-identified data per run so a duplicate doesn't collide with anything) or structuring retries to not re-execute the already-completed, non-idempotent part.
+
+## Where This Bites the API You're Testing
+
+Stripe's own API documentation for idempotent requests states the underlying problem directly: idempotency support exists specifically "for safely retrying requests without accidentally performing the same operation twice," and the mechanism is an **idempotency key** — a unique value the client generates and attaches to a request, which the server uses to recognize a retry of the *same* logical request rather than a new one:
+
+```bash
+curl https://api.stripe.com/v1/customers \
+  -H "Idempotency-Key: a-unique-key-per-logical-request" \
+  -d description="Customer created via API"
+```
+
+Per Stripe's documented behavior, the server saves the result — success or failure — of the *first* request made with a given key. Every subsequent request using that same key returns the exact same saved result, without re-executing the operation, "including `500` errors." This is the correct fix for the exact problem a naive retry creates: a client that sends a payment request, experiences a network timeout waiting for the response, and retries — with a real idempotency key, the retry is guaranteed to return the result of the original charge rather than creating a second one, even though the client genuinely has no way of knowing whether the first request's charge actually succeeded before the connection dropped.
+
+If you're testing an API that accepts payments, creates orders, or performs any other real-world side effect, this is a concrete, testable requirement worth actually writing a test for — not just assuming the backend handles correctly:
+
+```typescript
+test('retrying a request with the same idempotency key does not duplicate the charge', async ({ request }) => {
+  const idempotencyKey = crypto.randomUUID();
+  const payload = { amount: 2999, currency: 'usd' };
+
+  const first = await request.post('/api/charges', {
+    headers: { 'Idempotency-Key': idempotencyKey },
+    data: payload,
+  });
+  const second = await request.post('/api/charges', {
+    headers: { 'Idempotency-Key': idempotencyKey }, // same key, simulating a client retry
+    data: payload,
+  });
+
+  expect(await first.json()).toEqual(await second.json()); // same charge, not a new one
+  const charges = await getChargesForTestAccount();
+  expect(charges).toHaveLength(1); // exactly one charge exists, not two
+});
+```
+
+This test is directly verifying the property that matters — that a retry, under the exact conditions a real network failure would produce, doesn't create a second real-world side effect. That's a meaningfully different (and more valuable) assertion than just checking the endpoint returns a 200.
+
+## The Test Worth Writing for Any Non-Idempotent Endpoint
+
+Even without a formal idempotency-key mechanism, it's worth explicitly testing what happens when a genuinely non-idempotent operation is called twice in a row — not because you expect it to somehow be safe, but because knowing the actual behavior (does it silently duplicate? does it return a conflict error? does it corrupt related data?) is exactly the information you need to decide whether the client code calling this endpoint needs its own safeguard, like disabling a submit button after the first click, or generating and sending its own idempotency key even if the endpoint doesn't formally support one yet.
+
+## The Actual Distinction Worth Keeping Straight
+
+"Idempotent" doesn't mean "safe" or "read-only" — a `DELETE` is idempotent and clearly not read-only. It means specifically: *repeating it doesn't change the outcome beyond the first call*. Once that precise definition is in hand, two things that used to feel like separate, unrelated concerns turn out to be the exact same question, asked in two different places: does retrying this thing, for any reason — a flaky test's automatic retry, or a real client's network-failure retry — produce a different result than running it once? If the answer is yes, that's not incidental flakiness to shrug off. It's a concrete design gap, and now you know precisely what to name it and what to test for.

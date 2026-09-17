@@ -1,0 +1,176 @@
+---
+title: "Design Patterns Beyond Page Object Model: Factory and Strategy"
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['design-patterns', 'typescript', 'fundamentals', 'test-architecture']
+excerpt: "Page Object Model gets all the attention in testing tutorials, but it's one pattern out of dozens of well-established solutions to well-established problems. Two more — Factory and Strategy — solve problems every growing test suite eventually hits."
+featured: false
+---
+
+Page Object Model is the only design pattern most testers ever learn by name, which is a shame, because it's solving one specific problem — encapsulating page interactions — and test suites run into plenty of other problems that have equally well-established solutions. Two patterns worth knowing deliberately, because you've probably already half-invented worse versions of them without realizing it: the **Factory** pattern, for building test data, and the **Strategy** pattern, for swapping behavior based on configuration.
+
+## The Problem Factory Solves: Test Data Construction Getting Out of Hand
+
+Every test needs data — a user to log in as, a product to add to cart, an order to check out. The naive approach is to inline that data everywhere:
+
+```typescript
+test('standard user can check out', async () => {
+  await login('standard_user', 'secret_sauce');
+  // ...
+});
+
+test('locked out user sees an error', async () => {
+  await login('locked_out_user', 'secret_sauce');
+  // ...
+});
+```
+
+This is fine at first. It stops being fine once your data has more than two fields, or once several tests need slight variations of "mostly the same object." Consider a checkout form:
+
+```typescript
+test('validates postal code format', async () => {
+  await checkout.fillShippingInfo({
+    firstName: 'John',
+    lastName: 'Doe',
+    postalCode: 'invalid',
+    email: 'john@example.com',
+    country: 'US',
+  });
+});
+
+test('requires a first name', async () => {
+  await checkout.fillShippingInfo({
+    firstName: '',
+    lastName: 'Doe',
+    postalCode: '12345',
+    email: 'john@example.com',
+    country: 'US',
+  });
+});
+```
+
+Five fields, repeated in full for every test, with one deliberately-broken field changed each time. This is exactly the shape of problem a **Factory** — a function whose entire job is producing objects, with sensible defaults you can selectively override — exists to solve:
+
+```typescript
+function buildShippingInfo(overrides: Partial<ShippingInfo> = {}): ShippingInfo {
+  return {
+    firstName: 'John',
+    lastName: 'Doe',
+    postalCode: '12345',
+    email: 'john@example.com',
+    country: 'US',
+    ...overrides,
+  };
+}
+```
+
+```typescript
+test('validates postal code format', async () => {
+  await checkout.fillShippingInfo(buildShippingInfo({ postalCode: 'invalid' }));
+});
+
+test('requires a first name', async () => {
+  await checkout.fillShippingInfo(buildShippingInfo({ firstName: '' }));
+});
+```
+
+A precise terminology note, since testing literature is genuinely inconsistent here: this specific shape — a function with sensible defaults and a `Partial<T>` override parameter — is what testing literature calls a **Test Data Builder**, a name distinct from the GoF's stricter **Factory Method** (which is about subclasses deciding which concrete class to instantiate, typically via inheritance) and from **Object Mother** (Martin Fowler's term for named, reusable canned fixtures — a "standard employee named Heather" referenced by name across many tests, rather than built fresh with overrides each time). "Factory" gets used informally, in the loose sense of "a function whose job is constructing objects," for all three. That looseness is fine in conversation; it's worth knowing the more specific name exists when precision matters, and worth knowing Object Mother is a real alternative with a real tradeoff — shared named fixtures read well but couple many tests to one object's exact data, which is exactly the coupling a builder's per-test overrides avoid.
+
+Every test now states, at a glance, exactly the one thing it's actually testing — an invalid postal code, a missing first name — instead of five lines of mostly-identical noise with the interesting field buried in the middle. This is the entire value proposition of a factory: it lets a test's code communicate intent instead of restating a whole object every time, and it gives you exactly one place to update when the shape of `ShippingInfo` changes, instead of forty.
+
+Factories compose, too. A factory that builds a user can call a factory that builds an address:
+
+```typescript
+function buildUser(overrides: Partial<User> = {}): User {
+  return {
+    id: crypto.randomUUID(),
+    username: 'standard_user',
+    email: 'user@example.com',
+    shippingAddress: buildShippingInfo(),
+    ...overrides,
+  };
+}
+```
+
+This is worth naming explicitly because it's the same **composition** relationship covered in an earlier post on this blog about OOP fundamentals — `buildUser` doesn't duplicate `buildShippingInfo`'s logic, it delegates to it. Design patterns aren't a separate universe from the object-oriented concepts underneath them; they're named, common *arrangements* of those concepts, recognized often enough that giving the arrangement a name became useful shorthand.
+
+## The Problem Strategy Solves: Behavior That Needs to Change Based on Configuration
+
+A different, equally common problem: you need a piece of logic to behave differently depending on some runtime condition — which environment you're testing against, which user role is logged in, which browser you're running in — without littering `if` statements through every test that touches it.
+
+Here's the naive version, which usually starts innocently and grows into something unpleasant:
+
+```typescript
+async function getBaseUrl(env: string): Promise<string> {
+  if (env === 'staging') {
+    return 'https://staging.example.com';
+  } else if (env === 'production') {
+    return 'https://example.com';
+  } else if (env === 'local') {
+    return 'http://localhost:3000';
+  }
+  throw new Error(`Unknown environment: ${env}`);
+}
+```
+
+This particular example is small enough to tolerate, but the same shape of code shows up for things that are genuinely painful once they sprawl — how to authenticate depending on environment (a real login form in staging, a bypass token in a local dev build, an SSO redirect in production), or how to seed test data (an API call against a real backend, a direct database insert against a local one, a mocked response in an offline suite). The **Strategy** pattern replaces the branching with a set of interchangeable objects, each implementing the same interface, selected once instead of branched-on repeatedly:
+
+```typescript
+interface AuthStrategy {
+  login(page: Page, username: string, password: string): Promise<void>;
+}
+
+class UIFormAuthStrategy implements AuthStrategy {
+  async login(page: Page, username: string, password: string) {
+    await page.goto('/');
+    await page.getByPlaceholder('Username').fill(username);
+    await page.getByPlaceholder('Password').fill(password);
+    await page.getByRole('button', { name: 'Login' }).click();
+  }
+}
+
+class TokenBypassAuthStrategy implements AuthStrategy {
+  async login(page: Page, username: string) {
+    const token = await requestTestToken(username);
+    await page.context().addCookies([{ name: 'session', value: token, url: page.url() }]);
+  }
+}
+```
+
+The classic Strategy pattern (as described in the original Gang of Four catalog) has one more piece most simplified explanations skip: a **Context** object that *holds* a strategy and delegates to it, rather than the calling code invoking the strategy directly. That distinction matters — it's what lets you swap the strategy an existing object uses at runtime, not just pick one at construction time:
+
+```typescript
+class AuthContext {
+  constructor(private strategy: AuthStrategy) {}
+
+  setStrategy(strategy: AuthStrategy) {
+    this.strategy = strategy; // swap the algorithm on an existing object
+  }
+
+  async login(page: Page, username: string, password: string) {
+    await this.strategy.login(page, username, password);
+  }
+}
+```
+
+```typescript
+function selectStrategyFor(env: string): AuthStrategy {
+  return env === 'local' ? new TokenBypassAuthStrategy() : new UIFormAuthStrategy();
+}
+
+test('checkout flow', async ({ page }) => {
+  const auth = new AuthContext(selectStrategyFor(process.env.TEST_ENV!));
+  await auth.login(page, 'standard_user', 'secret_sauce');
+  // the rest of the test has no idea which concrete strategy ran, and doesn't need to
+});
+```
+
+Note that `selectStrategyFor()` is itself a small factory — it constructs the right `AuthStrategy` object for a given environment. This is normal and expected: patterns aren't mutually exclusive boxes you pick one from, they combine constantly. A factory function producing the object a Strategy context holds is one of the most common pairings in real code, not a sign you're using one of them "wrong."
+
+The test itself never branches. It asks for "the" auth strategy for this environment and calls `.login()` — the same method name, the same call shape, regardless of which concrete implementation actually ran. This is the pattern's real value: every strategy implements the same **interface** (`AuthStrategy`), so the code that *uses* a strategy can be written once, against the interface, and stays correct no matter which concrete strategy gets selected — including new ones added later.
+
+## The Shape Both Patterns Share
+
+Factory and Strategy are solving different problems — one is about constructing data, the other about selecting behavior — but they share a common shape worth naming: both exist to move a decision (what does this object look like? which implementation should run?) out of the many places that need the *result* of the decision, and into one place that makes the decision. A test file that calls `buildShippingInfo({ postalCode: 'invalid' })` doesn't know or care how the other four fields got their values. A test that calls `auth.login(...)` doesn't know or care whether it just filled in a real form or set a cookie directly. Both are instances of a more general principle: code that *uses* something should depend on what that something does, not on how it does it — which is the same idea encapsulation captures at the level of a single class, just applied one layer up, to a whole category of decision instead of one object's internals.
+
+You don't need to memorize pattern names to write good test code. But recognizing "oh, this repeated-object-with-small-variations problem has a name, and the name comes with a well-tested shape for solving it" saves you from re-deriving a worse version of the same solution from scratch — which is, in the end, the entire reason design patterns get written down and taught at all.

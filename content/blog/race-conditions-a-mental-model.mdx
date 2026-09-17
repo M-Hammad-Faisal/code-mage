@@ -1,0 +1,60 @@
+---
+title: "Race Conditions: A Mental Model That Actually Explains Your Flaky Tests"
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['race-conditions', 'fundamentals', 'flaky-tests', 'concurrency']
+excerpt: "'Race condition' gets used as a catch-all excuse for any flaky test nobody's bothered to diagnose. The actual definition is precise, comes from concurrent systems theory, and — once you know it properly — tells you exactly where to look."
+featured: false
+---
+
+"It's probably a race condition" is one of the most-used, least-precise phrases in test automation, usually deployed as a way to stop investigating rather than a diagnosis. The term has an actual, specific meaning from concurrent systems theory, and the precise version is more useful than the vague one, because it tells you exactly what to go looking for instead of giving you permission to stop looking.
+
+## The Precise Definition
+
+A race condition occurs when the correctness of a program's behavior depends on the *relative timing* of two or more operations — meaning the program produces a different, and often wrong, result depending on which operation happens to finish first, a detail that isn't reliably controlled. Two concepts sit underneath that definition and do the actual explanatory work:
+
+**Shared mutable state** — some piece of data that more than one operation can read and write. A shopping cart's item count, a global variable tracking whether a modal is open, a database row representing an account balance — all shared mutable state.
+
+**A critical section** — the specific stretch of code that reads or writes that shared state. The danger isn't the shared state existing; it's more than one operation entering its critical section for the same shared state *at overlapping times*, so one operation's read or write interleaves with another's in an order nobody guaranteed.
+
+Put together: a race condition exists whenever two operations can reach a critical section touching the same shared state without a guarantee about which one gets there first — and the program's correctness silently depends on an ordering nothing actually enforces.
+
+## Why This Definition, Written for Threads, Still Explains Async JavaScript Bugs
+
+The classic definition comes from multi-threaded programming, where two threads genuinely execute simultaneously on different CPU cores. JavaScript's single-threaded event loop — covered in a separate post on this blog — doesn't have that kind of true parallelism, and it's tempting to conclude race conditions therefore can't happen in JavaScript. They can, because the definition never actually required true parallelism — it requires *unenforced ordering* between operations that touch the same shared state, and `async`/`await` produces exactly that, even on one thread. Two `async` functions, neither one blocking the other, can have their operations interleaved by the event loop in an order that isn't fixed at the point you wrote the code — which is precisely the condition the definition names.
+
+```typescript
+let cartTotal = 0;
+
+async function addItem(price: number) {
+  const current = cartTotal;       // read the shared state
+  await recalculateDiscounts();    // suspends here — another addItem() can run in the gap
+  cartTotal = current + price;     // write, based on a value that might now be stale
+}
+
+await Promise.all([addItem(10), addItem(20)]);
+console.log(cartTotal); // might be 20, might be 10 — NOT reliably 30
+```
+
+Both calls read `cartTotal` as `0` before either one's `await recalculateDiscounts()` suspends. Whichever one resumes and writes last *overwrites* the other's contribution instead of adding to it, because the read-then-write sequence isn't atomic — something else can run in the gap the `await` created. This is a genuine race condition, and it exists specifically because of *the await*, not despite JavaScript being single-threaded. Without the `await` in the middle, the function would run start-to-finish without yielding control, and the interleaving couldn't happen — which is also why race conditions in async code are usually introduced by adding an `await` inside a read-modify-write sequence that used to be safe before that await existed.
+
+## Where This Shows Up in Test Automation Specifically
+
+**Test-suite-level races**, when tests aren't properly isolated: two tests running in parallel workers, both mutating the same shared account's cart, is the exact shared-mutable-state-plus-unenforced-ordering situation — whichever test's write happens to land last wins, and which one that is isn't guaranteed. This is precisely why test isolation, covered in another post on this blog, isn't a nice-to-have; unisolated parallel tests are a textbook race condition by construction, not a coincidence.
+
+**Assertion-timing races**, the most common flaky-test cause of all: asserting on a UI element before the application has finished the asynchronous work that updates it.
+
+```typescript
+await page.getByRole('button', { name: 'Add to cart' }).click();
+await expect(page.getByTestId('cart-badge')).toHaveText('1'); // races the app's own update
+```
+
+The click triggers an async state update inside the application (an API call, a re-render) and the test's assertion is a second, independent operation racing against that update — with no guarantee the app's write finishes before the test's read happens. Framework-native assertions that auto-retry (Playwright's `expect`, Cypress's `.should()`) exist specifically to paper over exactly this race by re-checking until a timeout rather than checking once — but they only mask the *symptom*; the underlying race, two operations touching the same piece of state with no enforced ordering between them, is still genuinely there.
+
+## Why "Just Add a Wait" Treats the Symptom, Not the Definition
+
+`await page.waitForTimeout(1000)` "fixes" a race condition the same way turning the volume down "fixes" a smoke alarm — it doesn't change the underlying timing relationship, it just makes the failure less likely to show up during the specific run you happened to test it on. The actual fix, once you're thinking in terms of shared state and critical sections rather than vague flakiness, is almost always one of two things: wait for a specific, well-defined signal that the write has actually completed (a network response, a DOM mutation, an explicit "ready" state) rather than an arbitrary duration — or restructure the code so the read and write genuinely can't interleave in the first place, the way `Promise.all()` intentionally avoids sequencing two truly independent operations that don't share state at all.
+
+## The Payoff of Using the Precise Definition
+
+"Race condition" as a vague excuse tells you nothing actionable. "Race condition" as shared mutable state plus an unenforced ordering between operations that touch it tells you exactly what to go find: what's the shared state, which operations touch it, and what — if anything — actually guarantees one happens before the other. That's a concrete, answerable question, and it's the difference between a bug you can actually fix and one you just learn to tolerate.

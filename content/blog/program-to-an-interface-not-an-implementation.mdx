@@ -1,0 +1,96 @@
+---
+title: '"Program to an Interface, Not an Implementation" — What That Actually Means for Test Code'
+date: '2026-09-17'
+category: 'Test Automation'
+tags: ['interfaces', 'object-oriented-programming', 'fundamentals', 'typescript']
+excerpt: "It's the first principle in the Gang of Four's Design Patterns book, printed in italics as the foundational rule everything else in that book builds on. Most people who've heard the phrase can't explain what an 'interface' means here, or why it matters outside application architecture."
+featured: false
+---
+
+*Design Patterns: Elements of Reusable Object-Oriented Software* (Gamma, Helm, Johnson, and Vlissides — the "Gang of Four," 1995) opens with a principle the authors print in italics as foundational: "Program to an interface, not an implementation." Erich Gamma has since described this as fundamentally about managing dependency relationships in a large application — which is a more precise framing than the phrase alone gives you, and one that applies directly to test code, not just to the application architecture it's usually taught against.
+
+## What "Interface" Means Here, Precisely
+
+Not TypeScript's `interface` keyword specifically — though that's one concrete way to express it. The GoF sense is broader: an interface is *the set of operations something can perform*, described without saying anything about how those operations are actually carried out. A `PaymentProcessor` interface says "you can call `.charge(amount)` and it returns a result" — it says nothing about whether that charge happens via Stripe, PayPal, or a test double that just returns a canned success.
+
+```typescript
+interface PaymentProcessor {
+  charge(amount: number): Promise<{ success: boolean; transactionId: string }>;
+}
+```
+
+"Programming to" this interface means: code that needs to process a payment is written against `PaymentProcessor` — the shape, the contract — and never mentions `StripePaymentProcessor` or any other concrete class by name anywhere in its own logic.
+
+## The Violation, Concretely
+
+```typescript
+class CheckoutFlow {
+  private processor = new StripePaymentProcessor(); // programmed to a CONCRETE implementation
+
+  async completeOrder(amount: number) {
+    const result = await this.processor.charge(amount);
+    return result.success;
+  }
+}
+```
+
+`CheckoutFlow` is programmed to `StripePaymentProcessor` specifically — the concrete class, not the abstract capability. This isn't wrong because Stripe is a bad choice; it's wrong because `CheckoutFlow`'s own logic (`completeOrder`) has now permanently welded itself to one particular *implementation* of "can process a payment," and every place that logic is used inherits that same rigid dependency.
+
+## What Programming to the Interface Looks Like Instead
+
+```typescript
+class CheckoutFlow {
+  constructor(private processor: PaymentProcessor) {} // depends on the INTERFACE
+
+  async completeOrder(amount: number) {
+    const result = await this.processor.charge(amount);
+    return result.success;
+  }
+}
+```
+
+```typescript
+// production: hand in the real implementation
+const flow = new CheckoutFlow(new StripePaymentProcessor());
+
+// test: hand in a test double implementing the same interface
+const flow = new CheckoutFlow(new StubPaymentProcessor());
+```
+
+`CheckoutFlow`'s own code never changed between these two uses. What changed is which concrete class gets handed in from outside — this is the exact same mechanism as dependency injection, covered from a different angle in an earlier post on this blog, and it's not a coincidence that both principles point at the same solution: they're two names for closely related consequences of the same underlying idea, that code should depend on *what something does*, not *how it does it*.
+
+## Why This Is Precisely What Makes a Class Testable at All
+
+`StubPaymentProcessor` above only works as a drop-in replacement because TypeScript's structural typing verifies it satisfies the exact same `PaymentProcessor` interface — same method name, same parameter types, same return shape — as the real Stripe implementation:
+
+```typescript
+class StubPaymentProcessor implements PaymentProcessor {
+  async charge(amount: number) {
+    return { success: true, transactionId: 'test-txn-1' };
+  }
+}
+```
+
+If `CheckoutFlow` had been written against the *concrete* `StripePaymentProcessor` class instead of the `PaymentProcessor` interface, no amount of clever mocking would let you cleanly substitute a test double without either the real Stripe SDK's classes being involved somehow, or reaching for framework-level module-mocking machinery to intercept the import — a heavier, more fragile solution than simply handing in a different object that satisfies the same interface. Programming to an interface isn't merely good architectural taste; it's the specific design decision that determines whether substituting a test double is trivial or requires fighting the framework.
+
+## Where This Shows Up in Page Objects Specifically
+
+The same principle applies one level up, to Page Objects themselves. A test written against a concrete `ChromePage` class, calling Chrome-specific methods, can't be reused against Firefox or WebKit without rewriting it. A test written against a `Page` interface — the shape every browser's page object satisfies, regardless of which engine implements it underneath — runs unchanged against whichever concrete implementation gets injected:
+
+```typescript
+interface Page {
+  goto(url: string): Promise<void>;
+  click(selector: string): Promise<void>;
+}
+
+async function testLoginFlow(page: Page) { // programmed to the interface
+  await page.goto('/');
+  await page.click('[data-test="login-button"]');
+}
+```
+
+Playwright, Cypress, and WebdriverIO all internally rely on exactly this discipline to let one piece of test logic run correctly across multiple browser engines — the framework's own internals are programmed to an interface, and the specific browser engine underneath is an implementation detail the test-writing layer never has to know about.
+
+## The Practical Test
+
+Before writing a class or function that directly instantiates or directly names a concrete dependency, ask: does the code that's *about to use* this dependency actually need to know which specific implementation it is, or does it only need to know what operations are available? If it's the latter — which is true far more often than reflexive `new ConcreteClass()` calls suggest — programming to an interface instead costs one extra `interface` declaration and buys you the ability to substitute a test double, a different provider, or a future replacement implementation without touching the code that depends on it. That trade is almost never a bad one, which is exactly why the Gang of Four put it first.
