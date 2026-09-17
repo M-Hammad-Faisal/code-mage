@@ -51,7 +51,7 @@ console.log('4');
 // Output: 1, 4, 3, 2 — not 1, 2, 3, 4
 ```
 
-`setTimeout(..., 0)` does not mean "run this immediately." It means "run this as a macrotask, after the current script finishes and after every pending microtask has drained." That's why `'3'` (a microtask) prints before `'2'` (a macrotask), even though the `setTimeout` was scheduled first in the source code. If you've ever been confused about why a `Promise`-based operation seemed to "jump the queue" ahead of something scheduled earlier with a timer, this is why — and it's not a bug, it's the specification working exactly as designed.
+`setTimeout(..., 0)` does not mean "run this immediately." It means "run this as a macrotask, after the current script finishes and after every pending microtask has drained." That's why `'3'` (a microtask) prints before `'2'` (a macrotask), even though the `setTimeout` was scheduled first in the source code. If you've ever been confused about why a `Promise`-based operation seemed to "jump the queue" ahead of something scheduled earlier with a timer, this is why — and it's not a bug, it's the specification working exactly as designed. [MDN states the underlying guarantee directly](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises): "callbacks added with `then()` will never be invoked before the completion of the current run of the JavaScript event loop," and its own worked example shows the identical pattern — synchronous code first, then every queued microtask drains completely, and only then does the next macrotask (a `setTimeout` callback) get its turn.
 
 ## Why This Explains Real Testing Bugs
 
