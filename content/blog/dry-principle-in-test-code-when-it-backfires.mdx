@@ -64,6 +64,28 @@ class LoginPage {
 
 If the login form's markup changes — a new required field, a different selector — that's a change to one genuine piece of knowledge, and it needs to change in exactly one place. This is DRY working correctly, and it's also the same encapsulation concept covered in an earlier post on this blog about Page Object Model: the *mechanism* is shared knowledge worth centralizing; the *expected outcome of each test scenario* is not.
 
+## The Rule of Three: A Practical Heuristic for *When*
+
+Knowing the difference between shared knowledge and coincidental similarity answers *whether* something should be centralized. It doesn't answer *when* — and reaching to centralize the instant you notice two similar-looking things has its own well-documented failure mode. The **Rule of Three**, popularized by Martin Fowler in *Refactoring* and attributed to Don Roberts, is the practical heuristic worth pairing with the knowledge-vs-shape distinction: don't extract an abstraction on the first repetition, and be cautious even on the second — wait for a third occurrence before you commit to a shared shape.
+
+The reasoning is specific, not just "be lazy about refactoring": with only one or two examples in front of you, you don't yet have enough real cases to see what the *actual* shared shape is, as opposed to what happens to be true of the one or two instances you've seen so far. Extract too early, and you risk designing an abstraction around an accidental commonality — exactly the `test.each` trap above, where "these two tests both call `login()`" looked like enough evidence to unify them, and turned out not to be. A third real test case, with a third real variation, is often what actually reveals whether two things share real, stable knowledge or just happened to look alike the first time you noticed them.
+
+```typescript
+// One test. No pattern visible yet — nothing to extract.
+test('standard user reaches inventory', async () => { /* ... */ });
+
+// Two tests, structurally similar. Tempting to unify. Don't yet —
+// two data points aren't enough to know what the REAL shared shape is.
+test('locked out user sees an error', async () => { /* ... */ });
+
+// A third, genuinely different case. NOW you can see what's actually
+// shared (the login call) versus what varies per case (the assertion) —
+// which is exactly what the earlier examples in this post already do.
+test('performance glitch user eventually logs in', async () => { /* ... */ });
+```
+
+Applied to the example throughout this post: the login mechanism was worth centralizing immediately, on the very first test, because it's not a case of "these tests happen to look alike" — it's one genuinely stable fact (how the form is filled and submitted) reused by definition, not by coincidence. The *assertions*, by contrast, are exactly the kind of thing the Rule of Three is warning you about: two of them looked similar enough to tempt a `test.each` merge, and a third case would have made it obvious, before the merge happened, that the pattern wasn't real.
+
 ## A Test for Which Kind of Duplication You're Looking At
 
 Before merging two similar-looking blocks of test code, ask: if the underlying application behavior these two blocks are checking diverges in the future — if `locked_out_user` starts seeing a different error format than some other invalid-login case — would fixing that *require editing the shared, merged code*? If yes, you probably merged two things that were never actually the same knowledge, they just happened to look alike at the moment you noticed them. If changing one scenario's expected behavior would obviously have no reason to touch the other, keeping them as separate, independently-readable tests isn't "code duplication that should be cleaned up" — it's two different facts about the system, correctly represented as two different things, and Hunt and Thomas's actual principle never asked you to collapse them.

@@ -83,6 +83,23 @@ test('removes an item from the cart', async () => {
 
 `sharedProductCatalog` is read from, never written to, by any test — so sharing it carries none of the risk a mutable shared `Cart` carried above, while still avoiding the cost of reseeding the entire catalog for every single test.
 
+## Finding Erratic Tests Before They Find You: Randomize the Order on Purpose
+
+Everything above explains why order-dependent tests happen. There's a genuinely useful, almost mechanical way to go looking for them before they surprise you in CI: run your suite in a *different* order on purpose, deliberately, and see what breaks. Python's `pytest-randomly` does exactly this — it shuffles test order (modules, then classes, then individual functions) on every run by default, and prints the random seed it used at the start of the run, so a failure caused by ordering can be reproduced exactly by passing that same seed back in.
+
+```bash
+pip install pytest-randomly
+pytest  # order is randomized automatically, seed printed at the top of output
+```
+
+```
+Using --randomly-seed=1234567890
+```
+
+If a test that's passed reliably for months suddenly fails the moment order gets shuffled, that's not new flakiness the plugin introduced — it's a real Erratic Test that's been latent in the suite the whole time, silently depending on a Shared Fixture being in whatever state a specific, previously-fixed run order happened to leave it in. The plugin didn't create the bug. It removed the accidental consistency that had been hiding it.
+
+The same idea exists for JavaScript test runners too — Jest and Vitest both support randomizing test order via config or CLI flags, and the diagnostic value is identical: a suite that only passes in one specific, unexamined order is a suite whose "passing" is partly an accident of that order, not a property of the tests themselves being correctly isolated.
+
 ## The Actual Decision Worth Making Explicitly
 
 The question worth asking about any fixture, before defaulting to whichever pattern is fastest to type, is precise: will any test that uses this fixture *mutate* it? If yes, that fixture needs to be fresh per test, full stop — sharing a mutable fixture isn't a performance optimization with a small downside, it's a guaranteed source of Erratic Tests waiting for the specific execution order that exposes it, which might not happen until months after the fixture was first shared, whenever the test suite's order or parallelism setup happens to change. If no — the fixture is read-only for every test that touches it — sharing it is free, safe, and exactly the case Meszaros's Immutable Shared Fixture pattern exists to name and recommend.

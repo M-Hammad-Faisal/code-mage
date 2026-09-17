@@ -97,6 +97,31 @@ test('shows correct cart total', async ({ cartWithOneItem }) => {
 
 `cartWithOneItem` depends on `authenticatedPage`, which depends on `page`. The test declaring `cartWithOneItem` gets the entire chain resolved automatically, in the correct order, without knowing the chain exists. This is precisely what a DI container does in larger application frameworks — resolve a full dependency graph from a single top-level request — implemented here as Playwright's fixture system instead of a general-purpose container.
 
+## The Three Kinds of DI, and Which One Fixtures Actually Are
+
+Martin Fowler's 2004 article "Inversion of Control Containers and the Dependency Injection Pattern" — the piece that popularized the term — names three distinct mechanisms for actually delivering a dependency, not just one, and knowing all three clarifies exactly which one Playwright chose and why:
+
+**Constructor injection** — the dependency arrives as a constructor argument, present and required from the moment the object exists:
+
+```typescript
+class OrderService {
+  constructor(private database: DatabaseClient) {} // must be provided to even create one
+}
+```
+
+**Setter injection** — the object can be constructed first, with the dependency supplied afterward through a setter method:
+
+```typescript
+class OrderService {
+  private database?: DatabaseClient;
+  setDatabase(database: DatabaseClient) { this.database = database; }
+}
+```
+
+**Interface injection** — the dependency isn't handed in directly at all; instead, the object implements an interface a container calls to *request* what it needs. Fowler's own assessment of this third form is blunt: it's "more invasive... you have to write a lot of interfaces," and it's genuinely rare in practice compared to the other two.
+
+Playwright's fixtures are closest in spirit to constructor injection, adapted to a test framework's shape rather than a class's: a test's parameter list (`async ({ authenticatedPage }) => {...}`) is the equivalent of a constructor's argument list — declared upfront, required before the test body runs a single line, resolved entirely by something external before the function is ever invoked with real values. There's no equivalent of setter injection in Playwright's model — a test can't ask for `page` at the start and then request `authenticatedPage` be *added* to it halfway through; every dependency a test needs is fixed at the point it's declared, which is exactly the constructor-injection shape, not the more flexible (and, per Fowler's own note, generally less clear) setter-injection shape.
+
 ## Designing Your Own Fixtures With This in Mind
 
 Once fixtures are understood as DI rather than magic, the design question for a new one becomes concrete: what does this test genuinely *need as input*, independent of how that input gets constructed? A fixture that mixes "what's needed" with "how it's built" in a way that leaks implementation details defeats the purpose — the whole value is that a test consuming `authenticatedPage` shouldn't need to know or care whether login happens via a real form or a shortcut. If changing *how* a fixture builds its value ever requires changing the tests that consume it, the dependency wasn't actually inverted — it just moved.

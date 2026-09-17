@@ -64,6 +64,28 @@ test('retrying a request with the same idempotency key does not duplicate the ch
 
 This test is directly verifying the property that matters — that a retry, under the exact conditions a real network failure would produce, doesn't create a second real-world side effect. That's a meaningfully different (and more valuable) assertion than just checking the endpoint returns a 200.
 
+## The HTTP Spec Already Tells You Which Methods Should Be Idempotent
+
+This isn't just an API-design convention teams invent for themselves — it's written directly into the HTTP specification, and knowing it gives you a concrete checklist for what to test. RFC 9110, the current HTTP semantics standard, defines it in almost exactly the same words this post opened with: a method is idempotent "if the intended effect on the server of multiple identical requests with that method is the same as the effect for a single such request." The spec then names which methods are supposed to have this property: **GET, HEAD, PUT, DELETE, OPTIONS, and TRACE are all idempotent by definition. POST is explicitly the exception** — it's the one standard method the spec doesn't require to be safe to repeat, precisely because POST's whole job is usually "create a new thing," and creating a second new thing on retry is often the correct behavior, not a bug, unless the API layers an idempotency key on top the way Stripe's does.
+
+This is directly testable, and worth testing as its own explicit check rather than assuming the framework or the backend gets it right by convention:
+
+```typescript
+test('PUT is idempotent: calling it twice leaves the same end state as once', async ({ request }) => {
+  const update = { name: 'Updated Name' };
+
+  await request.put('/api/users/42', { data: update });
+  const afterFirst = await (await request.get('/api/users/42')).json();
+
+  await request.put('/api/users/42', { data: update }); // same PUT, called again
+  const afterSecond = await (await request.get('/api/users/42')).json();
+
+  expect(afterFirst).toEqual(afterSecond); // a real PUT should leave identical state either way
+});
+```
+
+One precise nuance worth knowing, directly from the spec, so you don't test for the wrong thing: RFC 9110 explicitly clarifies that idempotency is about *the resource's state*, not about every possible server-side side effect — "a server is free to log each request separately... or implement other non-idempotent side effects for each idempotent request." A `PUT` that's correctly idempotent can still legitimately write a new audit-log entry on every call; what it must *not* do is leave the actual resource in a different state depending on whether it was called once or five times. If you're testing idempotency, assert on the resource's observable state, not on internal side effects like log entries — those are explicitly allowed to differ, by the same specification defining the idempotency guarantee you're checking.
+
 ## The Test Worth Writing for Any Non-Idempotent Endpoint
 
 Even without a formal idempotency-key mechanism, it's worth explicitly testing what happens when a genuinely non-idempotent operation is called twice in a row — not because you expect it to somehow be safe, but because knowing the actual behavior (does it silently duplicate? does it return a conflict error? does it corrupt related data?) is exactly the information you need to decide whether the client code calling this endpoint needs its own safeguard, like disabling a submit button after the first click, or generating and sending its own idempotency key even if the endpoint doesn't formally support one yet.
